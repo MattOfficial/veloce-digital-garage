@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { VehicleWithLogs } from "@/types/database";
+import { MotionWrapper } from "@/components/motion-wrapper";
 
 export default function DashboardClient({
     vehicles,
@@ -35,7 +36,7 @@ export default function DashboardClient({
     }
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto">
+        <MotionWrapper className="space-y-6 max-w-5xl mx-auto">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
                 <p className="text-muted-foreground mt-2">
@@ -46,7 +47,7 @@ export default function DashboardClient({
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {/* We will build these metric cards out later */}
-                <div className="rounded-xl border bg-card text-card-foreground shadow">
+                <div className="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
                     <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
                         <h3 className="tracking-tight text-sm font-medium">
                             Current Odometer
@@ -59,6 +60,6 @@ export default function DashboardClient({
                     </div>
                 </div>
             </div>
-        </div>
+        </MotionWrapper>
     );
 }

@@ -11,6 +11,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MotionWrapper } from "@/components/motion-wrapper";
 
 export default async function LoginPage({
     searchParams,
@@ -21,7 +22,7 @@ export default async function LoginPage({
     const resolvedSearchParams = await searchParams;
 
     return (
-        <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2 h-screen mx-auto">
+        <MotionWrapper className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2 h-screen mx-auto">
             <Card className="w-full">
                 <Tabs defaultValue="login" className="w-full">
                     <CardHeader>
@@ -113,6 +114,6 @@ export default async function LoginPage({
                     </TabsContent>
                 </Tabs>
             </Card>
-        </div>
+        </MotionWrapper>
     );
 }

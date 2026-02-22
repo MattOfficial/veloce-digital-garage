@@ -17,19 +17,20 @@ import {
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
 import { BarChart2 } from "lucide-react";
+import { MotionWrapper } from "@/components/motion-wrapper";
 
 const chartConfig = {
     efficiency: {
         label: "Efficiency (km/L)",
-        color: "hsl(var(--chart-1))",
+        color: "var(--chart-1)",
     },
     cost: {
         label: "Cost (£)",
-        color: "hsl(var(--chart-2))",
+        color: "var(--chart-2)",
     },
     distance: {
         label: "Distance (km)",
-        color: "hsl(var(--chart-3))",
+        color: "var(--chart-3)",
     }
 } satisfies ChartConfig;
 
@@ -110,39 +111,41 @@ export default function InsightsPage() {
     // If there are no logs, show empty state
     if (selectedVehicle.fuel_logs.length === 0) {
         return (
-            <div className="max-w-5xl mx-auto space-y-6">
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <BarChart2 className="h-8 w-8 text-primary" />
-                    Analytics Engine
-                </h1>
-                <div className="text-center py-20 border rounded-xl bg-card">
+            <MotionWrapper className="max-w-6xl mx-auto space-y-6 px-4">
+                <div className="flex flex-col gap-2 bg-primary/5 p-8 rounded-[2rem] border-none shadow-sm mb-8">
+                    <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary">
+                        <BarChart2 className="h-10 w-10" />
+                        Performance Pulse
+                    </h1>
+                </div>
+                <div className="text-center py-20 border-none shadow-md rounded-[2rem] bg-card/50 backdrop-blur-sm">
                     <h2 className="text-xl font-medium">Not enough data</h2>
                     <p className="text-muted-foreground mt-1">Please log some fill-ups to see insights and graphs.</p>
                 </div>
-            </div>
+            </MotionWrapper>
         )
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 pb-10">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <BarChart2 className="h-8 w-8 text-primary" />
-                    Analytics Engine
+        <MotionWrapper className="max-w-6xl mx-auto space-y-8 pb-10 px-4">
+            <div className="flex flex-col gap-2 bg-gradient-to-br from-primary/10 to-blue-500/5 p-8 rounded-[2rem] border-none shadow-sm mb-8">
+                <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary">
+                    <BarChart2 className="h-10 w-10" />
+                    Performance Pulse
                 </h1>
-                <p className="text-muted-foreground mt-2">
+                <p className="text-muted-foreground text-lg ml-1">
                     Deep dive into the performance of your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
                 </p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Efficiency Curve */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Fuel Efficiency Trend</CardTitle>
-                        <CardDescription>Kilometers per liter over time</CardDescription>
+                <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-blue-50/70 dark:bg-blue-950/30">
+                    <CardHeader className="pb-2 pt-6">
+                        <CardTitle className="text-xl text-blue-900 dark:text-blue-200">Fuel Efficiency Trend</CardTitle>
+                        <CardDescription className="text-base text-blue-700/70 dark:text-blue-300/70">Kilometers per liter over time</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
                             <AreaChart data={efficiencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
@@ -151,7 +154,7 @@ export default function InsightsPage() {
                                         <stop offset="95%" stopColor="var(--color-efficiency)" stopOpacity={0.1} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -168,15 +171,15 @@ export default function InsightsPage() {
                 </Card>
 
                 {/* Cost per Km */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Cost Per Kilometer</CardTitle>
-                        <CardDescription>Running cost efficiency (£/km)</CardDescription>
+                <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-emerald-50/70 dark:bg-emerald-950/30">
+                    <CardHeader className="pb-2 pt-6">
+                        <CardTitle className="text-xl text-emerald-900 dark:text-emerald-200">Cost Per Kilometer</CardTitle>
+                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency (£/km)</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
                             <LineChart data={costPerKmData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -194,15 +197,15 @@ export default function InsightsPage() {
                 </Card>
 
                 {/* Monthly Aggregate */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Monthly Overview</CardTitle>
-                        <CardDescription>Distance driven and total amount spent</CardDescription>
+                <Card className="md:col-span-2 rounded-[2rem] border-none shadow-sm overflow-hidden bg-purple-50/70 dark:bg-purple-950/30">
+                    <CardHeader className="pb-2 pt-6">
+                        <CardTitle className="text-xl text-purple-900 dark:text-purple-200">Monthly Overview</CardTitle>
+                        <CardDescription className="text-base text-purple-700/70 dark:text-purple-300/70">Distance driven and total amount spent</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
                             <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
                                 <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
                                 <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
@@ -214,6 +217,6 @@ export default function InsightsPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </MotionWrapper>
     );
 }

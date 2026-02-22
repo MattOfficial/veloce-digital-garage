@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fuel } from "lucide-react";
+import { MotionWrapper } from "@/components/motion-wrapper";
 
 const formSchema = z.object({
     date: z.string().nonempty({ message: "Date is required" }),
@@ -91,7 +92,7 @@ export default function FuelPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <MotionWrapper className="max-w-2xl mx-auto space-y-6">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                     <Fuel className="h-8 w-8 text-primary" />
@@ -182,6 +183,6 @@ export default function FuelPage() {
                     </Form>
                 </CardContent>
             </Card>
-        </div>
+        </MotionWrapper>
     );
 }

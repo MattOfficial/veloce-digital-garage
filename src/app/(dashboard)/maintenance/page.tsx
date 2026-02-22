@@ -4,6 +4,7 @@ import { useVehicleStore } from "@/store/vehicle-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Wrench, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { MotionWrapper } from "@/components/motion-wrapper";
 
 export default function MaintenancePage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
@@ -80,7 +81,7 @@ export default function MaintenancePage() {
     });
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-10">
+        <MotionWrapper className="max-w-4xl mx-auto space-y-6 pb-10">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                     <Wrench className="h-8 w-8 text-primary" />
@@ -92,9 +93,9 @@ export default function MaintenancePage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 mb-6">
-                <Card className="bg-primary text-primary-foreground">
+                <Card className="bg-primary text-primary-foreground border-none">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Estimated Current Mileage</CardTitle>
+                        <CardTitle className="text-sm font-medium text-primary-foreground/80">Estimated Current Mileage</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold">{currentOdometer.toLocaleString()} km</div>
@@ -171,6 +172,6 @@ export default function MaintenancePage() {
                 </CardContent>
             </Card>
 
-        </div>
+        </MotionWrapper>
     );
 }
