@@ -32,10 +32,12 @@ const navigation = [
 export function AppSidebar() {
     const pathname = usePathname();
     const { profile, fetchProfile } = useUserStore();
+    const { fetchVehicles } = useVehicleStore();
 
     useEffect(() => {
         fetchProfile();
-    }, [pathname, fetchProfile]); // Re-fetch slightly on path change (e.g. returning from profile edit)
+        fetchVehicles();
+    }, [pathname, fetchProfile, fetchVehicles]); // Re-fetch slightly on path change (e.g. returning from profile edit)
 
     const displayName = profile.displayName || profile.email?.split('@')[0] || "Driver";
     const initial = displayName.charAt(0).toUpperCase();

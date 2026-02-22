@@ -1,28 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { VehicleWithLogs } from "@/types/database";
 import { MotionWrapper } from "@/components/motion-wrapper";
 
-export default function DashboardClient({
-    vehicles,
-}: {
-    vehicles: VehicleWithLogs[];
-}) {
-    const { setVehicles, selectedVehicleId, setSelectedVehicleId } =
-        useVehicleStore();
-
-    useEffect(() => {
-        setVehicles(vehicles);
-        if (vehicles.length > 0 && !selectedVehicleId) {
-            setSelectedVehicleId(vehicles[0].id);
-        }
-    }, [vehicles, setVehicles, selectedVehicleId, setSelectedVehicleId]);
-
+export default function DashboardClient() {
+    const { vehicles, isLoading } = useVehicleStore();
     const selectedVehicle = useVehicleStore((state) => state.getSelectedVehicle());
 
-    if (!selectedVehicle) {
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-[50vh]">
+                <div className="text-center">
+                    <p className="text-muted-foreground animate-pulse">Loading dashboard...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!selectedVehicle || vehicles.length === 0) {
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center">
