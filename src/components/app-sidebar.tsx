@@ -14,6 +14,9 @@ import {
 import { Car, Fuel, Wrench, BarChart2, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
 import { logout } from "@/app/login/actions";
 import { SidebarFooter } from "@/components/ui/sidebar";
 
@@ -26,6 +29,35 @@ const navigation = [
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const [profile, setProfile] = useState<{ displayName: string | null, avatarUrl: string | null, email: string | undefined }>({
+        displayName: null,
+        avatarUrl: null,
+        email: undefined
+    });
+    const supabase = createClient();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data } = await supabase
+                    .from("users")
+                    .select("display_name, avatar_url")
+                    .eq("id", user.id)
+                    .single();
+
+                setProfile({
+                    displayName: data?.display_name || null,
+                    avatarUrl: data?.avatar_url || null,
+                    email: user.email
+                });
+            }
+        };
+        fetchUser();
+    }, [pathname]); // Re-fetch slightly on path change (e.g. returning from profile edit)
+
+    const displayName = profile.displayName || profile.email?.split('@')[0] || "Driver";
+    const initial = displayName.charAt(0).toUpperCase();
 
     return (
         <Sidebar>
@@ -54,12 +86,24 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                <form action={logout}>
-                    <SidebarMenuButton type="submit" className="w-full justify-start text-muted-foreground hover:text-foreground">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        <span>Log Out</span>
-                    </SidebarMenuButton>
-                </form>
+                <div className="flex flex-col gap-2 p-4 border-t border-border/50">
+                    <Link href="/profile" className="flex items-center gap-3 w-full hover:bg-secondary/50 p-2 rounded-xl transition-colors cursor-pointer mb-2">
+                        <Avatar className="h-10 w-10 border border-border/50">
+                            <AvatarImage src={profile.avatarUrl || undefined} className="object-cover" />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">{initial}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col overflow-hidden text-left">
+                            <span className="text-sm font-semibold truncate leading-tight">{displayName}</span>
+                            <span className="text-xs text-muted-foreground truncate leading-tight">View Profile</span>
+                        </div>
+                    </Link>
+                    <form action={logout}>
+                        <SidebarMenuButton type="submit" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            <span>Log Out</span>
+                        </SidebarMenuButton>
+                    </form>
+                </div>
             </SidebarFooter>
         </Sidebar>
     );
