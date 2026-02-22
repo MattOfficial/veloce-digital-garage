@@ -20,6 +20,8 @@ import { useEffect, useState } from "react";
 import { logout } from "@/app/login/actions";
 import { SidebarFooter } from "@/components/ui/sidebar";
 
+import { useUserStore } from "@/store/user-store";
+
 const navigation = [
     { name: "Dashboard", href: "/", icon: Car },
     { name: "Fill Up", href: "/fuel", icon: Fuel },
@@ -29,32 +31,11 @@ const navigation = [
 
 export function AppSidebar() {
     const pathname = usePathname();
-    const [profile, setProfile] = useState<{ displayName: string | null, avatarUrl: string | null, email: string | undefined }>({
-        displayName: null,
-        avatarUrl: null,
-        email: undefined
-    });
-    const supabase = createClient();
+    const { profile, fetchProfile } = useUserStore();
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data } = await supabase
-                    .from("users")
-                    .select("display_name, avatar_url")
-                    .eq("id", user.id)
-                    .single();
-
-                setProfile({
-                    displayName: data?.display_name || null,
-                    avatarUrl: data?.avatar_url || null,
-                    email: user.email
-                });
-            }
-        };
-        fetchUser();
-    }, [pathname]); // Re-fetch slightly on path change (e.g. returning from profile edit)
+        fetchProfile();
+    }, [pathname, fetchProfile]); // Re-fetch slightly on path change (e.g. returning from profile edit)
 
     const displayName = profile.displayName || profile.email?.split('@')[0] || "Driver";
     const initial = displayName.charAt(0).toUpperCase();

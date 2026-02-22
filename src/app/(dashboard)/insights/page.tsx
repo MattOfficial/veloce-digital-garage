@@ -19,25 +19,28 @@ import { useMemo } from "react";
 import { BarChart2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 
-const chartConfig = {
-    efficiency: {
-        label: "Efficiency (km/L)",
-        color: "var(--chart-1)",
-    },
-    cost: {
-        label: "Cost (£)",
-        color: "var(--chart-2)",
-    },
-    distance: {
-        label: "Distance (km)",
-        color: "var(--chart-3)",
-    }
-} satisfies ChartConfig;
+import { useUserStore } from "@/store/user-store";
 
 export default function InsightsPage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
+    const { profile } = useUserStore();
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+
+    const chartConfig = useMemo(() => ({
+        efficiency: {
+            label: "Efficiency (km/L)",
+            color: "var(--chart-1)",
+        },
+        cost: {
+            label: `Cost (${profile.currency})`,
+            color: "var(--chart-2)",
+        },
+        distance: {
+            label: "Distance (km)",
+            color: "var(--chart-3)",
+        }
+    } satisfies ChartConfig), [profile.currency]);
 
     // Process data for charts
     const { efficiencyData, costPerKmData, monthlyData } = useMemo(() => {
@@ -174,7 +177,7 @@ export default function InsightsPage() {
                 <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-emerald-50/70 dark:bg-emerald-950/30">
                     <CardHeader className="pb-2 pt-6">
                         <CardTitle className="text-xl text-emerald-900 dark:text-emerald-200">Cost Per Kilometer</CardTitle>
-                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency (£/km)</CardDescription>
+                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency ({profile.currency}/km)</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[250px] w-full">

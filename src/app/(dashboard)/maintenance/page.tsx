@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Wrench, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { useUserStore } from "@/store/user-store";
 
 export default function MaintenancePage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
+    const { profile } = useUserStore();
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
     if (!selectedVehicle) {
@@ -160,7 +162,7 @@ export default function MaintenancePage() {
                                     <TableRow key={log.id}>
                                         <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
                                         <TableCell className="font-medium">{log.service_type}</TableCell>
-                                        <TableCell>£{log.cost.toFixed(2)}</TableCell>
+                                        <TableCell>{profile.currency}{log.cost.toFixed(2)}</TableCell>
                                         <TableCell className="text-muted-foreground">{log.notes || "-"}</TableCell>
                                     </TableRow>
                                 ))}

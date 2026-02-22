@@ -6,6 +6,7 @@ import * as z from "zod";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { useState } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
+import { useUserStore } from "@/store/user-store";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ const formSchema = z.object({
 
 export default function FuelPage() {
     const { selectedVehicleId, vehicles } = useVehicleStore();
+    const { profile } = useUserStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -160,7 +162,7 @@ export default function FuelPage() {
                                     name="total_cost"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Total Cost (£/$/€)</FormLabel>
+                                            <FormLabel>Total Cost ({profile.currency})</FormLabel>
                                             <FormControl>
                                                 <Input type="number" step="0.01" placeholder="e.g. 50.00" {...field} />
                                             </FormControl>

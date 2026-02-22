@@ -9,35 +9,42 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { updateProfile } from "./actions";
-import { createClient } from "@/utils/supabase/client";
+import { useUserStore } from "@/store/user-store";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const currencies = [
+    { value: "₹", label: "Indian Rupee (₹)" },
+    { value: "$", label: "US Dollar ($)" },
+    { value: "£", label: "British Pound (£)" },
+    { value: "€", label: "Euro (€)" },
+    { value: "¥", label: "Japanese Yen (¥)" },
+];
 
 export default function ProfilePage() {
-    const [displayName, setDisplayName] = useState("");
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const { profile, fetchProfile, updateProfileOptimistic, isLoading } = useUserStore();
+
+    // We keep local state for formatting edits before save, initialized from the store
+    const [displayName, setDisplayName] = useState(profile.displayName || "");
+    const [currency, setCurrency] = useState(profile.currency || "₹");
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl);
+
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const supabase = createClient();
 
-    // Fetch initial profile data
+    // Initial fetch to sync store if not already loaded, and set local state
     useEffect(() => {
-        const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data, error } = await supabase
-                    .from("users")
-                    .select("display_name, avatar_url")
-                    .eq("id", user.id)
-                    .single();
-
-                if (data && !error) {
-                    setDisplayName(data.display_name || "");
-                    setAvatarUrl(data.avatar_url || null);
-                }
-            }
+        const initialize = async () => {
+            await fetchProfile();
         };
+        initialize();
+    }, [fetchProfile]);
 
-        fetchProfile();
-    }, []);
+    // Resync local inputs when profile loads from network
+    useEffect(() => {
+        setDisplayName(profile.displayName || "");
+        setCurrency(profile.currency || "₹");
+        setAvatarUrl(profile.avatarUrl);
+    }, [profile]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,6 +53,7 @@ export default function ProfilePage() {
 
         const formData = new FormData();
         formData.append("display_name", displayName);
+        formData.append("currency", currency);
         if (avatarUrl) {
             formData.append("avatar_url", avatarUrl);
         }
@@ -116,6 +124,26 @@ export default function ProfilePage() {
                                     />
                                     <p className="text-sm text-muted-foreground">
                                         This is the name that will be displayed in the application sidebar.
+                                    </p>
+                                </div>
+                                <div className="space-y-2 pt-4">
+                                    <Label htmlFor="currency" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        Preferred Currency
+                                    </Label>
+                                    <Select value={currency} onValueChange={setCurrency}>
+                                        <SelectTrigger id="currency" className="max-w-md h-12 rounded-xl">
+                                            <SelectValue placeholder="Select a currency" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencies.map((curr) => (
+                                                <SelectItem key={curr.value} value={curr.value} className="cursor-pointer">
+                                                    {curr.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-sm text-muted-foreground">
+                                        This currency symbol will be used across all your tracking and insights.
                                     </p>
                                 </div>
                             </div>
