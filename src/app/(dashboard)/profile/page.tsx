@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { User, Save, Car, Trash2, PlusCircle } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -323,7 +324,8 @@ export default function ProfilePage() {
                     ) : (
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {vehicles.map((vehicle) => (
-                                <div
+                                <Link
+                                    href={`/vehicles/${vehicle.id}`}
                                     key={vehicle.id}
                                     className="relative flex flex-col rounded-[2rem] bg-gradient-to-b from-border/50 to-background border shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
                                 >
@@ -332,7 +334,10 @@ export default function ProfilePage() {
                                         variant="destructive"
                                         size="icon"
                                         className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:scale-110"
-                                        onClick={() => handleDeleteVehicle(vehicle.id)}
+                                        onClick={(e) => {
+                                            e.preventDefault(); // Prevent navigating to the vehicle link when clicking delete
+                                            handleDeleteVehicle(vehicle.id);
+                                        }}
                                         disabled={isDeletingId === vehicle.id}
                                     >
                                         {isDeletingId === vehicle.id ? (
@@ -382,7 +387,7 @@ export default function ProfilePage() {
 
                                     {/* Glassmorphic/Holographic inner border reflection */}
                                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent z-10" />
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     )}

@@ -1,0 +1,203 @@
+"use client";
+
+import { useState } from "react";
+import { format } from "date-fns";
+import { Wrench, CalendarIcon, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+import { useUserStore } from "@/store/user-store";
+import { useVehicleStore } from "@/store/vehicle-store";
+import { submitMaintenanceLog } from "@/app/actions/maintenance";
+
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+
+interface AddMaintenanceModalProps {
+    vehicleId: string;
+}
+
+export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
+    const { profile } = useUserStore();
+    const { fetchVehicles } = useVehicleStore();
+
+    const [open, setOpen] = useState(false);
+    const [date, setDate] = useState<Date>(new Date());
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError(null);
+
+        const formData = new FormData(e.currentTarget);
+        // Inject the contextual data
+        formData.append("vehicle_id", vehicleId);
+        formData.append("date", format(date, "yyyy-MM-dd"));
+
+        const result = await submitMaintenanceLog(formData);
+
+        if (result.error) {
+            setError(result.error);
+            setIsSubmitting(false);
+        } else {
+            // Success! Refresh global state and close modal
+            fetchVehicles();
+            setOpen(false);
+            setIsSubmitting(false);
+            // Optionally could show a global toast here depending on setup
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" className="rounded-full shadow-sm shadow-primary/20">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Log Maintenance
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] rounded-[2rem] p-0 overflow-hidden border-primary/10 shadow-xl">
+                <div className="bg-muted/30 p-6 pb-4 border-b">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center text-xl">
+                            <Wrench className="w-5 h-5 mr-2 text-primary" />
+                            Log Service Record
+                        </DialogTitle>
+                        <DialogDescription>
+                            This record will be permanently attached to this vehicle's history.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4">
+                    {/* Date Picker */}
+                    <div className="space-y-2">
+                        <Label>Service Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal rounded-xl",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={(selected) => selected && setDate(selected)}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    {/* Service Type Dropdown */}
+                    <div className="space-y-2">
+                        <Label htmlFor="service_type">Service Performed</Label>
+                        <Select name="service_type" required defaultValue="Engine Oil Change">
+                            <SelectTrigger className="rounded-xl">
+                                <SelectValue placeholder="Select maintenance type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Engine Oil Change">Engine Oil Change</SelectItem>
+                                <SelectItem value="Tire Rotation / Replacement">Tire Rotation / Replacement</SelectItem>
+                                <SelectItem value="Brake Pad Replacement">Brake Pad Replacement</SelectItem>
+                                <SelectItem value="Air Filter Replacement">Air Filter Replacement</SelectItem>
+                                <SelectItem value="Battery Replacement">Battery Replacement</SelectItem>
+                                <SelectItem value="Transmission Fluid">Transmission Fluid</SelectItem>
+                                <SelectItem value="General Inspection">General Inspection</SelectItem>
+                                <SelectItem value="Other Repair">Other Repair</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Cost Input */}
+                    <div className="space-y-2">
+                        <Label htmlFor="cost">Total Cost ({currencySymbol})</Label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2.5 text-muted-foreground">{currencySymbol}</span>
+                            <Input
+                                id="cost"
+                                name="cost"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                required
+                                className="pl-7 rounded-xl"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Notes Field */}
+                    <div className="space-y-2">
+                        <Label htmlFor="notes">Notes & Provider (Optional)</Label>
+                        <Textarea
+                            id="notes"
+                            name="notes"
+                            placeholder="e.g. Jiffy Lube, included multi-point inspection."
+                            className="rounded-xl resize-none"
+                            rows={3}
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="pt-2 flex justify-end gap-3">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setOpen(false)}
+                            className="rounded-full"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="rounded-full shadow-md px-6"
+                        >
+                            {isSubmitting ? "Saving..." : "Save Record"}
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}

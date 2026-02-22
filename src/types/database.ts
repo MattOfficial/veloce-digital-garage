@@ -11,6 +11,12 @@ export type Vehicle = {
   year: number;
   baseline_odometer: number;
   image_url: string | null;
+  vin: string | null;
+  license_plate: string | null;
+  color: string | null;
+  engine_type: string | null;
+  transmission: string | null;
+  notes: string | null;
   created_at: string;
 };
 
