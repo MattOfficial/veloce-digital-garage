@@ -10,6 +10,7 @@ export type Vehicle = {
   model: string;
   year: number;
   baseline_odometer: number;
+  image_url: string | null;
   created_at: string;
 };
 

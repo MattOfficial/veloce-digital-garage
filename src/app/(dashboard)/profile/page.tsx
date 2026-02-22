@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { ImageUploadOrLink } from "@/components/image-upload-or-link";
 import { updateProfile } from "./actions";
 import { addVehicle, deleteVehicle } from "@/app/actions/vehicles";
 import { useUserStore } from "@/store/user-store";
@@ -48,6 +49,7 @@ export default function ProfilePage() {
     const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
     const [vehicleMessage, setVehicleMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [newVehicleImageUrl, setNewVehicleImageUrl] = useState<string>("");
     const addFormRef = useRef<HTMLFormElement>(null);
 
     // Initial fetch to sync store if not already loaded, and set local state
@@ -110,6 +112,7 @@ export default function ProfilePage() {
         } else {
             setVehicleMessage({ type: 'success', text: "Vehicle added successfully!" });
             setDialogOpen(false);
+            setNewVehicleImageUrl(""); // Reset local image state
             fetchVehicles(); // Refresh global store
         }
         setIsAddingVehicle(false);
@@ -262,6 +265,16 @@ export default function ProfilePage() {
                                     </DialogDescription>
                                 </DialogHeader>
                                 <form ref={addFormRef} onSubmit={handleAddVehicle} className="space-y-4 pt-4">
+                                    <input type="hidden" name="image_url" value={newVehicleImageUrl} />
+
+                                    <div className="space-y-2">
+                                        <Label>Vehicle Image</Label>
+                                        <ImageUploadOrLink
+                                            onImageSelected={setNewVehicleImageUrl}
+                                            currentUrl={newVehicleImageUrl}
+                                        />
+                                    </div>
+
                                     <div className="space-y-2">
                                         <Label htmlFor="make">Make</Label>
                                         <Input id="make" name="make" placeholder="e.g. Toyota" required className="rounded-xl" />
@@ -308,32 +321,67 @@ export default function ProfilePage() {
                             <p className="text-muted-foreground mt-1">Add a vehicle to start tracking your fuel and maintenance.</p>
                         </div>
                     ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {vehicles.map((vehicle) => (
-                                <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-[1.5rem] bg-background shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-primary/10 rounded-full text-primary">
-                                            <Car className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold">{vehicle.year} {vehicle.make} {vehicle.model}</h4>
-                                            <p className="text-sm text-muted-foreground">OD: {vehicle.baseline_odometer.toLocaleString()} {distanceUnit}</p>
-                                        </div>
-                                    </div>
+                                <div
+                                    key={vehicle.id}
+                                    className="relative flex flex-col rounded-[2rem] bg-gradient-to-b from-border/50 to-background border shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
+                                >
+                                    {/* Delete Button (Absolute Top Right) */}
                                     <Button
-                                        variant="ghost"
+                                        variant="destructive"
                                         size="icon"
-                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                        className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:scale-110"
                                         onClick={() => handleDeleteVehicle(vehicle.id)}
                                         disabled={isDeletingId === vehicle.id}
                                     >
                                         {isDeletingId === vehicle.id ? (
-                                            <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                            <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                                         ) : (
                                             <Trash2 className="h-4 w-4" />
                                         )}
                                         <span className="sr-only">Delete</span>
                                     </Button>
+
+                                    {/* Image Section (Top half of the card) */}
+                                    <div className="w-full h-48 bg-muted relative overflow-hidden border-b">
+                                        {vehicle.image_url ? (
+                                            <div className="w-full h-full group-hover:scale-105 transition-transform duration-500">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={vehicle.image_url}
+                                                    alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/20 group-hover:scale-105 transition-transform duration-500">
+                                                <Car className="h-20 w-20" />
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                                        <div className="absolute bottom-3 left-4">
+                                            <div className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-primary/20 backdrop-blur-md">
+                                                {vehicle.year}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Details Section (Bottom half of the card) */}
+                                    <div className="p-5 flex flex-col gap-1 bg-card/40 backdrop-blur-xl relative z-0">
+                                        <h4 className="font-bold text-xl leading-tight text-foreground truncate">
+                                            {vehicle.make} {vehicle.model}
+                                        </h4>
+                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 font-medium">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                            Active
+                                            <span className="mx-1 opacity-50">•</span>
+                                            {vehicle.baseline_odometer.toLocaleString()} {distanceUnit}
+                                        </div>
+                                    </div>
+
+                                    {/* Glassmorphic/Holographic inner border reflection */}
+                                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent z-10" />
                                 </div>
                             ))}
                         </div>

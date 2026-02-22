@@ -17,6 +17,7 @@ export async function addVehicle(formData: FormData) {
     const model = formData.get("model")?.toString();
     const yearStr = formData.get("year")?.toString();
     const odometerStr = formData.get("baseline_odometer")?.toString();
+    const image_url = formData.get("image_url")?.toString() || null;
 
     if (!make || !model || !yearStr || !odometerStr) {
         return { error: "Please fill out all required fields." };
@@ -37,6 +38,7 @@ export async function addVehicle(formData: FormData) {
             model,
             year,
             baseline_odometer,
+            image_url,
         })
         .select()
         .single();
