@@ -97,10 +97,10 @@ export default function MaintenancePage() {
             <div className="grid gap-4 md:grid-cols-3 mb-6">
                 <Card className="bg-primary text-primary-foreground border-none">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-primary-foreground/80">Estimated Current Mileage</CardTitle>
+                        <CardTitle className="text-sm font-medium text-primary-foreground/80">Estimated Current Distance</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{currentOdometer.toLocaleString()} km</div>
+                        <div className="text-3xl font-bold">{currentOdometer.toLocaleString()} {profile.distanceUnit}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -124,7 +124,7 @@ export default function MaintenancePage() {
                                     <div className={`text-sm font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-yellow-500' : ''}`}>
                                         {item.status === "good" && item.name.includes("Tire") && item.lastDoneDate !== "Never"
                                             ? "Recently replaced"
-                                            : `In ${Math.floor(item.kmUntilNext).toLocaleString()} km`}
+                                            : `In ${Math.floor(item.kmUntilNext).toLocaleString()} ${profile.distanceUnit}`}
                                     </div>
                                 </div>
 

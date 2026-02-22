@@ -26,6 +26,7 @@ export default function ProfilePage() {
     // We keep local state for formatting edits before save, initialized from the store
     const [displayName, setDisplayName] = useState(profile.displayName || "");
     const [currency, setCurrency] = useState(profile.currency || "₹");
+    const [distanceUnit, setDistanceUnit] = useState<"km" | "miles">(profile.distanceUnit || "km");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -43,6 +44,7 @@ export default function ProfilePage() {
     useEffect(() => {
         setDisplayName(profile.displayName || "");
         setCurrency(profile.currency || "₹");
+        setDistanceUnit(profile.distanceUnit || "km");
         setAvatarUrl(profile.avatarUrl);
     }, [profile]);
 
@@ -54,6 +56,7 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append("display_name", displayName);
         formData.append("currency", currency);
+        formData.append("distance_unit", distanceUnit);
         if (avatarUrl) {
             formData.append("avatar_url", avatarUrl);
         }
@@ -144,6 +147,23 @@ export default function ProfilePage() {
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
                                         This currency symbol will be used across all your tracking and insights.
+                                    </p>
+                                </div>
+                                <div className="space-y-2 pt-4">
+                                    <Label htmlFor="distance_unit" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        Distance Unit
+                                    </Label>
+                                    <Select value={distanceUnit} onValueChange={(val) => setDistanceUnit(val as "km" | "miles")}>
+                                        <SelectTrigger id="distance_unit" className="max-w-md h-12 rounded-xl">
+                                            <SelectValue placeholder="Select distance unit" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="km" className="cursor-pointer">Kilometers (km)</SelectItem>
+                                            <SelectItem value="miles" className="cursor-pointer">Miles</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-sm text-muted-foreground">
+                                        Will affect speed, volumes (Liters vs Gallons) and economy rates.
                                     </p>
                                 </div>
                             </div>

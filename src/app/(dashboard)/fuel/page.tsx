@@ -32,7 +32,7 @@ const formSchema = z.object({
 
 export default function FuelPage() {
     const { selectedVehicleId, vehicles } = useVehicleStore();
-    const { profile } = useUserStore();
+    const { profile, getVolumeUnit } = useUserStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -134,7 +134,7 @@ export default function FuelPage() {
                                     name="odometer"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Odometer Reading (km)</FormLabel>
+                                            <FormLabel>Odometer Reading ({profile.distanceUnit})</FormLabel>
                                             <FormControl>
                                                 <Input type="number" step="0.1" placeholder="e.g. 46250" {...field} />
                                             </FormControl>
@@ -148,7 +148,7 @@ export default function FuelPage() {
                                     name="fuel_volume"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Fuel Volume (Liters)</FormLabel>
+                                            <FormLabel>Fuel Volume ({getVolumeUnit()})</FormLabel>
                                             <FormControl>
                                                 <Input type="number" step="0.01" placeholder="e.g. 35.5" {...field} />
                                             </FormControl>

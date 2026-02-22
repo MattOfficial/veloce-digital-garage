@@ -23,13 +23,13 @@ import { useUserStore } from "@/store/user-store";
 
 export default function InsightsPage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
-    const { profile } = useUserStore();
+    const { profile, getFuelEconomyUnit } = useUserStore();
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
     const chartConfig = useMemo(() => ({
         efficiency: {
-            label: "Efficiency (km/L)",
+            label: `Efficiency (${getFuelEconomyUnit()})`,
             color: "var(--chart-1)",
         },
         cost: {
@@ -37,10 +37,10 @@ export default function InsightsPage() {
             color: "var(--chart-2)",
         },
         distance: {
-            label: "Distance (km)",
+            label: `Distance (${profile.distanceUnit})`,
             color: "var(--chart-3)",
         }
-    } satisfies ChartConfig), [profile.currency]);
+    } satisfies ChartConfig), [profile.currency, profile.distanceUnit, getFuelEconomyUnit()]);
 
     // Process data for charts
     const { efficiencyData, costPerKmData, monthlyData } = useMemo(() => {
@@ -146,7 +146,7 @@ export default function InsightsPage() {
                 <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-blue-50/70 dark:bg-blue-950/30">
                     <CardHeader className="pb-2 pt-6">
                         <CardTitle className="text-xl text-blue-900 dark:text-blue-200">Fuel Efficiency Trend</CardTitle>
-                        <CardDescription className="text-base text-blue-700/70 dark:text-blue-300/70">Kilometers per liter over time</CardDescription>
+                        <CardDescription className="text-base text-blue-700/70 dark:text-blue-300/70">{getFuelEconomyUnit()} over time</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
@@ -173,11 +173,11 @@ export default function InsightsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Cost per Km */}
+                {/* Cost per Distance */}
                 <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-emerald-50/70 dark:bg-emerald-950/30">
                     <CardHeader className="pb-2 pt-6">
-                        <CardTitle className="text-xl text-emerald-900 dark:text-emerald-200">Cost Per Kilometer</CardTitle>
-                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency ({profile.currency}/km)</CardDescription>
+                        <CardTitle className="text-xl text-emerald-900 dark:text-emerald-200">Cost Per {profile.distanceUnit === 'km' ? 'Kilometer' : 'Mile'}</CardTitle>
+                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency ({profile.currency}/{profile.distanceUnit})</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                         <ChartContainer config={chartConfig} className="min-h-[250px] w-full">

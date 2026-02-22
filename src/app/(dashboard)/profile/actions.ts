@@ -7,6 +7,7 @@ export async function updateProfile(formData: FormData) {
     const displayName = formData.get("display_name") as string;
     const avatarUrl = formData.get("avatar_url") as string;
     const currency = formData.get("currency") as string;
+    const distanceUnit = formData.get("distance_unit") as string;
 
     const supabase = await createClient();
 
@@ -22,6 +23,7 @@ export async function updateProfile(formData: FormData) {
             display_name: displayName || null,
             avatar_url: avatarUrl || null,
             currency: currency || '₹',
+            distance_unit: distanceUnit || 'km',
         })
         .eq("id", user.id);
 
