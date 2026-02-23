@@ -13,17 +13,25 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History } from "lucide-react";
+import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X } from "lucide-react";
 import Link from "next/link";
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
 
 export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: VehicleWithLogs }) {
     const router = useRouter();
     const { profile } = useUserStore();
-    const { vehicles, fetchVehicles } = useVehicleStore();
+    const { vehicles, fetchVehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
     const [vehicle, setVehicle] = useState(initialVehicle);
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditingSpecs, setIsEditingSpecs] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    // Sync global selected vehicle to this page's vehicle if it doesn't match
+    useEffect(() => {
+        if (selectedVehicleId !== initialVehicle.id) {
+            setSelectedVehicleId(initialVehicle.id);
+        }
+    }, [initialVehicle.id, selectedVehicleId, setSelectedVehicleId]);
 
     // Sync local state with global store updates (e.g., when a modal adds a new log)
     useEffect(() => {
@@ -57,6 +65,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
             setVehicle({ ...vehicle, ...result.vehicle });
             // Re-fetch global vehicles so the profile page is updated too
             fetchVehicles();
+            setIsEditingSpecs(false);
         }
         setIsSaving(false);
     }
@@ -82,7 +91,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
                 <div className="relative z-10 space-y-4">
-                    <Link href="/profile" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4 bg-background/50 backdrop-blur-md px-3 py-1.5 rounded-full w-fit">
+                    <Link href="/profile" className="inline-flex items-center text-sm font-semibold text-primary-foreground bg-primary/95 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 mb-4 px-5 py-2.5 rounded-full w-fit">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Garage
                     </Link>
@@ -147,68 +156,130 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                 {/* Specs Form */}
                 <div className="md:col-span-2">
                     <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
-                        <CardHeader>
-                            <CardTitle>Specifications & Details</CardTitle>
-                            <CardDescription>Manage your vehicle's identifying information and attributes.</CardDescription>
+                        <CardHeader className="flex flex-row items-start justify-between">
+                            <div>
+                                <CardTitle>Specifications & Details</CardTitle>
+                                <CardDescription>Manage your vehicle's identifying information and attributes.</CardDescription>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setIsEditingSpecs(!isEditingSpecs);
+                                    setMessage(null);
+                                }}
+                                className="h-8 rounded-full px-3 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                                {isEditingSpecs ? (
+                                    <>
+                                        <X className="h-4 w-4 mr-1.5" />
+                                        Cancel
+                                    </>
+                                ) : (
+                                    <>
+                                        <Edit3 className="h-4 w-4 mr-1.5" />
+                                        Edit
+                                    </>
+                                )}
+                            </Button>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleUpdateSpecs} className="space-y-6">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
-                                        <Input id="vin" name="vin" defaultValue={vehicle.vin || ""} placeholder="17-character VIN" className="rounded-xl font-mono uppercase" />
+                            {isEditingSpecs ? (
+                                <form onSubmit={handleUpdateSpecs} className="space-y-6">
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
+                                            <Input id="vin" name="vin" defaultValue={vehicle.vin || ""} placeholder="17-character VIN" className="rounded-xl font-mono uppercase" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="license_plate">License Plate</Label>
+                                            <Input id="license_plate" name="license_plate" defaultValue={vehicle.license_plate || ""} placeholder="e.g. ABC-1234" className="rounded-xl uppercase font-mono" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="color">Exterior Color</Label>
+                                            <Input id="color" name="color" defaultValue={vehicle.color || ""} placeholder="e.g. Midnight Blue" className="rounded-xl" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="engine_type">Engine Type</Label>
+                                            <Input id="engine_type" name="engine_type" defaultValue={vehicle.engine_type || ""} placeholder="e.g. 2.0L Inline-4 Turbo" className="rounded-xl" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="transmission">Transmission</Label>
+                                            <Input id="transmission" name="transmission" defaultValue={vehicle.transmission || ""} placeholder="e.g. 8-Speed Automatic" className="rounded-xl" />
+                                        </div>
+                                        {/* Make/Model/Year/Odometer hidden here if they aren't edited, but let's allow basic edits */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="year">Model Year</Label>
+                                            <Input id="year" name="year" type="number" defaultValue={vehicle.year} className="rounded-xl" required />
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="license_plate">License Plate</Label>
-                                        <Input id="license_plate" name="license_plate" defaultValue={vehicle.license_plate || ""} placeholder="e.g. ABC-1234" className="rounded-xl uppercase font-mono" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="color">Exterior Color</Label>
-                                        <Input id="color" name="color" defaultValue={vehicle.color || ""} placeholder="e.g. Midnight Blue" className="rounded-xl" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="engine_type">Engine Type</Label>
-                                        <Input id="engine_type" name="engine_type" defaultValue={vehicle.engine_type || ""} placeholder="e.g. 2.0L Inline-4 Turbo" className="rounded-xl" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="transmission">Transmission</Label>
-                                        <Input id="transmission" name="transmission" defaultValue={vehicle.transmission || ""} placeholder="e.g. 8-Speed Automatic" className="rounded-xl" />
-                                    </div>
-                                    {/* Make/Model/Year/Odometer hidden here if they aren't edited, but let's allow basic edits */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="year">Model Year</Label>
-                                        <Input id="year" name="year" type="number" defaultValue={vehicle.year} className="rounded-xl" required />
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="notes">Important Notes</Label>
-                                    <Textarea
-                                        id="notes"
-                                        name="notes"
-                                        defaultValue={vehicle.notes || ""}
-                                        placeholder="Insurance policy numbers, radio codes, tire pressure specs, or any other reminders..."
-                                        className="rounded-xl min-h-[120px]"
-                                    />
-                                </div>
-
-                                {message && (
-                                    <div className={`p-4 rounded-xl text-sm ${message.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'}`}>
-                                        {message.text}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="notes">Important Notes</Label>
+                                        <Textarea
+                                            id="notes"
+                                            name="notes"
+                                            defaultValue={vehicle.notes || ""}
+                                            placeholder="Insurance policy numbers, radio codes, tire pressure specs, or any other reminders..."
+                                            className="rounded-xl min-h-[120px]"
+                                        />
                                     </div>
-                                )}
 
-                                <div className="flex justify-end pt-4">
-                                    <Button type="submit" disabled={isSaving} className="rounded-full px-8 shadow-md">
-                                        {isSaving ? (
-                                            <div className="h-5 w-5 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
-                                        ) : (
-                                            <Save className="h-4 w-4 mr-2" />
-                                        )}
-                                        {isSaving ? "Saving Specs..." : "Save Specifications"}
-                                    </Button>
+                                    {message && (
+                                        <div className={`p-4 rounded-xl text-sm ${message.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'}`}>
+                                            {message.text}
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end pt-4">
+                                        <Button type="submit" disabled={isSaving} className="rounded-full px-8 shadow-md">
+                                            {isSaving ? (
+                                                <div className="h-5 w-5 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
+                                            ) : (
+                                                <Save className="h-4 w-4 mr-2" />
+                                            )}
+                                            {isSaving ? "Saving Specs..." : "Save Specifications"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    <div className="grid gap-5 sm:grid-cols-2">
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">VIN (Vehicle Identification Number)</p>
+                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.vin || "—"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">License Plate</p>
+                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.license_plate || "—"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Exterior Color</p>
+                                            <p className="font-medium text-foreground">{vehicle.color || "—"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Engine Type</p>
+                                            <p className="font-medium text-foreground">{vehicle.engine_type || "—"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Transmission</p>
+                                            <p className="font-medium text-foreground">{vehicle.transmission || "—"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Model Year</p>
+                                            <p className="font-medium text-foreground">{vehicle.year}</p>
+                                        </div>
+                                    </div>
+                                    {vehicle.notes && (
+                                        <div className="space-y-2 pt-4 border-t border-border/50">
+                                            <p className="text-sm font-medium text-muted-foreground">Important Notes</p>
+                                            <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-xl border border-border/30">
+                                                {vehicle.notes}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                            </form>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
