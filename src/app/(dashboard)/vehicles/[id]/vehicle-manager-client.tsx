@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { VehicleWithLogs } from "@/types/database";
+import { VehicleWithLogs, CustomLogCategory } from "@/types/database";
 import { useUserStore } from "@/store/user-store";
 import { updateVehicle } from "@/app/actions/vehicles";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -13,11 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X } from "lucide-react";
+import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
+import { AddTrackerModal } from "@/components/add-tracker-modal";
+import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
+import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 
-export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: VehicleWithLogs }) {
+export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { vehicle: VehicleWithLogs; categories: CustomLogCategory[] }) {
     const router = useRouter();
     const { profile } = useUserStore();
     const { vehicles, fetchVehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
@@ -25,6 +28,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
     const [isSaving, setIsSaving] = useState(false);
     const [isEditingSpecs, setIsEditingSpecs] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [customFields, setCustomFields] = useState<{ key: string, value: string }[]>([]);
 
     // Sync global selected vehicle to this page's vehicle if it doesn't match
     useEffect(() => {
@@ -56,6 +60,16 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
         setMessage(null);
 
         const formData = new FormData(e.currentTarget);
+
+        // Convert customFields array back to object and append to formData
+        const customFieldsObj = customFields.reduce((acc, curr) => {
+            if (curr.key.trim() !== '') {
+                acc[curr.key.trim()] = curr.value.trim();
+            }
+            return acc;
+        }, {} as Record<string, string>);
+        formData.append("custom_fields", JSON.stringify(customFieldsObj));
+
         const result = await updateVehicle(vehicle.id, formData);
 
         if (result.error) {
@@ -165,8 +179,12 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                    setIsEditingSpecs(!isEditingSpecs);
+                                    const nextEditingState = !isEditingSpecs;
+                                    setIsEditingSpecs(nextEditingState);
                                     setMessage(null);
+                                    if (nextEditingState) {
+                                        setCustomFields(Object.entries(vehicle.custom_fields || {}).map(([key, value]) => ({ key, value: value as string })));
+                                    }
                                 }}
                                 className="h-8 rounded-full px-3 text-muted-foreground hover:text-primary transition-colors"
                             >
@@ -225,6 +243,66 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                         />
                                     </div>
 
+                                    {/* Custom Fields Section */}
+                                    <div className="space-y-4 pt-4 border-t border-border/50">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-base font-semibold">Custom Specifications</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="rounded-full h-8 px-3"
+                                                onClick={() => setCustomFields([...customFields, { key: "", value: "" }])}
+                                            >
+                                                + Add Field
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {customFields.map((field, index) => (
+                                                <div key={index} className="flex items-center gap-3">
+                                                    <Input
+                                                        placeholder="e.g. Tire Brand"
+                                                        className="rounded-xl flex-1"
+                                                        value={field.key}
+                                                        onChange={(e) => {
+                                                            const newFields = [...customFields];
+                                                            newFields[index].key = e.target.value;
+                                                            setCustomFields(newFields);
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        placeholder="e.g. Michelin"
+                                                        className="rounded-xl flex-1"
+                                                        value={field.value}
+                                                        onChange={(e) => {
+                                                            const newFields = [...customFields];
+                                                            newFields[index].value = e.target.value;
+                                                            setCustomFields(newFields);
+                                                        }}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-10 w-10 text-muted-foreground hover:text-destructive shrink-0 rounded-full"
+                                                        onClick={() => {
+                                                            const newFields = [...customFields];
+                                                            newFields.splice(index, 1);
+                                                            setCustomFields(newFields);
+                                                        }}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            {customFields.length === 0 && (
+                                                <p className="text-sm text-muted-foreground italic bg-muted/30 p-4 rounded-xl text-center border border-dashed border-border/50">
+                                                    No custom specifications added. Click the button above to add one.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {message && (
                                         <div className={`p-4 rounded-xl text-sm ${message.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'}`}>
                                             {message.text}
@@ -269,6 +347,13 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                             <p className="text-sm font-medium text-muted-foreground">Model Year</p>
                                             <p className="font-medium text-foreground">{vehicle.year}</p>
                                         </div>
+                                        {/* Render Custom Fields in Read-Only Mode */}
+                                        {Object.entries(vehicle.custom_fields || {}).map(([key, value]) => (
+                                            <div key={key} className="space-y-1">
+                                                <p className="text-sm font-medium text-muted-foreground">{key}</p>
+                                                <p className="font-medium text-foreground">{value as string}</p>
+                                            </div>
+                                        ))}
                                     </div>
                                     {vehicle.notes && (
                                         <div className="space-y-2 pt-4 border-t border-border/50">
@@ -284,6 +369,36 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                     </Card>
                 </div>
 
+            </div>
+
+            {/* Custom Time-Series Trackers Section */}
+            <div className="relative z-20 space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
+                        <Sparkles className="h-5 w-5 mr-2 text-primary" />
+                        Custom Trackers
+                    </h2>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {/* The Permanent Tyre Tracker Block */}
+                    <div className="md:col-span-2 lg:col-span-3 min-h-[300px]">
+                        <TyreTrackerWidget vehicle={vehicle} latestOdometer={latestOdometer} />
+                    </div>
+
+                    {categories.map(category => (
+                        <div key={category.id} className="min-h-[300px]">
+                            <CustomTrackerWidget
+                                category={category}
+                                logs={vehicle.custom_logs ? vehicle.custom_logs.filter(l => l.category_id === category.id) : []}
+                                vehicleId={vehicle.id}
+                            />
+                        </div>
+                    ))}
+                    {/* The Add Tracker block */}
+                    <div className="min-h-[300px]">
+                        <AddTrackerModal />
+                    </div>
+                </div>
             </div>
 
             {/* Service History Table Section */}

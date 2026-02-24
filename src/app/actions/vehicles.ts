@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function addVehicle(formData: FormData) {
     const supabase = await createClient();
@@ -112,6 +113,34 @@ export async function updateVehicle(id: string, formData: FormData) {
         }
     }
 
+    if (formData.has("custom_fields")) {
+        try {
+            const customFieldsStr = formData.get("custom_fields")?.toString();
+            if (customFieldsStr) {
+                updates.custom_fields = JSON.parse(customFieldsStr);
+            } else {
+                updates.custom_fields = {};
+            }
+        } catch (e) {
+            console.error("Failed to parse custom_fields JSON", e);
+            return { error: "Invalid format for custom specifications." };
+        }
+    }
+
+    if (formData.has("tyre_info")) {
+        try {
+            const tyreInfoStr = formData.get("tyre_info")?.toString();
+            if (tyreInfoStr) {
+                updates.tyre_info = JSON.parse(tyreInfoStr);
+            } else {
+                updates.tyre_info = null;
+            }
+        } catch (e) {
+            console.error("Failed to parse tyre_info JSON", e);
+            return { error: "Invalid format for tire information." };
+        }
+    }
+
     // Ensure we actually have data to update
     if (Object.keys(updates).length === 0) {
         return { error: "No fields provided to update." };
@@ -129,6 +158,9 @@ export async function updateVehicle(id: string, formData: FormData) {
         console.error("Error updating vehicle:", error);
         return { error: error.message };
     }
+
+    revalidatePath(`/(dashboard)/vehicles/${id}`, "page");
+    revalidatePath("/(dashboard)/vehicles", "layout");
 
     return { success: true, vehicle: data };
 }

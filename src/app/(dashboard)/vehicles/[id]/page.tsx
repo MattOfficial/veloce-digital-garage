@@ -19,10 +19,10 @@ export default async function VehiclePage({
         redirect("/login");
     }
 
-    // Fetch the specific vehicle
+    // Fetch the specific vehicle with all logs
     const { data: vehicle, error: vehicleError } = await supabase
         .from("vehicles")
-        .select("*, fuel_logs(*), maintenance_logs(*)")
+        .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*)")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
@@ -31,5 +31,12 @@ export default async function VehiclePage({
         redirect("/profile"); // Redirect back to garage if not found or unauthorized
     }
 
-    return <VehicleManagerClient vehicle={vehicle} />;
+    // Fetch custom categories for the user
+    const { data: categories } = await supabase
+        .from("custom_log_categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    return <VehicleManagerClient vehicle={vehicle} categories={categories || []} />;
 }
