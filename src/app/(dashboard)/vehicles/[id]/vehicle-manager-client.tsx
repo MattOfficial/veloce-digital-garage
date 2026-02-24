@@ -114,10 +114,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
                 <div className="relative z-10 space-y-4">
-                    <Link href="/profile" className="inline-flex items-center text-sm font-semibold text-primary-foreground bg-primary/95 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 mb-4 px-5 py-2.5 rounded-full w-fit">
+                    <button onClick={() => router.back()} className="inline-flex items-center text-sm font-semibold text-primary-foreground bg-primary/95 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 mb-4 px-5 py-2.5 rounded-full w-fit">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Garage
-                    </Link>
+                        Back
+                    </button>
 
                     <div>
                         <div className="flex items-center gap-3 text-primary text-sm font-bold tracking-wider uppercase mb-2">
