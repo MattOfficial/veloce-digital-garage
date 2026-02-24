@@ -2,16 +2,23 @@
 
 import { useVehicleStore } from "@/store/vehicle-store";
 import { useUserStore } from "@/store/user-store";
+import { useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Fuel, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
+import { Fuel, TrendingUp, TrendingDown, DollarSign, Activity, Settings2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+export type FuelEfficiencyUnit = 'km/L' | 'L/100km' | 'MPG (US)' | 'MPG (UK)';
+const METRIC_OPTIONS: FuelEfficiencyUnit[] = ['km/L', 'L/100km', 'MPG (US)', 'MPG (UK)'];
 
 export default function FuelPage() {
     const { selectedVehicleId, vehicles } = useVehicleStore();
     const { profile, getVolumeUnit } = useUserStore();
+
+    const [selectedMetric, setSelectedMetric] = useState<FuelEfficiencyUnit | null>(null);
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
@@ -29,20 +36,49 @@ export default function FuelPage() {
     const logs = selectedVehicle.fuel_logs?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) || [];
     const hasLogs = logs.length > 0;
 
+    const volUnit = getVolumeUnit();
+    const defaultMetric = profile.distanceUnit === 'km' && volUnit.includes('Liter') ? 'km/L' :
+        volUnit.includes('UK') ? 'MPG (UK)' : 'MPG (US)';
+    const activeMetric = selectedMetric || defaultMetric;
+
+    // Helper to calculate runtime multi-metric efficiency
+    const computeEfficiency = (distanceDelta: number, volumeDelta: number, targetMetric: FuelEfficiencyUnit) => {
+        if (!distanceDelta || !volumeDelta || distanceDelta <= 0) return 0;
+
+        let distanceKm = distanceDelta;
+        if (profile.distanceUnit === 'miles') distanceKm = distanceDelta * 1.60934;
+
+        let volumeLiters = volumeDelta;
+        if (volUnit === 'Gallons') volumeLiters = volumeDelta * 3.78541;
+        else if (volUnit.includes('UK')) volumeLiters = volumeDelta * 4.54609;
+
+        switch (targetMetric) {
+            case 'km/L': return distanceKm / volumeLiters;
+            case 'L/100km': return (volumeLiters / distanceKm) * 100;
+            case 'MPG (US)': return (distanceKm * 0.621371) / (volumeLiters * 0.264172);
+            case 'MPG (UK)': return (distanceKm * 0.621371) / (volumeLiters * 0.219969);
+            default: return 0;
+        }
+    };
+
     // --- Analytics Calculations ---
     let avgEfficiency = 0;
     let avgCostPerDistance = 0;
 
-    // Sort logs descending for the table
-    const tableLogs = [...logs].reverse();
+    // Sort logic requires distance delta computation for proper timeline logging
+    const logsWithDelta = logs.map((log, index) => {
+        const distDelta = index > 0 ? log.odometer - logs[index - 1].odometer : 0;
+        const calcEff = computeEfficiency(distDelta, log.fuel_volume, activeMetric);
+        return { ...log, distDelta, calcEff };
+    });
 
-    // Prepare chart data
-    const chartData = logs.map((log) => {
-        const eff = log.calculated_efficiency || 0;
-        const cpd = log.odometer > 0 && log.total_cost > 0 ? (log.total_cost / log.fuel_volume) : 0; // Simple approximation for chart
+    const tableLogs = [...logsWithDelta].reverse();
+
+    // Prepare chart data using dynamically calculated efficiencies
+    const chartData = logsWithDelta.map((log) => {
         return {
             date: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            efficiency: Number(eff.toFixed(2)),
+            efficiency: Number(log.calcEff.toFixed(2)),
             cost: Number(log.total_cost.toFixed(2)),
             volume: Number(log.fuel_volume.toFixed(2)),
             rawDate: log.date
@@ -54,7 +90,6 @@ export default function FuelPage() {
         let totalVolume = 0;
         let totalCost = 0;
 
-        // Calculate based on deltas between fill-ups
         for (let i = 1; i < logs.length; i++) {
             const distance = logs[i].odometer - logs[i - 1].odometer;
             if (distance > 0) {
@@ -65,17 +100,12 @@ export default function FuelPage() {
         }
 
         if (totalDistance > 0 && totalVolume > 0) {
-            // Efficiency based on user locale
-            if (profile.distanceUnit === 'km' && getVolumeUnit() === 'L') {
-                avgEfficiency = (totalVolume / totalDistance) * 100; // L/100km
-            } else {
-                avgEfficiency = totalDistance / totalVolume; // mpg or km/L
-            }
+            avgEfficiency = computeEfficiency(totalDistance, totalVolume, activeMetric);
             avgCostPerDistance = totalCost / totalDistance;
         }
     }
 
-    const efficiencyUnit = profile.distanceUnit === 'km' && getVolumeUnit() === 'L' ? 'L/100km' : `${profile.distanceUnit}/${getVolumeUnit()}`;
+    const efficiencyUnit = activeMetric;
     const numberFormat = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formatCurrency = (val: number) => `${profile.currency || '$'}${numberFormat.format(val)}`;
 
@@ -111,7 +141,25 @@ export default function FuelPage() {
                         <Card className="rounded-[2rem] shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Average Efficiency</CardTitle>
-                                <Activity className="h-4 w-4 text-emerald-500" />
+                                <div className="flex items-center gap-2">
+                                    <Activity className="h-4 w-4 text-emerald-500" />
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger className="focus:outline-none hover:bg-muted p-1 rounded-md transition-colors">
+                                            <Settings2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="rounded-xl border shadow-sm">
+                                            {METRIC_OPTIONS.map((metric) => (
+                                                <DropdownMenuItem
+                                                    key={metric}
+                                                    onClick={() => setSelectedMetric(metric)}
+                                                    className={`cursor-pointer ${activeMetric === metric ? 'font-bold bg-muted/50' : ''}`}
+                                                >
+                                                    {metric}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
@@ -243,7 +291,7 @@ export default function FuelPage() {
                                                 {formatCurrency(log.total_cost)}
                                             </td>
                                             <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
-                                                {log.calculated_efficiency ? `${log.calculated_efficiency.toFixed(2)}` : '--'}
+                                                {log.calcEff ? `${log.calcEff.toFixed(2)}` : '--'}
                                             </td>
                                         </tr>
                                     ))}
