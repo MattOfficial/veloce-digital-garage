@@ -125,3 +125,26 @@ export async function getCustomLogsByVehicle(vehicleId: string) {
 
     return { data, error: null };
 }
+
+export async function deleteTrackerCategory(categoryId: string) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: "You must be logged in to delete a tracker." };
+    }
+
+    // Since custom_logs cascade delete, we only need to delete the category
+    const { error } = await supabase
+        .from("custom_log_categories")
+        .delete()
+        .eq("id", categoryId)
+        .eq("user_id", user.id); // Ensure the user actually owns this category
+
+    if (error) {
+        console.error("Error deleting tracker category:", error);
+        return { error: error.message };
+    }
+
+    return { success: true };
+}

@@ -10,6 +10,7 @@ import { Loader2, Plus, Droplets, Wrench, Sparkles, Receipt, Map, Zap, Battery, 
 import { createTrackerCategory } from "@/app/actions/custom-trackers";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
+import { useVehicleStore } from "@/store/vehicle-store";
 
 const ICONS = [
     { name: "Sparkles", icon: Sparkles },
@@ -35,6 +36,7 @@ const COLORS = [
 
 export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => void }) {
     const router = useRouter();
+    const { fetchVehicles } = useVehicleStore();
     const [open, setOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -57,7 +59,7 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
         } else {
             setOpen(false);
             setMessage(null);
-            router.refresh();
+            fetchVehicles();
             if (onTrackerAdded) onTrackerAdded();
         }
         setIsSaving(false);

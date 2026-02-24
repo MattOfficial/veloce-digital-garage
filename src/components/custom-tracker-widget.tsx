@@ -4,15 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CustomLog, CustomLogCategory } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map, Zap, Battery, Car, Umbrella, Plus, Loader2 } from "lucide-react";
-import { addCustomLog } from "@/app/actions/custom-trackers";
+import { Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map, Zap, Battery, Car, Umbrella, Plus, Loader2, Trash2, ChevronDown } from "lucide-react";
+import { addCustomLog, deleteTrackerCategory } from "@/app/actions/custom-trackers";
 import { useUserStore } from "@/store/user-store";
+import { useVehicleStore } from "@/store/vehicle-store";
+import { cn } from "@/lib/utils";
 
 const ICON_MAP: Record<string, React.ElementType> = {
     Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map, Zap, Battery, Car, Umbrella
@@ -41,6 +42,7 @@ export function CustomTrackerWidget({
 }) {
     const router = useRouter();
     const { profile } = useUserStore();
+    const { fetchVehicles } = useVehicleStore();
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -66,9 +68,25 @@ export function CustomTrackerWidget({
         } else {
             setOpenDialog(false);
             setMessage(null);
-            router.refresh();
+            fetchVehicles();
         }
         setIsSaving(false);
+    }
+
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    async function handleDeleteCategory() {
+        if (!confirm(`Are you sure you want to permanently delete the "${category.name}" tracker and all its historical logs? This cannot be undone.`)) {
+            return;
+        }
+        setIsDeleting(true);
+        const result = await deleteTrackerCategory(category.id);
+        if (result.error) {
+            setMessage({ type: 'error', text: result.error });
+            setIsDeleting(false);
+        } else {
+            fetchVehicles();
+        }
     }
 
     // Sort logs descending by date
@@ -90,81 +108,80 @@ export function CustomTrackerWidget({
                     <CardDescription>Track timeline events for {category.name.toLowerCase()}.</CardDescription>
                 </div>
 
-                <Dialog open={openDialog} onOpenChange={(o) => { if (!o) setMessage(null); setOpenDialog(o); }}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="rounded-full shadow-sm" style={{ color: themeColor, borderColor: `${themeColor}50` }}>
-                            <Plus className="h-4 w-4 mr-1.5" />
-                            Log Event
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
-                        <DialogHeader>
-                            <DialogTitle>Log New: {category.name}</DialogTitle>
-                            <DialogDescription>Add a new entry to this tracker's timeline.</DialogDescription>
-                        </DialogHeader>
-
-                        <form onSubmit={onSubmitLog} className="space-y-6 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="date">Date</Label>
-                                <Input type="date" id="date" name="date" required className="rounded-xl" defaultValue={new Date().toISOString().split('T')[0]} />
-                            </div>
-
-                            {category.track_cost && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="cost">Total Cost ({currencySymbol})</Label>
-                                    <Input type="number" id="cost" name="cost" step="0.01" min="0" placeholder="0.00" className="rounded-xl" />
-                                </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Notes & Details (Optional)</Label>
-                                <Textarea id="notes" name="notes" placeholder="Any specific details about this event..." className="rounded-xl min-h-[100px]" />
-                            </div>
-
-                            {message && (
-                                <div className={`p-4 rounded-xl text-sm ${message.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'}`}>
-                                    {message.text}
-                                </div>
-                            )}
-
-                            <Button type="submit" disabled={isSaving} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all" style={{ backgroundColor: themeColor, color: '#fff' }}>
-                                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Log"}
+                <div className="flex items-center gap-2">
+                    <Dialog open={openDialog} onOpenChange={(o) => { if (!o) setMessage(null); setOpenDialog(o); }}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="rounded-full shadow-sm" style={{ color: themeColor, borderColor: `${themeColor}50` }}>
+                                <Plus className="h-4 w-4 mr-1.5" />
+                                Log Event
                             </Button>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+                            <DialogHeader>
+                                <DialogTitle>Log New: {category.name}</DialogTitle>
+                                <DialogDescription>Add a new entry to this tracker's timeline.</DialogDescription>
+                            </DialogHeader>
+
+                            <form onSubmit={onSubmitLog} className="space-y-6 pt-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="date">Date</Label>
+                                    <Input type="date" id="date" name="date" required className="rounded-xl" defaultValue={new Date().toISOString().split('T')[0]} />
+                                </div>
+
+                                {category.track_cost && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cost">Total Cost ({currencySymbol})</Label>
+                                        <Input type="number" id="cost" name="cost" step="0.01" min="0" placeholder="0.00" className="rounded-xl" />
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="notes">Notes & Details (Optional)</Label>
+                                    <Textarea id="notes" name="notes" placeholder="Any specific details about this event..." className="rounded-xl min-h-[100px]" />
+                                </div>
+
+                                {message && (
+                                    <div className={`p-4 rounded-xl text-sm ${message.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'}`}>
+                                        {message.text}
+                                    </div>
+                                )}
+
+                                <Button type="submit" disabled={isSaving} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all" style={{ backgroundColor: themeColor, color: '#fff' }}>
+                                    {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Log"}
+                                </Button>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+                        onClick={handleDeleteCategory}
+                        disabled={isDeleting}
+                        title="Delete Tracker"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
             </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col">
+            <CardContent className="p-0 flex-1 flex flex-col relative">
+                {isDeleting && (
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                )}
                 {sortedLogs.length > 0 ? (
-                    <div className="overflow-x-auto flex-1">
-                        <Table>
-                            <TableHeader className="bg-muted/10">
-                                <TableRow className="border-b/50 hover:bg-transparent">
-                                    <TableHead className="w-[120px] font-semibold text-muted-foreground pl-6">Date</TableHead>
-                                    <TableHead className="font-semibold text-muted-foreground w-1/2">Notes</TableHead>
-                                    {category.track_cost && (
-                                        <TableHead className="text-right font-semibold text-muted-foreground pr-6">Cost</TableHead>
-                                    )}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sortedLogs.map((log) => (
-                                    <TableRow key={log.id} className="group hover:bg-muted/20 transition-colors">
-                                        <TableCell className="font-medium pl-6 text-foreground/80 whitespace-nowrap">
-                                            {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground/90 text-sm">
-                                            {log.notes || <span className="italic opacity-50">No details provided</span>}
-                                        </TableCell>
-                                        {category.track_cost && (
-                                            <TableCell className="text-right font-semibold pr-6 text-foreground/90">
-                                                {log.cost !== null ? `${currencySymbol}${log.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                    <div className="overflow-y-auto overflow-x-hidden flex-1 p-4 space-y-3 max-h-[400px] scrollbar-thin">
+                        {sortedLogs.map((log) => (
+                            <LogBubble
+                                key={log.id}
+                                log={log}
+                                category={category}
+                                currencySymbol={currencySymbol}
+                                themeColor={themeColor}
+                                IconComponent={IconComponent}
+                            />
+                        ))}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/5 flex-1 min-h-[200px]">
@@ -182,5 +199,60 @@ export function CustomTrackerWidget({
                 )}
             </CardContent>
         </Card>
+    );
+}
+
+function LogBubble({ log, category, currencySymbol, themeColor, IconComponent }: {
+    log: CustomLog,
+    category: CustomLogCategory,
+    currencySymbol: string,
+    themeColor: string,
+    IconComponent: React.ElementType
+}) {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <div
+            onClick={() => setExpanded(!expanded)}
+            className="group relative flex flex-col gap-3 p-4 rounded-3xl border bg-card hover:bg-muted/40 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md"
+            style={{ borderColor: `${themeColor}20` }}
+        >
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full shrink-0" style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
+                        <IconComponent className="h-4 w-4" />
+                    </div>
+                    <div>
+                        <div className="font-semibold text-sm text-foreground/90">
+                            {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {category.track_cost && log.cost !== null && (
+                        <div className="font-bold text-sm tracking-tight" style={{ color: themeColor }}>
+                            {currencySymbol}{log.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                    )}
+                    {log.notes && (
+                        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-300", expanded ? "rotate-180" : "")} />
+                    )}
+                </div>
+            </div>
+
+            {log.notes && (
+                <div className={cn(
+                    "text-sm text-muted-foreground/90 pl-11 pr-4 leading-relaxed transition-all duration-300 ease-in-out",
+                    expanded ? "line-clamp-none pb-2 opacity-100" : "line-clamp-2 opacity-80"
+                )}>
+                    {log.notes}
+                </div>
+            )}
+
+            {!log.notes && expanded && (
+                <div className="text-xs italic text-muted-foreground/50 pl-11 pb-2">No additional details recorded.</div>
+            )}
+        </div>
     );
 }

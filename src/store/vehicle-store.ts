@@ -35,7 +35,8 @@ export const useVehicleStore = create<VehicleStore>((set, get) => ({
                 .select(`
                     *,
                     fuel_logs (*),
-                    maintenance_logs (*)
+                    maintenance_logs (*),
+                    custom_logs (*)
                 `)
                 .eq("user_id", user.id)
                 .order('created_at', { ascending: false });

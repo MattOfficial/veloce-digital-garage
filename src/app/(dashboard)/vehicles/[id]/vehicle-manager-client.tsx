@@ -29,6 +29,11 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
     const [isEditingSpecs, setIsEditingSpecs] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [customFields, setCustomFields] = useState<{ key: string, value: string }[]>([]);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Sync global selected vehicle to this page's vehicle if it doesn't match
     useEffect(() => {
@@ -82,6 +87,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
             setIsEditingSpecs(false);
         }
         setIsSaving(false);
+    }
+
+    if (!isMounted) {
+        return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse flex items-center gap-2"><Car className="h-6 w-6 text-muted-foreground" /> <span className="text-muted-foreground">Loading Vehicle Profile...</span></div></div>;
     }
 
     return (
@@ -371,38 +380,13 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
 
             </div>
 
-            {/* Custom Time-Series Trackers Section */}
-            <div className="relative z-20 space-y-4">
-                <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
-                        <Sparkles className="h-5 w-5 mr-2 text-primary" />
-                        Custom Trackers
-                    </h2>
-                </div>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {/* The Permanent Tyre Tracker Block */}
-                    <div className="md:col-span-2 lg:col-span-3 min-h-[300px]">
-                        <TyreTrackerWidget vehicle={vehicle} latestOdometer={latestOdometer} />
-                    </div>
-
-                    {categories.map(category => (
-                        <div key={category.id} className="min-h-[300px]">
-                            <CustomTrackerWidget
-                                category={category}
-                                logs={vehicle.custom_logs ? vehicle.custom_logs.filter(l => l.category_id === category.id) : []}
-                                vehicleId={vehicle.id}
-                            />
-                        </div>
-                    ))}
-                    {/* The Add Tracker block */}
-                    <div className="min-h-[300px]">
-                        <AddTrackerModal />
-                    </div>
-                </div>
+            {/* The Permanent Tyre Tracker Block */}
+            <div className="relative z-20 mt-8 mb-6">
+                <TyreTrackerWidget vehicle={vehicle} latestOdometer={latestOdometer} />
             </div>
 
             {/* Service History Table Section */}
-            <div className="relative z-20">
+            <div className="relative z-20 mb-8">
                 <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/20 border-b">
                         <div className="space-y-1">
@@ -465,6 +449,31 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
                         )}
                     </CardContent>
                 </Card>
+            </div>
+
+            {/* Custom Time-Series Trackers Section */}
+            <div className="relative z-20 space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
+                        <Sparkles className="h-5 w-5 mr-2 text-primary" />
+                        Custom Trackers
+                    </h2>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {categories.map(category => (
+                        <div key={category.id} className="min-h-[300px]">
+                            <CustomTrackerWidget
+                                category={category}
+                                logs={vehicle.custom_logs ? vehicle.custom_logs.filter(l => l.category_id === category.id) : []}
+                                vehicleId={vehicle.id}
+                            />
+                        </div>
+                    ))}
+                    {/* The Add Tracker block */}
+                    <div className="min-h-[300px]">
+                        <AddTrackerModal />
+                    </div>
+                </div>
             </div>
 
         </MotionWrapper>
