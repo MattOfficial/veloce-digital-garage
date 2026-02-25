@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { User, Save, Car, Trash2, PlusCircle } from "lucide-react";
+import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ export default function ProfilePage() {
     const [vehicleMessage, setVehicleMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [newVehicleImageUrl, setNewVehicleImageUrl] = useState<string>("");
+    const [selectedPowertrain, setSelectedPowertrain] = useState<string>("ice");
     const addFormRef = useRef<HTMLFormElement>(null);
 
     // Initial fetch to sync store if not already loaded, and set local state
@@ -109,6 +110,7 @@ export default function ProfilePage() {
             setVehicleMessage({ type: 'success', text: "Vehicle added successfully!" });
             setDialogOpen(false);
             setNewVehicleImageUrl(""); // Reset local image state
+            setSelectedPowertrain("ice");
             fetchVehicles(); // Refresh global store
         }
         setIsAddingVehicle(false);
@@ -253,7 +255,7 @@ export default function ProfilePage() {
                                     Add Vehicle
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+                            <DialogContent className="sm:max-w-[500px] rounded-[2rem] border-border/50 shadow-2xl">
                                 <DialogHeader>
                                     <DialogTitle>Add New Vehicle</DialogTitle>
                                     <DialogDescription>
@@ -273,24 +275,60 @@ export default function ProfilePage() {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="make">Make</Label>
-                                        <Input id="make" name="make" placeholder="e.g. Toyota" required className="rounded-xl" />
+                                        <Input id="make" name="make" placeholder="e.g. Toyota" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="model">Model</Label>
-                                        <Input id="model" name="model" placeholder="e.g. Camry" required className="rounded-xl" />
+                                        <Input id="model" name="model" placeholder="e.g. Camry" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="vehicle_type">Type</Label>
+                                            <Select name="vehicle_type" defaultValue="car">
+                                                <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="car">Car</SelectItem>
+                                                    <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                                                    <SelectItem value="truck">Truck</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="powertrain">Powertrain</Label>
+                                            <Select name="powertrain" value={selectedPowertrain} onValueChange={setSelectedPowertrain}>
+                                                <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
+                                                    <SelectValue placeholder="Select powertrain" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="ice">Combustion (ICE)</SelectItem>
+                                                    <SelectItem value="ev">Electric (EV)</SelectItem>
+                                                    <SelectItem value="phev">Plug-in Hybrid (PHEV)</SelectItem>
+                                                    <SelectItem value="hev">Hybrid (HEV)</SelectItem>
+                                                    <SelectItem value="rex">Range Extender (REX)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="year">Year</Label>
-                                            <Input id="year" name="year" type="number" min="1900" max={new Date().getFullYear() + 1} placeholder="2020" required className="rounded-xl" />
+                                            <Input id="year" name="year" type="number" min="1900" max={new Date().getFullYear() + 1} placeholder="2020" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="baseline_odometer">Initial Distance ({distanceUnit})</Label>
-                                            <Input id="baseline_odometer" name="baseline_odometer" type="number" min="0" step="any" placeholder="0" required className="rounded-xl" />
+                                            <Input id="baseline_odometer" name="baseline_odometer" type="number" min="0" step="any" placeholder="0" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                     </div>
+                                    {(selectedPowertrain === 'ev' || selectedPowertrain === 'phev' || selectedPowertrain === 'rex') && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                            <Label htmlFor="battery_capacity_kwh">Battery Capacity (kWh) <span className="text-muted-foreground text-xs font-normal">(Optional)</span></Label>
+                                            <Input id="battery_capacity_kwh" name="battery_capacity_kwh" type="number" min="0" step="any" placeholder="e.g. 75" className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                        </div>
+                                    )}
                                     <div className="pt-4 flex justify-end">
-                                        <Button type="submit" disabled={isAddingVehicle} className="rounded-xl">
+                                        <Button type="submit" disabled={isAddingVehicle} className="rounded-xl h-11 w-full font-semibold shadow-md active:scale-[0.98] transition-all">
                                             {isAddingVehicle ? "Adding..." : "Add Vehicle"}
                                         </Button>
                                     </div>
@@ -356,14 +394,24 @@ export default function ProfilePage() {
                                             </div>
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/20 group-hover:scale-105 transition-transform duration-500">
-                                                <Car className="h-20 w-20" />
+                                                {vehicle.vehicle_type === 'truck' ? <Truck className="h-20 w-20" /> : <Car className="h-20 w-20" />}
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-                                        <div className="absolute bottom-3 left-4">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+                                        <div className="absolute bottom-3 left-4 flex gap-2">
                                             <div className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-primary/20 backdrop-blur-md">
                                                 {vehicle.year}
                                             </div>
+                                            {vehicle.powertrain === 'ev' && (
+                                                <div className="bg-blue-500/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-blue-400/30 backdrop-blur-md flex items-center gap-1">
+                                                    <Zap className="h-3 w-3" /> EV {vehicle.battery_capacity_kwh ? `| ${vehicle.battery_capacity_kwh}kWh` : ''}
+                                                </div>
+                                            )}
+                                            {(vehicle.powertrain === 'phev' || vehicle.powertrain === 'hev' || vehicle.powertrain === 'rex') && (
+                                                <div className="bg-emerald-500/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-emerald-400/30 backdrop-blur-md flex items-center gap-1">
+                                                    <Leaf className="h-3 w-3" /> {vehicle.powertrain.toUpperCase()}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

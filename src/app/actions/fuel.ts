@@ -12,6 +12,9 @@ export async function submitFuelLog(formData: FormData) {
     const odometer = parseFloat(formData.get("odometer") as string);
     const fuel_volume = parseFloat(formData.get("fuel_volume") as string);
     const total_cost = parseFloat(formData.get("total_cost") as string);
+    const energy_type = (formData.get("energy_type") as string) || "fuel";
+    const estimatedRangeStr = formData.get("estimated_range");
+    const estimated_range = estimatedRangeStr ? parseFloat(estimatedRangeStr as string) : null;
 
     if (!vehicle_id || !date || !odometer || !fuel_volume || !total_cost) {
         return { success: false, error: "All fields are required" };
@@ -59,6 +62,8 @@ export async function submitFuelLog(formData: FormData) {
         fuel_volume,
         total_cost,
         calculated_efficiency,
+        energy_type,
+        estimated_range,
     });
 
     if (error) {

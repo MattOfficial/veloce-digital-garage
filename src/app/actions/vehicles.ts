@@ -19,6 +19,9 @@ export async function addVehicle(formData: FormData) {
     const yearStr = formData.get("year")?.toString();
     const odometerStr = formData.get("baseline_odometer")?.toString();
     const image_url = formData.get("image_url")?.toString() || null;
+    const vehicle_type = formData.get("vehicle_type")?.toString() || 'car';
+    const powertrain = formData.get("powertrain")?.toString() || 'ice';
+    const batteryCapacityStr = formData.get("battery_capacity_kwh")?.toString();
 
     if (!make || !model || !yearStr || !odometerStr) {
         return { error: "Please fill out all required fields." };
@@ -26,6 +29,7 @@ export async function addVehicle(formData: FormData) {
 
     const year = parseInt(yearStr, 10);
     const baseline_odometer = parseFloat(odometerStr);
+    const battery_capacity_kwh = batteryCapacityStr ? parseFloat(batteryCapacityStr) : null;
 
     if (isNaN(year) || isNaN(baseline_odometer)) {
         return { error: "Year and Odometer must be valid numbers." };
@@ -40,6 +44,9 @@ export async function addVehicle(formData: FormData) {
             year,
             baseline_odometer,
             image_url,
+            vehicle_type,
+            powertrain,
+            battery_capacity_kwh
         })
         .select()
         .single();
@@ -90,7 +97,7 @@ export async function updateVehicle(id: string, formData: FormData) {
 
     const updates: Record<string, string | number | null | object> = {};
 
-    const stringFields = ["make", "model", "image_url", "vin", "license_plate", "color", "engine_type", "transmission", "notes"];
+    const stringFields = ["make", "model", "image_url", "vin", "license_plate", "color", "engine_type", "transmission", "notes", "vehicle_type", "powertrain"];
     stringFields.forEach((field) => {
         if (formData.has(field)) {
             updates[field] = formData.get(field)?.toString() || null;
@@ -110,6 +117,16 @@ export async function updateVehicle(id: string, formData: FormData) {
         if (odoStr) {
             const odo = parseFloat(odoStr);
             if (!isNaN(odo)) updates.baseline_odometer = odo;
+        }
+    }
+
+    if (formData.has("battery_capacity_kwh")) {
+        const battStr = formData.get("battery_capacity_kwh")?.toString();
+        if (battStr) {
+            const batt = parseFloat(battStr);
+            if (!isNaN(batt)) updates.battery_capacity_kwh = batt;
+        } else {
+            updates.battery_capacity_kwh = null;
         }
     }
 

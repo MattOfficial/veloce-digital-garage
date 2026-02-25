@@ -40,6 +40,9 @@ export type Vehicle = {
   notes: string | null;
   custom_fields: Record<string, string> | null;
   tyre_info: TyreInfo | null;
+  vehicle_type: 'car' | 'motorcycle' | 'truck';
+  powertrain: 'ice' | 'ev' | 'hev' | 'phev' | 'rex';
+  battery_capacity_kwh: number | null;
   created_at: string;
 };
 
@@ -48,9 +51,11 @@ export type FuelLog = {
   vehicle_id: string;
   date: string;
   odometer: number;
-  fuel_volume: number;
+  fuel_volume: number; // For EVs this represents kWh. Legacy name kept for DB column mapping context. 
   total_cost: number;
   calculated_efficiency: number | null;
+  energy_type: 'fuel' | 'charge';
+  estimated_range: number | null;
   created_at: string;
 };
 

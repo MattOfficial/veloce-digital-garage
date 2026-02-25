@@ -82,9 +82,12 @@ export default function FuelPage() {
             efficiency: Number(log.calcEff.toFixed(2)),
             cost: Number(log.total_cost.toFixed(2)),
             volume: Number(log.fuel_volume.toFixed(2)),
+            range: log.estimated_range ? Number(log.estimated_range) : null,
             rawDate: log.date
         };
-    }).filter(d => d.efficiency > 0);
+    }).filter(d => d.efficiency > 0 || (d.range !== null && d.range > 0));
+
+    const hasRangeData = chartData.some(d => d.range !== null && d.range > 0);
 
     if (logs.length > 1) {
         let totalDistance = 0;
@@ -264,6 +267,38 @@ export default function FuelPage() {
                                 </Card>
                             </MotionWrapper>
                         </div>
+                    )}
+
+                    {hasRangeData && (
+                        <MotionWrapper delay={0.6}>
+                            <Card className="overflow-hidden">
+                                <CardHeader className="border-b border-white/5">
+                                    <CardTitle>Battery Range Trend</CardTitle>
+                                    <CardDescription>Track your EV's estimated battery range over time.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[250px] w-full pt-6">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData.filter(d => d.range !== null)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
+                                            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} />
+                                            <YAxis tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} domain={['dataMin - 10', 'dataMax + 10']} />
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="range"
+                                                stroke="#3b82f6"
+                                                strokeWidth={3}
+                                                dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2, stroke: "#030712" }}
+                                                activeDot={{ r: 6 }}
+                                                name={`Range (${profile.distanceUnit})`}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
                     )}
 
                     {/* Data Table */}

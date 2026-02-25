@@ -8,6 +8,7 @@ import { useState } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
 
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -33,7 +34,8 @@ const formSchema = z.object({
     date: z.string().nonempty({ message: "Date is required" }),
     odometer: z.coerce.number().positive({ message: "Must be a positive number" }),
     fuel_volume: z.coerce.number().positive({ message: "Must be a positive number" }),
-    total_cost: z.coerce.number().positive({ message: "Must be a positive number" }),
+    total_cost: z.coerce.number().min(0, { message: "Must be a positive number or zero" }),
+    estimated_range: z.coerce.number().optional(),
 });
 
 export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
@@ -42,6 +44,11 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    const isEV = vehicle.powertrain === 'ev';
+    const isPHEV = vehicle.powertrain === 'phev' || vehicle.powertrain === 'rex';
+    const defaultEnergyType = isEV ? 'charge' : 'fuel';
+    const [energyType, setEnergyType] = useState<'fuel' | 'charge'>(defaultEnergyType);
 
     // Auto-fill odometer based on highest previous reading if any exist
     const latestOdometer = vehicle.fuel_logs?.length > 0
@@ -55,6 +62,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
             odometer: latestOdometer,
             fuel_volume: 0,
             total_cost: 0,
+            estimated_range: undefined,
         },
     });
 
@@ -68,6 +76,10 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
         formData.append("odometer", values.odometer.toString());
         formData.append("fuel_volume", values.fuel_volume.toString());
         formData.append("total_cost", values.total_cost.toString());
+        formData.append("energy_type", energyType);
+        if (values.estimated_range !== undefined && values.estimated_range !== null) {
+            formData.append("estimated_range", values.estimated_range.toString());
+        }
 
         try {
             const result = await submitFuelLog(formData);
@@ -81,7 +93,8 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
                         date: values.date, // Keep the date they just entered in case of back to back logs
                         odometer: values.odometer,
                         fuel_volume: 0,
-                        total_cost: 0
+                        total_cost: 0,
+                        estimated_range: undefined,
                     });
                 }, 1000);
             } else {
@@ -107,11 +120,20 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] rounded-[2rem]">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">Log Fill-Up</DialogTitle>
+                    <DialogTitle className="text-xl">Log {isEV ? 'Charge' : isPHEV ? 'Fill-Up / Charge' : 'Fill-Up'}</DialogTitle>
                     <DialogDescription>
                         Enter details for your {vehicle.make} {vehicle.model}.
                     </DialogDescription>
                 </DialogHeader>
+
+                {isPHEV && (
+                    <Tabs value={energyType} onValueChange={(v) => setEnergyType(v as 'fuel' | 'charge')} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 rounded-xl">
+                            <TabsTrigger value="fuel" className="rounded-lg">Fuel</TabsTrigger>
+                            <TabsTrigger value="charge" className="rounded-lg">Charge</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                )}
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-2">
@@ -150,9 +172,9 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
                                 name="fuel_volume"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Volume ({getVolumeUnit()})</FormLabel>
+                                        <FormLabel>{energyType === 'charge' ? 'Energy (kWh)' : `Volume (${getVolumeUnit()})`}</FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" className="rounded-xl" placeholder="e.g. 35.5" {...field} />
+                                            <Input type="number" step="0.01" className="rounded-xl" placeholder={energyType === 'charge' ? "e.g. 50.5" : "e.g. 35.5"} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -172,6 +194,22 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
                                     </FormItem>
                                 )}
                             />
+
+                            {energyType === 'charge' && (
+                                <FormField
+                                    control={form.control}
+                                    name="estimated_range"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2 sm:col-span-1">
+                                            <FormLabel>Estimated Range ({profile.distanceUnit}) <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.1" className="rounded-xl" placeholder="e.g. 300" {...field} value={field.value ?? ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
                         </div>
 
                         {message && (

@@ -27,8 +27,8 @@ function parseDotCode(dotCode?: string): Date | null {
     return date;
 }
 
-type WheelPos = 'FL' | 'FR' | 'RL' | 'RR';
-type ApplyTarget = 'ALL' | 'FRONT' | 'REAR' | 'FL' | 'FR' | 'RL' | 'RR';
+type WheelPos = 'FL' | 'FR' | 'RL' | 'RR' | 'F' | 'R';
+type ApplyTarget = 'ALL' | 'FRONT' | 'REAR' | 'FL' | 'FR' | 'RL' | 'RR' | 'F' | 'R';
 
 const MAX_AGE_YEARS = 6;
 const MAX_MILEAGE = 50000;
@@ -88,12 +88,23 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
         dot_code: tyreInfo.dot_code
     } : undefined;
 
-    const tires: Record<WheelPos, TireItem | undefined> = {
-        FL: tyreInfo?.front_left || legacyTire,
-        FR: tyreInfo?.front_right || legacyTire,
-        RL: tyreInfo?.rear_left || legacyTire,
-        RR: tyreInfo?.rear_right || legacyTire,
-    };
+    let tires: Partial<Record<WheelPos, TireItem | undefined>> = {};
+    const isMoto = vehicle.vehicle_type === 'motorcycle';
+
+    if (isMoto) {
+        // For motorcycles, front_left = Front, rear_left = Rear (repurposing DB fields)
+        tires = {
+            F: tyreInfo?.front_left || legacyTire,
+            R: tyreInfo?.rear_left || legacyTire,
+        };
+    } else {
+        tires = {
+            FL: tyreInfo?.front_left || legacyTire,
+            FR: tyreInfo?.front_right || legacyTire,
+            RL: tyreInfo?.rear_left || legacyTire,
+            RR: tyreInfo?.rear_right || legacyTire,
+        };
+    }
 
     const hasAnyTires = Object.values(tires).some(t => t !== undefined);
 
@@ -116,19 +127,30 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
         const updatedTyreInfo: TyreInfo = { ...tyreInfo };
 
         if (applyTarget === 'ALL') {
-            updatedTyreInfo.front_left = newTire;
-            updatedTyreInfo.front_right = newTire;
-            updatedTyreInfo.rear_left = newTire;
-            updatedTyreInfo.rear_right = newTire;
+            if (isMoto) {
+                updatedTyreInfo.front_left = newTire; // Front
+                updatedTyreInfo.rear_left = newTire;  // Rear
+            } else {
+                updatedTyreInfo.front_left = newTire;
+                updatedTyreInfo.front_right = newTire;
+                updatedTyreInfo.rear_left = newTire;
+                updatedTyreInfo.rear_right = newTire;
+            }
         } else if (applyTarget === 'FRONT') {
-            updatedTyreInfo.front_left = newTire;
-            updatedTyreInfo.front_right = newTire;
+            if (isMoto) updatedTyreInfo.front_left = newTire;
+            else {
+                updatedTyreInfo.front_left = newTire;
+                updatedTyreInfo.front_right = newTire;
+            }
         } else if (applyTarget === 'REAR') {
-            updatedTyreInfo.rear_left = newTire;
-            updatedTyreInfo.rear_right = newTire;
-        } else if (applyTarget === 'FL') updatedTyreInfo.front_left = newTire;
+            if (isMoto) updatedTyreInfo.rear_left = newTire;
+            else {
+                updatedTyreInfo.rear_left = newTire;
+                updatedTyreInfo.rear_right = newTire;
+            }
+        } else if (applyTarget === 'FL' || applyTarget === 'F') updatedTyreInfo.front_left = newTire;
         else if (applyTarget === 'FR') updatedTyreInfo.front_right = newTire;
-        else if (applyTarget === 'RL') updatedTyreInfo.rear_left = newTire;
+        else if (applyTarget === 'RL' || applyTarget === 'R') updatedTyreInfo.rear_left = newTire;
         else if (applyTarget === 'RR') updatedTyreInfo.rear_right = newTire;
 
         // Remove legacy flat fields since we migrated to the new schema
@@ -183,6 +205,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                 applyTarget={applyTarget}
                                 setApplyTarget={setApplyTarget}
                                 latestOdometer={latestOdometer}
+                                isMoto={isMoto}
                             />
                         </DialogContent>
                     </Dialog>
@@ -214,6 +237,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                     applyTarget={applyTarget}
                                     setApplyTarget={setApplyTarget}
                                     latestOdometer={latestOdometer}
+                                    isMoto={isMoto}
                                 />
                             </DialogContent>
                         </Dialog>
@@ -224,18 +248,31 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                         <div className="relative w-full max-w-xl h-[280px] bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 dark:from-slate-800 dark:via-indigo-950/30 dark:to-slate-900 rounded-[3rem] border-[4px] border-white/50 dark:border-slate-700/50 shadow-xl flex items-center justify-center shrink-0 overflow-visible transition-colors mx-auto group/car">
 
                             {/* Static Wheels Array */}
-                            <div className="absolute left-6 xl:left-8 top-[-2.5rem]">
-                                <WheelComponent pos="RL" tire={tires.RL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
-                            </div>
-                            <div className="absolute right-6 xl:right-8 top-[-2.5rem]">
-                                <WheelComponent pos="FL" tire={tires.FL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
-                            </div>
-                            <div className="absolute left-6 xl:left-8 bottom-[-2.5rem]">
-                                <WheelComponent pos="RR" tire={tires.RR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
-                            </div>
-                            <div className="absolute right-6 xl:right-8 bottom-[-2.5rem]">
-                                <WheelComponent pos="FR" tire={tires.FR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
-                            </div>
+                            {isMoto ? (
+                                <>
+                                    <div className="absolute right-8 top-1/2 -translate-y-1/2">
+                                        <WheelComponent pos="F" tire={tires.F} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                    <div className="absolute left-8 top-1/2 -translate-y-1/2">
+                                        <WheelComponent pos="R" tire={tires.R} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="absolute left-6 xl:left-8 top-[-2.5rem]">
+                                        <WheelComponent pos="RL" tire={tires.RL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                    <div className="absolute right-6 xl:right-8 top-[-2.5rem]">
+                                        <WheelComponent pos="FL" tire={tires.FL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                    <div className="absolute left-6 xl:left-8 bottom-[-2.5rem]">
+                                        <WheelComponent pos="RR" tire={tires.RR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                    <div className="absolute right-6 xl:right-8 bottom-[-2.5rem]">
+                                        <WheelComponent pos="FR" tire={tires.FR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
+                                    </div>
+                                </>
+                            )}
 
                             {/* Mid-chassis visual */}
                             <div className="absolute inset-y-16 inset-x-32 bg-white/40 dark:bg-black/20 rounded-3xl border border-white/60 dark:border-white/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] overflow-hidden backdrop-blur-md transition-all duration-500">
@@ -250,7 +287,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                     <Button variant="ghost" size="sm" className="absolute top-4 right-4 h-6 text-xs px-2" onClick={() => setSelectedWheel(null)}>Close</Button>
                                     <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-primary" />
-                                        {selectedWheel === 'FL' ? 'Front Left' : selectedWheel === 'FR' ? 'Front Right' : selectedWheel === 'RL' ? 'Rear Left' : 'Rear Right'} Tire
+                                        {selectedWheel === 'FL' ? 'Front Left' : selectedWheel === 'FR' ? 'Front Right' : selectedWheel === 'RL' ? 'Rear Left' : selectedWheel === 'RR' ? 'Rear Right' : selectedWheel === 'F' ? 'Front Wheel' : 'Rear Wheel'} Tire
                                     </h4>
 
                                     {tires[selectedWheel] ? (
@@ -356,8 +393,9 @@ interface TireFormProps {
     applyTarget: ApplyTarget;
     setApplyTarget: (target: ApplyTarget) => void;
     latestOdometer: number;
+    isMoto: boolean;
 }
-function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget, setApplyTarget, latestOdometer }: TireFormProps) {
+function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget, setApplyTarget, latestOdometer, isMoto }: TireFormProps) {
     return (
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
             <div className="space-y-2">
@@ -367,13 +405,23 @@ function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget
                         <SelectValue placeholder="Select wheels" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                        <SelectItem value="ALL">All 4 Wheels</SelectItem>
-                        <SelectItem value="FRONT">Front Pair Only</SelectItem>
-                        <SelectItem value="REAR">Rear Pair Only</SelectItem>
-                        <SelectItem value="FL">Front Left Only</SelectItem>
-                        <SelectItem value="FR">Front Right Only</SelectItem>
-                        <SelectItem value="RL">Rear Left Only</SelectItem>
-                        <SelectItem value="RR">Rear Right Only</SelectItem>
+                        {isMoto ? (
+                            <>
+                                <SelectItem value="ALL">Both Wheels</SelectItem>
+                                <SelectItem value="F">Front Only</SelectItem>
+                                <SelectItem value="R">Rear Only</SelectItem>
+                            </>
+                        ) : (
+                            <>
+                                <SelectItem value="ALL">All 4 Wheels</SelectItem>
+                                <SelectItem value="FRONT">Front Pair Only</SelectItem>
+                                <SelectItem value="REAR">Rear Pair Only</SelectItem>
+                                <SelectItem value="FL">Front Left Only</SelectItem>
+                                <SelectItem value="FR">Front Right Only</SelectItem>
+                                <SelectItem value="RL">Rear Left Only</SelectItem>
+                                <SelectItem value="RR">Rear Right Only</SelectItem>
+                            </>
+                        )}
                     </SelectContent>
                 </Select>
             </div>
