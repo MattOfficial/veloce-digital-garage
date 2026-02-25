@@ -189,109 +189,121 @@ export default function InsightsPage() {
 
             {/* Top Level KPIs */}
             <div className="grid gap-4 md:grid-cols-3">
-                <Card className="rounded-[2rem] border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative">
-                    <div className="absolute top-0 right-0 p-4 opacity-20">
-                        <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
-                    </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-medium opacity-90">Total Running Cost</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-black mb-1">{formatCurrency(tcoPerDist)} <span className="text-lg opacity-70 font-medium">/ {distUnit}</span></div>
-                        <p className="text-sm opacity-80">
-                            Based on {formatCurrency(totalCost)} spent over {totalDistance.toLocaleString()} {distUnit}.
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Daily Operating Cost</CardTitle>
-                        <div className="p-2 bg-emerald-100 rounded-full text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                            <DollarSign className="h-4 w-4" />
+                <MotionWrapper delay={0.1}>
+                    <Card className="border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-20">
+                            <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black text-foreground">{formatCurrency(runningCostPerDay)} <span className="text-base font-medium text-muted-foreground">/ day</span></div>
-                        <p className="text-xs text-muted-foreground mt-1">Average spent across all categories</p>
-                    </CardContent>
-                </Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base font-medium opacity-90">Total Running Cost</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-black mb-1">{formatCurrency(tcoPerDist)} <span className="text-lg opacity-70 font-medium">/ {distUnit}</span></div>
+                            <p className="text-sm opacity-80">
+                                Based on {formatCurrency(totalCost)} spent over {totalDistance.toLocaleString()} {distUnit}.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
-                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Daily Distance</CardTitle>
-                        <div className="p-2 bg-blue-100 rounded-full text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                            <Activity className="h-4 w-4" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black text-foreground">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-muted-foreground">{distUnit}</span></div>
-                        <p className="text-xs text-muted-foreground mt-1">Typical distance covered per day</p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.2}>
+                    <Card className="relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Daily Operating Cost</CardTitle>
+                            <div className="p-2 bg-emerald-500/10 rounded-full text-emerald-500">
+                                <DollarSign className="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-black text-foreground">{formatCurrency(runningCostPerDay)} <span className="text-base font-medium text-muted-foreground">/ day</span></div>
+                            <p className="text-xs text-muted-foreground mt-1">Average spent across all categories</p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
+
+                <MotionWrapper delay={0.3}>
+                    <Card className="relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Daily Distance</CardTitle>
+                            <div className="p-2 bg-blue-500/10 rounded-full text-blue-500">
+                                <Activity className="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-black text-foreground">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-muted-foreground">{distUnit}</span></div>
+                            <p className="text-xs text-muted-foreground mt-1">Typical distance covered per day</p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             </div>
 
 
             <div className="grid gap-6 md:grid-cols-3">
                 {/* Cost Breakdown over Time */}
-                <Card className="md:col-span-2 rounded-[2rem] border shadow-sm overflow-hidden bg-card">
-                    <CardHeader>
-                        <CardTitle>Expense Breakdown</CardTitle>
-                        <CardDescription>Monthly visualization of where your money is going</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
-                            <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
-                                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
-                                <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${currencySymbol}${v}`} />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <ChartLegend content={<ChartLegendContent />} />
-                                <Bar yAxisId="left" dataKey="fuel" stackId="a" fill="var(--color-fuel)" radius={[0, 0, 4, 4]} />
-                                <Bar yAxisId="left" dataKey="maintenance" stackId="a" fill="var(--color-maintenance)" />
-                                <Bar yAxisId="left" dataKey="custom" stackId="a" fill="var(--color-custom)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.4} className="md:col-span-2">
+                    <Card className="h-full overflow-hidden">
+                        <CardHeader className="border-b border-white/5">
+                            <CardTitle>Expense Breakdown</CardTitle>
+                            <CardDescription>Monthly visualization of where your money is going</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
+                                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
+                                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
+                                    <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${currencySymbol}${v}`} />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <ChartLegend content={<ChartLegendContent />} />
+                                    <Bar yAxisId="left" dataKey="fuel" stackId="a" fill="var(--color-fuel)" radius={[0, 0, 4, 4]} />
+                                    <Bar yAxisId="left" dataKey="maintenance" stackId="a" fill="var(--color-maintenance)" />
+                                    <Bar yAxisId="left" dataKey="custom" stackId="a" fill="var(--color-custom)" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
                 {/* Predictive Vitals */}
-                <Card className="rounded-[2rem] border shadow-sm overflow-hidden bg-card flex flex-col">
-                    <CardHeader className="bg-muted/30 border-b pb-4">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-                            Cadence Predictions
-                        </CardTitle>
-                        <CardDescription>Based on {totalDays} days of recorded tracking</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 p-6 flex flex-col justify-center space-y-8">
+                <MotionWrapper delay={0.5}>
+                    <Card className="h-full overflow-hidden flex flex-col">
+                        <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
+                                Cadence Predictions
+                            </CardTitle>
+                            <CardDescription>Based on {totalDays} days of recorded tracking</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-1 p-6 flex flex-col justify-center space-y-8">
 
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4" /> Refueling Frequency
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                    <CalendarClock className="h-4 w-4" /> Refueling Frequency
+                                </div>
+                                <div className="text-xl font-semibold">Every {Math.round(daysBetweenRefuels)} days</div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    You typically visit a fuel station roughly every {Math.max(1, Math.round(daysBetweenRefuels / 7))} weeks.
+                                </p>
                             </div>
-                            <div className="text-xl font-semibold">Every {Math.round(daysBetweenRefuels)} days</div>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                You typically visit a fuel station roughly every {Math.max(1, Math.round(daysBetweenRefuels / 7))} weeks.
-                            </p>
-                        </div>
 
-                        <div className="h-px w-full bg-border" />
+                            <div className="h-px w-full bg-border/20" />
 
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <Activity className="h-4 w-4" /> Estimated Next Refuel
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                    <Activity className="h-4 w-4" /> Estimated Next Refuel
+                                </div>
+                                <div className="text-xl font-semibold text-primary">
+                                    {projectedEmptyDate ? projectedEmptyDate.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' }) : 'Unknown'}
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Based on your current driving cadence, you will likely need to refuel around this date.
+                                </p>
                             </div>
-                            <div className="text-xl font-semibold text-primary">
-                                {projectedEmptyDate ? projectedEmptyDate.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' }) : 'Unknown'}
-                            </div>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                Based on your current driving cadence, you will likely need to refuel around this date.
-                            </p>
-                        </div>
 
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             </div>
         </MotionWrapper>
     );

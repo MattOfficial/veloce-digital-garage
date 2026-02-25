@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veloce V2 Prototype</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg-base: #030712;
+            --glass-bg: rgba(17, 24, 39, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Animated Background Gradients */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(59, 130, 246, 0.15);
+            top: -10%;
+            left: -10%;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: rgba(16, 185, 129, 0.1);
+            bottom: -20%;
+            right: -10%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(30px, 50px);
+            }
+        }
+
+        /* Dashboard Container */
+        .dashboard {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.8s ease forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sidebar Profile */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            border-right: 1px solid var(--glass-border);
+            padding-right: 2rem;
+        }
+
+        .car-profile h2 {
+            margin: 0;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .car-profile p {
+            color: var(--text-muted);
+            margin: 0.5rem 0 0 0;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .health-score {
+            margin-top: 2rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 1.5rem;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .health-score h3 {
+            margin: 0;
+            color: var(--accent-green);
+            font-size: 3rem;
+        }
+
+        .health-score span {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--text-main);
+            color: var(--bg-base);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn.outline {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn.outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: none;
+        }
+
+        /* Grid Widgets */
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .widget {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.3s;
+        }
+
+        .widget:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .widget h4 {
+            margin: 0 0 1rem 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 400;
+        }
+
+        .widget .value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .widget .subtext {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Live Tracker Demo */
+        .live-tracker {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .live-tracker .status-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-blue);
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="car-profile">
+                <h2>Porsche 911</h2>
+                <p>Carrera S · 2021</p>
+            </div>
+
+            <div class="health-score">
+                <h3 id="health-value">98%</h3>
+                <span>System Health</span>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+
+            <button class="btn outline" style="width: 100%" onclick="simulateScan()">Run OBD2 Scan</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="margin: 0; font-size: 1.5rem; font-weight: 600;">Welcome back, User.</h1>
+                    <p style="margin: 0.25rem 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Your vehicle is
+                        operating optimally.</p>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn outline">History</button>
+                    <button class="btn">+ Fast Log</button>
+                </div>
+            </div>
+
+            <div class="widget-grid">
+                <!-- Predictive Widget -->
+                <div class="widget live-tracker">
+                    <div class="status-dot"></div>
+                    <div>
+                        <h4>AI Cadence Prediction</h4>
+                        <div class="value" style="font-size: 1.5rem;">Refuel needed in ~3 days</div>
+                        <div class="subtext">Based on your recent commuting patterns to "Downtown".</div>
+                    </div>
+                </div>
+
+                <!-- TCO Widget -->
+                <div class="widget">
+                    <h4>True Running Cost</h4>
+                    <div class="value">$0.14 <span
+                            style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">/ mi</span></div>
+                    <div class="subtext">-1.2% versus last month</div>
+                </div>
+
+                <!-- Odometer -->
+                <div class="widget">
+                    <h4>Current Odometer</h4>
+                    <div class="value" id="odo-value">14,240</div>
+                    <div class="subtext">Synced via Bluetooth 2m ago</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple interactivity to make the prototype feel alive
+        function simulateScan() {
+            const btn = document.querySelector('.btn.outline');
+            const health = document.getElementById('health-value');
+
+            btn.innerText = "Scanning Systems...";
+            health.style.color = "var(--text-muted)";
+            health.innerText = "...";
+
+            setTimeout(() => {
+                btn.innerText = "Diagnosis Complete";
+                health.style.color = "var(--accent-red)";
+                health.innerText = "82%";
+
+                // Add a warning message dynamically
+                const warningDiv = document.createElement('div');
+                warningDiv.style.marginTop = '1rem';
+                warningDiv.style.padding = '1rem';
+                warningDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                warningDiv.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                warningDiv.style.borderRadius = '12px';
+                warningDiv.style.color = '#fca5a5';
+                warningDiv.style.fontSize = '0.85rem';
+                warningDiv.innerHTML = '<strong>P0420 Detected:</strong> Efficiency below threshold. Book service soon.';
+
+                document.querySelector('.health-score').appendChild(warningDiv);
+
+                setTimeout(() => {
+                    btn.innerText = "Run OBD2 Scan";
+                }, 3000);
+            }, 2000);
+        }
+
+        // Simulate live data ticking
+        setInterval(() => {
+            const odo = document.getElementById('odo-value');
+            if (Math.random() > 0.8) {
+                const current = parseInt(odo.innerText.replace(',', ''));
+                odo.innerText = (current + 1).toLocaleString();
+            }
+        }, 3000);
+    </script>
+</body>
+
+</html>

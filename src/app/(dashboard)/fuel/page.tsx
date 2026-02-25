@@ -121,136 +121,148 @@ export default function FuelPage() {
             </PageHeader>
 
             {!hasLogs ? (
-                <Card className="bg-muted/10 border-dashed border-2">
-                    <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                        <Fuel className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                        <h3 className="text-xl font-semibold tracking-tight">No fuel data yet</h3>
-                        <p className="text-muted-foreground mt-2 max-w-sm">
-                            Log your first fill-up to unlock efficiency metrics, cost charts, and historical analysis.
-                        </p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.1}>
+                    <Card className="bg-white/5 border-dashed border-2 border-white/10">
+                        <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                            <Fuel className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                            <h3 className="text-xl font-semibold tracking-tight">No fuel data yet</h3>
+                            <p className="text-muted-foreground mt-2 max-w-sm">
+                                Log your first fill-up to unlock efficiency metrics, cost charts, and historical analysis.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             ) : (
                 <>
                     {/* Vitals Row */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <Card className="rounded-[2rem] shadow-sm">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Average Efficiency</CardTitle>
-                                <div className="flex items-center gap-2">
-                                    <Activity className="h-4 w-4 text-emerald-500" />
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger className="focus:outline-none hover:bg-muted p-1 rounded-md transition-colors">
-                                            <Settings2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="rounded-xl border shadow-sm">
-                                            {METRIC_OPTIONS.map((metric) => (
-                                                <DropdownMenuItem
-                                                    key={metric}
-                                                    onClick={() => setSelectedMetric(metric)}
-                                                    className={`cursor-pointer ${activeMetric === metric ? 'font-bold bg-muted/50' : ''}`}
-                                                >
-                                                    {metric}
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                                    {avgEfficiency > 0 ? avgEfficiency.toFixed(2) : '--'}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">{efficiencyUnit}</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.1}>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Average Efficiency</CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-emerald-500" />
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger className="focus:outline-none hover:bg-white/10 p-1 rounded-md transition-colors">
+                                                <Settings2 className="h-4 w-4 text-muted-foreground hover:text-white" />
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="rounded-xl border border-white/10 bg-veloce-bg backdrop-blur-xl shadow-2xl">
+                                                {METRIC_OPTIONS.map((metric) => (
+                                                    <DropdownMenuItem
+                                                        key={metric}
+                                                        onClick={() => setSelectedMetric(metric)}
+                                                        className={`cursor-pointer focus:bg-white/10 ${activeMetric === metric ? 'font-bold bg-white/5' : ''}`}
+                                                    >
+                                                        {metric}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-emerald-500 shadow-emerald-500/20 drop-shadow-md">
+                                        {avgEfficiency > 0 ? avgEfficiency.toFixed(2) : '--'}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{efficiencyUnit}</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
 
-                        <Card className="rounded-[2rem] shadow-sm">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Cost per {profile.distanceUnit.toUpperCase()}</CardTitle>
-                                <DollarSign className="h-4 w-4 text-rose-500" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-rose-600 dark:text-rose-400">
-                                    {avgCostPerDistance > 0 ? formatCurrency(avgCostPerDistance) : '--'}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Average running cost</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.2}>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Cost per {profile.distanceUnit.toUpperCase()}</CardTitle>
+                                    <DollarSign className="h-4 w-4 text-rose-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
+                                        {avgCostPerDistance > 0 ? formatCurrency(avgCostPerDistance) : '--'}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Average running cost</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
 
-                        <Card className="rounded-[2rem] shadow-sm md:col-span-2 lg:col-span-1">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Total Logs</CardTitle>
-                                <Fuel className="h-4 w-4 text-blue-500" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                                    {logs.length}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Fill-ups recorded</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Logs</CardTitle>
+                                    <Fuel className="h-4 w-4 text-blue-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-blue-500 shadow-blue-500/20 drop-shadow-md">
+                                        {logs.length}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Fill-ups recorded</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
                     </div>
 
                     {/* Charts Row */}
                     {chartData.length > 0 && (
                         <div className="grid gap-6 md:grid-cols-2">
-                            <Card className="rounded-[2rem] shadow-sm">
-                                <CardHeader>
-                                    <CardTitle>Efficiency Trend</CardTitle>
-                                    <CardDescription>Fuel efficiency over your recent fill-ups.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
-                                            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="efficiency"
-                                                stroke="#10b981"
-                                                strokeWidth={3}
-                                                dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "var(--background)" }}
-                                                activeDot={{ r: 6 }}
-                                                name={efficiencyUnit}
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
+                            <MotionWrapper delay={0.4}>
+                                <Card className="h-full overflow-hidden">
+                                    <CardHeader className="border-b border-white/5">
+                                        <CardTitle>Efficiency Trend</CardTitle>
+                                        <CardDescription>Fuel efficiency over your recent fill-ups.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="h-[250px] w-full pt-6">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
+                                                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} />
+                                                <YAxis tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
+                                                />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="efficiency"
+                                                    stroke="#10b981"
+                                                    strokeWidth={3}
+                                                    dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#030712" }}
+                                                    activeDot={{ r: 6 }}
+                                                    name={efficiencyUnit}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            </MotionWrapper>
 
-                            <Card className="rounded-[2rem] shadow-sm">
-                                <CardHeader>
-                                    <CardTitle>Cost vs Volume</CardTitle>
-                                    <CardDescription>Track the financial impact of each visit.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
-                                            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="cost"
-                                                stackId="1"
-                                                stroke="#f43f5e"
-                                                fill="#f43f5e"
-                                                fillOpacity={0.2}
-                                                strokeWidth={2}
-                                                name={`Cost (${profile.currency})`}
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
+                            <MotionWrapper delay={0.5}>
+                                <Card className="h-full overflow-hidden">
+                                    <CardHeader className="border-b border-white/5">
+                                        <CardTitle>Cost vs Volume</CardTitle>
+                                        <CardDescription>Track the financial impact of each visit.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
+                                                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="cost"
+                                                    stackId="1"
+                                                    stroke="#f43f5e"
+                                                    fill="#f43f5e"
+                                                    fillOpacity={0.2}
+                                                    strokeWidth={2}
+                                                    name={`Cost (${profile.currency})`}
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            </MotionWrapper>
                         </div>
                     )}
 

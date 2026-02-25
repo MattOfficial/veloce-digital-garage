@@ -244,10 +244,10 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                         </div>
 
                         {/* Details Panel */}
-                        <div className="flex-1 w-full space-y-4">
+                        <div className="flex-1 w-full max-w-md h-[280px]">
                             {selectedWheel ? (
-                                <div className="bg-muted/30 p-5 rounded-3xl border border-black/5 relative animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <Button variant="ghost" size="sm" className="absolute top-3 right-3 h-6 text-xs px-2" onClick={() => setSelectedWheel(null)}>Close</Button>
+                                <div className="bg-muted/30 p-6 rounded-3xl border border-black/5 dark:border-white/5 dark:bg-white/5 shadow-md relative animate-in fade-in slide-in-from-right-4 duration-300 h-full flex flex-col justify-center">
+                                    <Button variant="ghost" size="sm" className="absolute top-4 right-4 h-6 text-xs px-2" onClick={() => setSelectedWheel(null)}>Close</Button>
                                     <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-primary" />
                                         {selectedWheel === 'FL' ? 'Front Left' : selectedWheel === 'FR' ? 'Front Right' : selectedWheel === 'RL' ? 'Rear Left' : 'Rear Right'} Tire
@@ -295,7 +295,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                     )}
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-muted/10 rounded-3xl border border-dashed border-black/10">
+                                <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-muted/10 rounded-3xl border border-dashed border-black/10 dark:border-white/10 dark:bg-white/5">
                                     <Disc className="h-10 w-10 text-muted-foreground/30 mb-3" />
                                     <p className="font-medium text-foreground">Interactive Tire Map</p>
                                     <p className="text-sm text-muted-foreground mt-1">Tap on any wheel on the diagram to see its specific details, age, and tread depth.</p>

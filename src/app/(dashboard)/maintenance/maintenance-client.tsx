@@ -147,155 +147,169 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                 <TabsContent value="overview" className="space-y-6">
                     {/* Vitals Row */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <Card className="rounded-[2rem] shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance Cost</CardTitle>
-                                <DollarSign className="h-4 w-4 text-rose-500" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-rose-600 dark:text-rose-400">
-                                    {formatCurrency(totalSpend)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Total spent on keeping it running</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.1}>
+                            <Card className="relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance Cost</CardTitle>
+                                    <DollarSign className="h-4 w-4 text-rose-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
+                                        {formatCurrency(totalSpend)}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Total spent on keeping it running</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
 
-                        <Card className="rounded-[2rem] shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance Cost per {distanceUnit.toUpperCase()}</CardTitle>
-                                <Activity className="h-4 w-4 text-amber-500" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
-                                    {costPerDistance > 0 ? formatCurrency(costPerDistance) : '--'}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Depreciation via service</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.2}>
+                            <Card className="relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance Cost per {distanceUnit.toUpperCase()}</CardTitle>
+                                    <Activity className="h-4 w-4 text-amber-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-amber-500 shadow-amber-500/20 drop-shadow-md">
+                                        {costPerDistance > 0 ? formatCurrency(costPerDistance) : '--'}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Depreciation via service</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
 
-                        <Card className="rounded-[2rem] shadow-sm md:col-span-2 lg:col-span-1 border-primary/20 bg-primary/5">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-primary">Service Log Completeness</CardTitle>
-                                <FileText className="h-4 w-4 text-primary" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-black text-primary">
-                                    {logs.length}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Recorded invoices</p>
-                            </CardContent>
-                        </Card>
+                        <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
+                            <Card className="border-primary/20 bg-primary/5">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-primary">Service Log Completeness</CardTitle>
+                                    <FileText className="h-4 w-4 text-primary" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
+                                        {logs.length}
+                                    </div>
+                                    <p className="text-xs text-primary/70 mt-1 font-medium">Recorded invoices</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
                     </div>
 
                     {/* Pending Maintenance Health Monitor */}
-                    <Card className="rounded-[2rem] shadow-sm border">
-                        <CardHeader>
-                            <CardTitle>Health Monitor</CardTitle>
-                            <CardDescription>Estimated lifespan of critical components based on your odometer ({currentOdometer.toLocaleString()}{distanceUnit}).</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                                {maintenanceStatus.map((item, index) => (
-                                    <div key={index} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/30">
-                                        {/* Simple circular gauge simulation */}
-                                        <div className="relative w-24 h-24 mb-3 flex items-center justify-center">
-                                            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="18" cy="18" r="16" fill="none" className="stroke-muted" strokeWidth="3"></circle>
-                                                <circle cx="18" cy="18" r="16" fill="none" className={`stroke-current ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`} strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - (item.status === 'good' ? 100 : item.progressPercent)} strokeLinecap="round"></circle>
-                                            </svg>
-                                            <div className="absolute flex flex-col items-center justify-center">
-                                                {item.status === 'good' ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> :
-                                                    item.status === 'warning' ? <AlertTriangle className="h-6 w-6 text-amber-500" /> :
-                                                        <AlertCircle className="h-6 w-6 text-red-500 animate-pulse" />
-                                                }
+                    <MotionWrapper delay={0.4}>
+                        <Card>
+                            <CardHeader className="border-b border-white/5 bg-white/5">
+                                <CardTitle>Health Monitor</CardTitle>
+                                <CardDescription>Estimated lifespan of critical components based on your odometer ({currentOdometer.toLocaleString()}{distanceUnit}).</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                    {maintenanceStatus.map((item, index) => (
+                                        <div key={index} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-black/20 border border-white/5 shadow-inner">
+                                            {/* Simple circular gauge simulation */}
+                                            <div className="relative w-24 h-24 mb-3 flex items-center justify-center">
+                                                <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                                                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-muted opacity-20" strokeWidth="2"></circle>
+                                                    <circle cx="18" cy="18" r="16" fill="none" className={`stroke-current ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`} strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - (item.status === 'good' ? 100 : item.progressPercent)} strokeLinecap="round" style={{ filter: `drop-shadow(0 0 4px currentColor)` }}></circle>
+                                                </svg>
+                                                <div className="absolute flex flex-col items-center justify-center drop-shadow-md">
+                                                    {item.status === 'good' ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> :
+                                                        item.status === 'warning' ? <AlertTriangle className="h-6 w-6 text-amber-500" /> :
+                                                            <AlertCircle className="h-6 w-6 text-red-500 animate-pulse" />
+                                                    }
+                                                </div>
                                             </div>
+                                            <h4 className="font-semibold text-center leading-tight mb-1">{item.name}</h4>
+                                            <p className={`text-xs font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                {item.status === "good" ? "Healthy" : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground mt-1">Last: {item.lastDoneDate}</p>
                                         </div>
-                                        <h4 className="font-semibold text-center leading-tight mb-1">{item.name}</h4>
-                                        <p className={`text-xs font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                            {item.status === "good" ? "Healthy" : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
-                                        </p>
-                                        <p className="text-[10px] text-muted-foreground mt-1">Last: {item.lastDoneDate}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {!hasLogs ? (
-                        <Card className="bg-muted/10 border-dashed border-2">
-                            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                                <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                                <h3 className="text-xl font-semibold tracking-tight">No maintenance logged</h3>
-                                <p className="text-muted-foreground mt-2 max-w-sm">
-                                    Log your first service to unlock spending breakdowns and historical analytics.
-                                </p>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
+                    </MotionWrapper>
+
+                    {!hasLogs ? (
+                        <MotionWrapper delay={0.5}>
+                            <Card className="bg-white/5 border-dashed border-2 border-white/10">
+                                <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                                    <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                                    <h3 className="text-xl font-semibold tracking-tight">No maintenance logged</h3>
+                                    <p className="text-muted-foreground mt-2 max-w-sm">
+                                        Log your first service to unlock spending breakdowns and historical analytics.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
                     ) : (
                         <>
 
                             {/* Analytics Charts */}
                             <div className="grid gap-6 md:grid-cols-5">
-                                <Card className="rounded-[2rem] shadow-sm md:col-span-2">
-                                    <CardHeader>
-                                        <CardTitle>Spend by Category</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="h-[250px] w-full pb-4">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={categoryData}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                    stroke="none"
-                                                >
-                                                    {categoryData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <RechartsTooltip
-                                                    formatter={(value: number) => formatCurrency(value)}
-                                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend
-                                                    layout="vertical"
-                                                    verticalAlign="middle"
-                                                    align="right"
-                                                    iconType="circle"
-                                                    wrapperStyle={{ fontSize: '12px' }}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
+                                <MotionWrapper delay={0.5} className="md:col-span-2">
+                                    <Card className="h-full overflow-hidden">
+                                        <CardHeader className="border-b border-white/5">
+                                            <CardTitle>Spend by Category</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="h-[250px] w-full pb-4 pt-6">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={categoryData}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={60}
+                                                        outerRadius={80}
+                                                        paddingAngle={5}
+                                                        dataKey="value"
+                                                        stroke="none"
+                                                    >
+                                                        {categoryData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip
+                                                        formatter={(value: number) => formatCurrency(value)}
+                                                        contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
+                                                    />
+                                                    <Legend
+                                                        layout="vertical"
+                                                        verticalAlign="middle"
+                                                        align="right"
+                                                        iconType="circle"
+                                                        wrapperStyle={{ fontSize: '12px' }}
+                                                    />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                </MotionWrapper>
 
-                                <Card className="rounded-[2rem] shadow-sm md:col-span-3">
-                                    <CardHeader>
-                                        <CardTitle>Maintenance Timeline</CardTitle>
-                                        <CardDescription>Visualize the frequency and cost of shop visits.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="h-[250px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
-                                                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                                <RechartsTooltip
-                                                    formatter={(value: number) => formatCurrency(value)}
-                                                    cursor={{ fill: 'transparent' }}
-                                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Total Cost" />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
+                                <MotionWrapper delay={0.6} className="md:col-span-3">
+                                    <Card className="h-full overflow-hidden">
+                                        <CardHeader className="border-b border-white/5">
+                                            <CardTitle>Maintenance Timeline</CardTitle>
+                                            <CardDescription>Visualize the frequency and cost of shop visits.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="h-[250px] w-full pt-6">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
+                                                    <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} />
+                                                    <YAxis tickLine={false} axisLine={false} tick={{ fill: '#e2e8f0', fontSize: 12 }} />
+                                                    <RechartsTooltip
+                                                        formatter={(value: number) => formatCurrency(value)}
+                                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                                        contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
+                                                    />
+                                                    <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Total Cost" />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                </MotionWrapper>
                             </div>
                         </>
                     )}
@@ -303,66 +317,68 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                 <TabsContent value="invoices" className="space-y-6 mt-6">
                     {/* Service History Table */}
-                    <Card className="rounded-[2rem] shadow-sm overflow-hidden border">
-                        <CardHeader className="bg-muted/20 border-b pb-4">
-                            <CardTitle>Service Log</CardTitle>
-                            <CardDescription>Detailed history of all documented repairs and maintenance.</CardDescription>
-                        </CardHeader>
-                        <div className="overflow-x-auto">
-                            {tableLogs.length === 0 ? (
-                                <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
-                                    <FileText className="h-10 w-10 mb-4 opacity-20" />
-                                    <p className="font-medium text-foreground">No service records found</p>
-                                    <p className="text-sm mt-1">When you log your first service, it will appear here.</p>
-                                </div>
-                            ) : (
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-xs text-muted-foreground uppercase bg-muted/10 border-b">
-                                        <tr>
-                                            <th className="px-6 py-4 font-medium">Date</th>
-                                            <th className="px-6 py-4 font-medium">Service Performed</th>
-                                            <th className="px-6 py-4 font-medium">Additional Notes</th>
-                                            <th className="px-6 py-4 font-medium text-right">Invoice Cost</th>
-                                            <th className="px-6 py-4 font-medium text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {tableLogs.map((log) => (
-                                            <tr key={log.id} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-6 py-4 font-medium whitespace-nowrap">
-                                                    {new Date(log.date).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 font-semibold text-primary">
-                                                    {log.service_type}
-                                                </td>
-                                                <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
-                                                    {log.notes || "--"}
-                                                </td>
-                                                <td className="px-6 py-4 text-right font-bold text-foreground">
-                                                    {formatCurrency(log.cost)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <MaintenanceLogActions log={log} vehicleId={selectedVehicle.id} />
-                                                </td>
+                    <MotionWrapper delay={0.1}>
+                        <Card className="overflow-hidden">
+                            <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
+                                <CardTitle>Service Log</CardTitle>
+                                <CardDescription>Detailed history of all documented repairs and maintenance.</CardDescription>
+                            </CardHeader>
+                            <div className="overflow-x-auto">
+                                {tableLogs.length === 0 ? (
+                                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                                        <FileText className="h-10 w-10 mb-4 opacity-20" />
+                                        <p className="font-medium text-foreground">No service records found</p>
+                                        <p className="text-sm mt-1">When you log your first service, it will appear here.</p>
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-xs text-muted-foreground uppercase bg-black/20 border-b border-white/5">
+                                            <tr>
+                                                <th className="px-6 py-4 font-medium">Date</th>
+                                                <th className="px-6 py-4 font-medium">Service Performed</th>
+                                                <th className="px-6 py-4 font-medium">Additional Notes</th>
+                                                <th className="px-6 py-4 font-medium text-right">Invoice Cost</th>
+                                                <th className="px-6 py-4 font-medium text-right">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    </Card>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 bg-transparent">
+                                            {tableLogs.map((log) => (
+                                                <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-6 py-4 font-medium whitespace-nowrap">
+                                                        {new Date(log.date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-semibold text-primary">
+                                                        {log.service_type}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
+                                                        {log.notes || "--"}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-bold text-foreground">
+                                                        {formatCurrency(log.cost)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <MaintenanceLogActions log={log} vehicleId={selectedVehicle.id} />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </Card>
+                    </MotionWrapper>
                 </TabsContent>
 
                 <TabsContent value="trackers" className="space-y-8 mt-6">
                     {/* The Permanent Tyre Tracker Block */}
-                    <div className="relative z-20 mt-8 mb-6">
+                    <MotionWrapper delay={0.1} className="relative z-20 mt-8 mb-6">
                         <TyreTrackerWidget vehicle={selectedVehicle} latestOdometer={currentOdometer} />
-                    </div>
+                    </MotionWrapper>
 
                     {/* Custom Time-Series Trackers Section */}
-                    <div className="relative z-20 space-y-4 pt-6 mt-6 border-t border-border/50">
+                    <MotionWrapper delay={0.2} className="relative z-20 space-y-4 pt-6 mt-6 border-t border-border/10">
                         <div className="flex items-center justify-between px-2">
-                            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
+                            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center drop-shadow-md">
                                 <Sparkles className="h-5 w-5 mr-2 text-primary" />
                                 Custom Trackers
                             </h2>
@@ -371,20 +387,20 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             </p>
                         </div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {categories.map(category => (
-                                <div key={category.id} className="min-h-[300px]">
+                            {categories.map((category, i) => (
+                                <MotionWrapper key={category.id} delay={0.3 + (i * 0.1)} className="min-h-[300px]">
                                     <CustomTrackerWidget
                                         category={category}
                                         logs={selectedVehicle.custom_logs ? selectedVehicle.custom_logs.filter(l => l.category_id === category.id) : []}
                                         vehicleId={selectedVehicle.id}
                                     />
-                                </div>
+                                </MotionWrapper>
                             ))}
-                            <div className="min-h-[300px]">
+                            <MotionWrapper delay={0.3 + (categories.length * 0.1)} className="min-h-[300px]">
                                 <AddTrackerModal />
-                            </div>
+                            </MotionWrapper>
                         </div>
-                    </div>
+                    </MotionWrapper>
 
                 </TabsContent>
             </Tabs>

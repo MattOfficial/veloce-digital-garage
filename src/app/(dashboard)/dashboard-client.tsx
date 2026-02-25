@@ -155,238 +155,254 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
             {/* Top Vitals Row */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="rounded-2xl shadow-sm border-primary/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Current Odometer</CardTitle>
-                        <Activity className="h-4 w-4 text-primary opacity-70" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{latestOdometer.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {distanceUnit} on the clock
-                        </p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.1}>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Current Odometer</CardTitle>
+                            <Activity className="h-4 w-4 text-primary opacity-70" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{latestOdometer.toLocaleString()}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {distanceUnit} on the clock
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
-                <Card className="rounded-2xl shadow-sm border-primary/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">30-Day Spend</CardTitle>
-                        <CalendarDays className="h-4 w-4 text-emerald-500 opacity-70" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{currencySymbol}{costLast30Days.toFixed(2)}</div>
-                        <p className={`text-xs mt-1 flex items-center ${spendTrend > 0 ? 'text-destructive' : spendTrend < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                            {spendTrend > 0 ? '↑' : spendTrend < 0 ? '↓' : ''} {Math.abs(spendTrend).toFixed(1)}% vs previous 30 days
-                        </p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.2}>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">30-Day Spend</CardTitle>
+                            <CalendarDays className="h-4 w-4 text-emerald-500 opacity-70" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{currencySymbol}{costLast30Days.toFixed(2)}</div>
+                            <p className={`text-xs mt-1 flex items-center ${spendTrend > 0 ? 'text-destructive' : spendTrend < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                                {spendTrend > 0 ? '↑' : spendTrend < 0 ? '↓' : ''} {Math.abs(spendTrend).toFixed(1)}% vs previous 30 days
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
-                <Card className="rounded-2xl shadow-sm border-primary/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Fuel</CardTitle>
-                        <Droplet className="h-4 w-4 text-amber-500 opacity-70" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{currencySymbol}{totalFuelCost.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            All time fuel cost
-                        </p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.3}>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Fuel</CardTitle>
+                            <Droplet className="h-4 w-4 text-amber-500 opacity-70" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{currencySymbol}{totalFuelCost.toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                All time fuel cost
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
-                <Card className="rounded-2xl shadow-sm border-primary/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance</CardTitle>
-                        <Wrench className="h-4 w-4 text-blue-500 opacity-70" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{currencySymbol}{totalMaintenanceCost.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            All time repair cost
-                        </p>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.4}>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance</CardTitle>
+                            <Wrench className="h-4 w-4 text-blue-500 opacity-70" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{currencySymbol}{totalMaintenanceCost.toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                All time repair cost
+                            </p>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
                 {/* 6-Month Expense History Chart */}
-                <Card className="lg:col-span-4 rounded-[2rem] shadow-sm border overflow-hidden">
-                    <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle className="flex items-center">
-                            <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-                            6-Month Expense History
-                        </CardTitle>
-                        <CardDescription>Track your spending trends over half a year.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <div className="h-[300px] w-full pt-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={costOverTimeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                                    <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${currencySymbol}${value}`} />
-                                    <Tooltip
-                                        cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
-                                        contentStyle={{ borderRadius: '0.75rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, undefined]}
-                                    />
-                                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                                    <Bar dataKey="Fuel" stackId="a" fill={COLORS[1]} radius={[0, 0, 4, 4]} />
-                                    <Bar dataKey="Maintenance" stackId="a" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.5} className="lg:col-span-4">
+                    <Card className="overflow-hidden h-full">
+                        <CardHeader className="border-b border-white/5">
+                            <CardTitle className="flex items-center">
+                                <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+                                6-Month Expense History
+                            </CardTitle>
+                            <CardDescription>Track your spending trends over half a year.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="h-[300px] w-full pt-4">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={costOverTimeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                                        <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${currencySymbol}${value}`} />
+                                        <Tooltip
+                                            cursor={{ fill: 'var(--color-veloce-glass)' }}
+                                            contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
+                                            formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, undefined]}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                                        <Bar dataKey="Fuel" stackId="a" fill={COLORS[1]} radius={[0, 0, 4, 4]} />
+                                        <Bar dataKey="Maintenance" stackId="a" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
                 {/* Expense Distribution Pie Chart */}
-                <Card className="lg:col-span-3 rounded-[2rem] shadow-sm border overflow-hidden">
-                    <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle>Expense Distribution</CardTitle>
-                        <CardDescription>Lifetime spending breakdown by category.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        {totalSpend > 0 ? (
-                            <div className="h-[300px] w-full pt-4 flex flex-col items-center justify-center relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={expenseData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={70}
-                                            outerRadius={100}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {expenseData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, undefined]}
-                                            contentStyle={{ borderRadius: '0.75rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                {/* Center Label */}
-                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -mt-4 text-center">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block mb-1">Total</span>
-                                    <span className="text-xl font-bold">{currencySymbol}{(totalSpend / 1000).toFixed(1)}k</span>
+                <MotionWrapper delay={0.6} className="lg:col-span-3">
+                    <Card className="h-full overflow-hidden">
+                        <CardHeader className="border-b border-white/5">
+                            <CardTitle>Expense Distribution</CardTitle>
+                            <CardDescription>Lifetime spending breakdown by category.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            {totalSpend > 0 ? (
+                                <div className="h-[300px] w-full pt-4 flex flex-col items-center justify-center relative">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={expenseData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={70}
+                                                outerRadius={100}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {expenseData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, undefined]}
+                                                contentStyle={{ borderRadius: '0.75rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    {/* Center Label */}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -mt-4 text-center">
+                                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block mb-1">Total</span>
+                                        <span className="text-xl font-bold">{currencySymbol}{(totalSpend / 1000).toFixed(1)}k</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="h-[300px] flex items-center justify-center">
-                                <p className="text-muted-foreground text-sm">No expenses logged yet.</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            ) : (
+                                <div className="h-[300px] flex items-center justify-center">
+                                    <p className="text-muted-foreground text-sm">No expenses logged yet.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             </div>
 
             {/* Bottom Row - Recent Activity */}
             <div className="grid gap-6 md:grid-cols-2">
-                <Card className="rounded-[2rem] shadow-sm border overflow-hidden md:col-span-2 lg:col-span-1">
-                    <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle>Recent Activity</CardTitle>
-                        <CardDescription>The last 5 events recorded for your vehicle.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {allLogs.length > 0 ? (
-                            <div className="divide-y max-h-[350px] overflow-y-auto">
-                                {allLogs.map((log, i) => {
-                                    type LogUnion = typeof log & {
-                                        category_id?: string;
-                                        service_type?: string;
-                                        fuel_volume?: number;
-                                        gallons?: number;
-                                        odometer?: number;
-                                        notes?: string;
-                                        cost?: number;
-                                        total_cost?: number;
-                                    };
+                <MotionWrapper delay={0.7} className="md:col-span-2 lg:col-span-1">
+                    <Card className="h-full overflow-hidden">
+                        <CardHeader className="border-b border-white/5">
+                            <CardTitle>Recent Activity</CardTitle>
+                            <CardDescription>The last 5 events recorded for your vehicle.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {allLogs.length > 0 ? (
+                                <div className="divide-y max-h-[350px] overflow-y-auto">
+                                    {allLogs.map((log, i) => {
+                                        type LogUnion = typeof log & {
+                                            category_id?: string;
+                                            service_type?: string;
+                                            fuel_volume?: number;
+                                            gallons?: number;
+                                            odometer?: number;
+                                            notes?: string;
+                                            cost?: number;
+                                            total_cost?: number;
+                                        };
 
-                                    const ulog = log as LogUnion;
+                                        const ulog = log as LogUnion;
 
-                                    const cat = ulog.type === 'Other' ? categories.find(c => c.id === ulog.category_id) : null;
-                                    const IconComponent = ulog.type === 'Fuel' ? Droplet :
-                                        ulog.type === 'Maintenance' ? Wrench :
-                                            cat && ICON_MAP[cat.icon] ? ICON_MAP[cat.icon] : Activity;
+                                        const cat = ulog.type === 'Other' ? categories.find(c => c.id === ulog.category_id) : null;
+                                        const IconComponent = ulog.type === 'Fuel' ? Droplet :
+                                            ulog.type === 'Maintenance' ? Wrench :
+                                                cat && ICON_MAP[cat.icon] ? ICON_MAP[cat.icon] : Activity;
 
-                                    const themeColor = ulog.type === 'Other' && cat ? getColorHex(cat.color_theme) : null;
+                                        const themeColor = ulog.type === 'Other' && cat ? getColorHex(cat.color_theme) : null;
 
-                                    return (
-                                        <div key={`${ulog.type}-${i}`} className="p-4 flex items-start gap-4 hover:bg-muted/20 transition-colors">
-                                            <div className={`p-2 rounded-full mt-0.5 shrink-0 ${ulog.type === 'Fuel' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
-                                                ulog.type === 'Maintenance' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' :
-                                                    (!themeColor ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : '')
-                                                }`}
-                                                style={themeColor ? { backgroundColor: `${themeColor}20`, color: themeColor } : undefined}>
-                                                <IconComponent className="h-4 w-4" />
-                                            </div>
-                                            <div className="flex-1 space-y-1">
-                                                <div className="flex justify-between items-start">
-                                                    <p className="text-sm font-medium leading-none">
-                                                        {ulog.type === 'Fuel' ? 'Refueled' :
-                                                            ulog.type === 'Maintenance' ? ulog.service_type :
-                                                                cat ? cat.name : 'Custom Entry'}
-                                                    </p>
-                                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                                                        {new Date(ulog.date).toLocaleDateString()}
-                                                    </span>
+                                        return (
+                                            <div key={`${ulog.type}-${i}`} className="p-4 flex items-start gap-4 hover:bg-muted/20 transition-colors">
+                                                <div className={`p-2 rounded-full mt-0.5 shrink-0 ${ulog.type === 'Fuel' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
+                                                    ulog.type === 'Maintenance' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' :
+                                                        (!themeColor ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : '')
+                                                    }`}
+                                                    style={themeColor ? { backgroundColor: `${themeColor}20`, color: themeColor } : undefined}>
+                                                    <IconComponent className="h-4 w-4" />
                                                 </div>
-                                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                                    {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
-                                                        ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
-                                                            ulog.notes || 'Entry logged'}
-                                                </p>
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <p className="text-sm font-medium leading-none">
+                                                            {ulog.type === 'Fuel' ? 'Refueled' :
+                                                                ulog.type === 'Maintenance' ? ulog.service_type :
+                                                                    cat ? cat.name : 'Custom Entry'}
+                                                        </p>
+                                                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
+                                                            {new Date(ulog.date).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground line-clamp-1">
+                                                        {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
+                                                            ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
+                                                                ulog.notes || 'Entry logged'}
+                                                    </p>
+                                                </div>
+                                                <div className="text-sm font-semibold text-right flex items-center justify-end">
+                                                    {ulog.type === 'Other' && cat && !cat.track_cost ? null :
+                                                        ulog.cost != null ? `${currencySymbol}${Number(ulog.cost).toFixed(2)}` :
+                                                            ulog.total_cost != null ? `${currencySymbol}${Number(ulog.total_cost).toFixed(2)}` : ''}
+                                                </div>
                                             </div>
-                                            <div className="text-sm font-semibold text-right flex items-center justify-end">
-                                                {ulog.type === 'Other' && cat && !cat.track_cost ? null :
-                                                    ulog.cost != null ? `${currencySymbol}${Number(ulog.cost).toFixed(2)}` :
-                                                        ulog.total_cost != null ? `${currencySymbol}${Number(ulog.total_cost).toFixed(2)}` : ''}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="p-8 text-center bg-muted/5 min-h-[250px] flex flex-col items-center justify-center">
-                                <Activity className="h-8 w-8 text-muted-foreground/50 mb-3" />
-                                <p className="text-sm text-muted-foreground">No recent activity found. Log your first fill-up or service!</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center bg-muted/5 min-h-[250px] flex flex-col items-center justify-center">
+                                    <Activity className="h-8 w-8 text-muted-foreground/50 mb-3" />
+                                    <p className="text-sm text-muted-foreground">No recent activity found. Log your first fill-up or service!</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
 
                 {/* Quick Actions Card */}
-                <Card className="rounded-[2rem] shadow-sm border overflow-hidden md:col-span-2 lg:col-span-1 bg-gradient-to-br from-primary/5 to-transparent">
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>Add new records to your vehicle without leaving the dashboard.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-4">
-                        <Link href="/fuel" className="block w-full">
-                            <Button className="w-full justify-start h-14 rounded-xl text-md" variant="default">
-                                <div className="bg-primary-foreground/20 p-2 rounded-lg mr-3">
-                                    <Droplet className="h-5 w-5" />
-                                </div>
-                                Log a Fill-up
-                            </Button>
-                        </Link>
-                        {/* We will add a wrapper to open the maintenance modal from here later if needed, for now we will link to the maintenance tab or the vehicle view */}
-                        <Link href={`/vehicles/${selectedVehicle.id}`} className="block w-full">
-                            <Button className="w-full justify-start h-14 rounded-xl text-md" variant="outline">
-                                <div className="bg-muted p-2 rounded-lg mr-3">
-                                    <Wrench className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                Add Maintenance Record
-                            </Button>
-                        </Link>
-                    </CardContent>
-                </Card>
+                <MotionWrapper delay={0.8} className="md:col-span-2 lg:col-span-1">
+                    <Card className="h-full overflow-hidden bg-gradient-to-br from-primary/10 to-transparent">
+                        <CardHeader>
+                            <CardTitle>Quick Actions</CardTitle>
+                            <CardDescription>Add new records to your vehicle without leaving the dashboard.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-4">
+                            <Link href="/fuel" className="block w-full">
+                                <Button className="w-full justify-start h-14 rounded-xl text-md" variant="default">
+                                    <div className="bg-primary-foreground/20 p-2 rounded-lg mr-3">
+                                        <Droplet className="h-5 w-5" />
+                                    </div>
+                                    Log a Fill-up
+                                </Button>
+                            </Link>
+                            {/* We will add a wrapper to open the maintenance modal from here later if needed, for now we will link to the maintenance tab or the vehicle view */}
+                            <Link href={`/vehicles/${selectedVehicle.id}`} className="block w-full">
+                                <Button className="w-full justify-start h-14 rounded-xl text-md" variant="outline">
+                                    <div className="bg-muted p-2 rounded-lg mr-3">
+                                        <Wrench className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    Add Maintenance Record
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+                </MotionWrapper>
             </div>
 
         </MotionWrapper>
