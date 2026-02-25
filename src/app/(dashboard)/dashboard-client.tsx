@@ -141,7 +141,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
             {/* Header Area with Profile Link */}
             <PageHeader
-                title="Dashboard Overview"
+                title="Overview"
                 description={`Tracking analytics and insights for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
                 icon={LayoutDashboard}
             >

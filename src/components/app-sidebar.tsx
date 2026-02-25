@@ -24,7 +24,7 @@ import { useUserStore } from "@/store/user-store";
 
 const navigation = [
     { name: "Dashboard", href: "/", icon: Car },
-    { name: "Fill Up", href: "/fuel", icon: Fuel },
+    { name: "Fuel History", href: "/fuel", icon: Fuel },
     { name: "Maintenance", href: "/maintenance", icon: Wrench },
     { name: "Insights", href: "/insights", icon: BarChart2 },
 ];
