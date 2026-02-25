@@ -26,7 +26,7 @@ const navigation = [
     { name: "Dashboard", href: "/", icon: Car },
     { name: "Fuel History", href: "/fuel", icon: Fuel },
     { name: "Maintenance", href: "/maintenance", icon: Wrench },
-    { name: "Insights", href: "/insights", icon: BarChart2 },
+    { name: "Running Costs", href: "/insights", icon: BarChart2 },
 ];
 
 export function AppSidebar() {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useVehicleStore } from "@/store/vehicle-store";
+
 import {
     Card,
     CardContent,
@@ -13,10 +14,12 @@ import {
     ChartContainer,
     ChartTooltip,
     ChartTooltipContent,
+    ChartLegend,
+    ChartLegendContent,
 } from "@/components/ui/chart";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, TrendingDown, DollarSign, CalendarClock, Zap, Activity } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
 
@@ -24,84 +27,125 @@ import { useUserStore } from "@/store/user-store";
 
 export default function InsightsPage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
-    const { profile, getFuelEconomyUnit } = useUserStore();
+    const { profile } = useUserStore();
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
-    const fuelEconomyUnit = getFuelEconomyUnit();
+    const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
+    const distUnit = profile.distanceUnit;
 
     const chartConfig = useMemo(() => ({
-        efficiency: {
-            label: `Efficiency (${fuelEconomyUnit})`,
+        fuel: {
+            label: `Fuel (${currencySymbol})`,
             color: "var(--chart-1)",
         },
-        cost: {
-            label: `Cost (${profile.currency})`,
+        maintenance: {
+            label: `Maintenance (${currencySymbol})`,
             color: "var(--chart-2)",
         },
-        distance: {
-            label: `Distance (${profile.distanceUnit})`,
+        custom: {
+            label: `Custom Tracker (${currencySymbol})`,
             color: "var(--chart-3)",
         }
-    } satisfies ChartConfig), [profile.currency, profile.distanceUnit, fuelEconomyUnit]);
+    } satisfies ChartConfig), [currencySymbol]);
 
     // Process data for charts
-    const { efficiencyData, costPerKmData, monthlyData } = useMemo(() => {
-        if (!selectedVehicle || !selectedVehicle.fuel_logs) {
-            return { efficiencyData: [], costPerKmData: [], monthlyData: [] };
+    const {
+        totalCost,
+        totalDistance,
+        tcoPerDist,
+        monthlyData,
+        fuelLogsCount,
+        totalDays,
+        daysBetweenRefuels,
+        avgDistancePerDay,
+        projectedEmptyDate,
+        runningCostPerDay
+    } = useMemo(() => {
+        if (!selectedVehicle) {
+            return {
+                totalCost: 0, totalDistance: 0, tcoPerDist: 0, monthlyData: [],
+                fuelLogsCount: 0, firstLogDate: new Date(), lastLogDate: new Date(), totalDays: 0,
+                daysBetweenRefuels: 0, avgDistancePerDay: 0, projectedEmptyDate: null, runningCostPerDay: 0
+            };
         }
 
-        // Sort logs by date ascending
-        const sortedLogs = [...selectedVehicle.fuel_logs].sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
+        const fuel = selectedVehicle.fuel_logs || [];
+        const maint = selectedVehicle.maintenance_logs || [];
+        const custom = selectedVehicle.custom_logs || [];
 
-        // 1. Efficiency Data
-        const mappedEfficiency = sortedLogs
-            .filter((log) => log.calculated_efficiency !== null)
-            .map((log) => ({
-                date: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                efficiency: log.calculated_efficiency,
-            }));
+        // Distill all logs into a single flat array for easier date sorting
+        const allLogs: { date: string, cost: number, type: 'fuel' | 'maintenance' | 'custom', odometer?: number }[] = [
+            ...fuel.map(l => ({ date: l.date, cost: l.total_cost, type: 'fuel' as const, odometer: l.odometer })),
+            ...maint.map(l => ({ date: l.date, cost: l.cost || 0, type: 'maintenance' as const, odometer: undefined })),
+            ...custom.map(l => ({ date: l.date, cost: l.cost || 0, type: 'custom' as const, odometer: undefined })) // Custom logs don't strictly require odometer right now
+        ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        // 2. Cost Per Km Data
-        // Requires distance, so we look at distance driven vs cost of fuel.
-        let previousOdometer = selectedVehicle.baseline_odometer;
-        const mappedCostPerKm = sortedLogs.map((log) => {
-            const distance = log.odometer - previousOdometer;
-            const costPerKm = distance > 0 ? log.total_cost / distance : 0;
-            previousOdometer = log.odometer; // update for next iteration
 
-            return {
-                date: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                costPerKm: parseFloat(costPerKm.toFixed(2)),
-            };
-        });
+        let tCost = 0;
+        let minOdo = selectedVehicle.baseline_odometer;
+        let maxOdo = selectedVehicle.baseline_odometer;
 
-        // 3. Monthly Aggregate (Cost & Distance)
-        const monthlyMap = new Map<string, { month: string; distance: number; cost: number }>();
-        previousOdometer = selectedVehicle.baseline_odometer;
+        const monthlyMap = new Map<string, { month: string; fuel: number; maintenance: number; custom: number }>();
 
-        sortedLogs.forEach((log) => {
-            const monthYear = new Date(log.date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-            const distance = log.odometer - previousOdometer;
-            previousOdometer = log.odometer;
-
-            if (!monthlyMap.has(monthYear)) {
-                monthlyMap.set(monthYear, { month: monthYear, distance: 0, cost: 0 });
+        allLogs.forEach(log => {
+            tCost += log.cost;
+            if (log.odometer) {
+                if (log.odometer > maxOdo) maxOdo = log.odometer;
+                if (log.odometer < minOdo && minOdo === selectedVehicle.baseline_odometer) minOdo = log.odometer; // only update if we haven't found a real minimum yet
             }
 
+            const monthYear = new Date(log.date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+            if (!monthlyMap.has(monthYear)) {
+                monthlyMap.set(monthYear, { month: monthYear, fuel: 0, maintenance: 0, custom: 0 });
+            }
             const current = monthlyMap.get(monthYear)!;
-            current.distance += distance;
-            current.cost += log.total_cost;
+            current[log.type] += log.cost;
         });
 
+        const tDist = Math.max(0, maxOdo - minOdo);
+        const tco = tDist > 0 ? tCost / tDist : 0;
+
+        // Predictive Modeling based purely on Fuel Logs (most consistent intervals)
+        const sortedFuel = [...fuel].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        let avgDistPerDay = 0;
+        let daysRefuel = 0;
+        let projEmpty: Date | null = null;
+        let costDay = 0;
+        let tDays = 0;
+        let fDate = new Date();
+        let lDate = new Date();
+
+        if (sortedFuel.length > 1) {
+            fDate = new Date(sortedFuel[0].date);
+            lDate = new Date(sortedFuel[sortedFuel.length - 1].date);
+            tDays = Math.max(1, Math.floor((lDate.getTime() - fDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+            avgDistPerDay = tDist / tDays;
+            daysRefuel = tDays / (sortedFuel.length - 1);
+            costDay = tCost / tDays;
+
+            projEmpty = new Date(lDate);
+            projEmpty.setDate(projEmpty.getDate() + Math.round(daysRefuel));
+        }
+
+
         return {
-            efficiencyData: mappedEfficiency,
-            costPerKmData: mappedCostPerKm,
+            totalCost: tCost,
+            totalDistance: tDist,
+            tcoPerDist: tco,
             monthlyData: Array.from(monthlyMap.values()),
+            fuelLogsCount: sortedFuel.length,
+            totalDays: tDays,
+            daysBetweenRefuels: daysRefuel,
+            avgDistancePerDay: avgDistPerDay,
+            projectedEmptyDate: projEmpty,
+            runningCostPerDay: costDay
         };
+
     }, [selectedVehicle]);
+
 
     if (!selectedVehicle) {
         return (
@@ -114,109 +158,138 @@ export default function InsightsPage() {
         );
     }
 
-    // If there are no logs, show empty state
-    if (selectedVehicle.fuel_logs.length === 0) {
+    if (fuelLogsCount < 2) {
         return (
             <MotionWrapper className="max-w-6xl mx-auto space-y-6 px-4">
                 <PageHeader
-                    title="Insights"
-                    description={`Deep dive into the performance of your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                    title="Running Costs"
+                    description={`Track every penny spent on your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
                     icon={BarChart2}
                     className="mb-4"
                 />
                 <div className="text-center py-20 border-none shadow-md rounded-[2rem] bg-card/50 backdrop-blur-sm">
-                    <h2 className="text-xl font-medium">Not enough data</h2>
-                    <p className="text-muted-foreground mt-1">Please log some fill-ups to see insights and graphs.</p>
+                    <h2 className="text-xl font-medium">Insufficient Data</h2>
+                    <p className="text-muted-foreground mt-1">Please log at least two fill-ups to establish a baseline for insights and cost projections.</p>
                 </div>
             </MotionWrapper>
         )
     }
 
+    const numberFormat = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurrency = (val: number) => `${currencySymbol}${numberFormat.format(val)}`;
+
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-8 pb-10 px-4">
             <PageHeader
-                title="Insights"
-                description={`Deep dive into the performance of your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                title="Running Costs"
+                description={`A complete breakdown of running costs for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
                 icon={BarChart2}
                 className="mb-4"
             />
 
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Efficiency Curve */}
-                <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-blue-50/70 dark:bg-blue-950/30">
-                    <CardHeader className="pb-2 pt-6">
-                        <CardTitle className="text-xl text-blue-900 dark:text-blue-200">Fuel Efficiency Trend</CardTitle>
-                        <CardDescription className="text-base text-blue-700/70 dark:text-blue-300/70">{getFuelEconomyUnit()} over time</CardDescription>
+            {/* Top Level KPIs */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card className="rounded-[2rem] border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative">
+                    <div className="absolute top-0 right-0 p-4 opacity-20">
+                        <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
+                    </div>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-medium opacity-90">Total Running Cost</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <AreaChart data={efficiencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="fillEfficiency" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-efficiency)" stopOpacity={0.8} />
-                                        <stop offset="95%" stopColor="var(--color-efficiency)" stopOpacity={0.1} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
-                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="efficiency"
-                                    stroke="var(--color-efficiency)"
-                                    fillOpacity={1}
-                                    fill="url(#fillEfficiency)"
-                                />
-                            </AreaChart>
-                        </ChartContainer>
+                    <CardContent>
+                        <div className="text-4xl font-black mb-1">{formatCurrency(tcoPerDist)} <span className="text-lg opacity-70 font-medium">/ {distUnit}</span></div>
+                        <p className="text-sm opacity-80">
+                            Based on {formatCurrency(totalCost)} spent over {totalDistance.toLocaleString()} {distUnit}.
+                        </p>
                     </CardContent>
                 </Card>
 
-                {/* Cost per Distance */}
-                <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden bg-emerald-50/70 dark:bg-emerald-950/30">
-                    <CardHeader className="pb-2 pt-6">
-                        <CardTitle className="text-xl text-emerald-900 dark:text-emerald-200">Cost Per {profile.distanceUnit === 'km' ? 'Kilometer' : 'Mile'}</CardTitle>
-                        <CardDescription className="text-base text-emerald-700/70 dark:text-emerald-300/70">Running cost efficiency ({profile.currency}/{profile.distanceUnit})</CardDescription>
+                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Daily Operating Cost</CardTitle>
+                        <div className="p-2 bg-emerald-100 rounded-full text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            <DollarSign className="h-4 w-4" />
+                        </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <LineChart data={costPerKmData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
-                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <Line
-                                    type="step"
-                                    dataKey="costPerKm"
-                                    stroke="var(--color-cost)"
-                                    strokeWidth={2}
-                                    dot={{ r: 4 }}
-                                    activeDot={{ r: 6 }}
-                                />
-                            </LineChart>
-                        </ChartContainer>
+                    <CardContent>
+                        <div className="text-3xl font-black text-foreground">{formatCurrency(runningCostPerDay)} <span className="text-base font-medium text-muted-foreground">/ day</span></div>
+                        <p className="text-xs text-muted-foreground mt-1">Average spent across all categories</p>
                     </CardContent>
                 </Card>
 
-                {/* Monthly Aggregate */}
-                <Card className="md:col-span-2 rounded-[2rem] border-none shadow-sm overflow-hidden bg-purple-50/70 dark:bg-purple-950/30">
-                    <CardHeader className="pb-2 pt-6">
-                        <CardTitle className="text-xl text-purple-900 dark:text-purple-200">Monthly Overview</CardTitle>
-                        <CardDescription className="text-base text-purple-700/70 dark:text-purple-300/70">Distance driven and total amount spent</CardDescription>
+                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Daily Distance</CardTitle>
+                        <div className="p-2 bg-blue-100 rounded-full text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                            <Activity className="h-4 w-4" />
+                        </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                    <CardContent>
+                        <div className="text-3xl font-black text-foreground">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-muted-foreground">{distUnit}</span></div>
+                        <p className="text-xs text-muted-foreground mt-1">Typical distance covered per day</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+
+            <div className="grid gap-6 md:grid-cols-3">
+                {/* Cost Breakdown over Time */}
+                <Card className="md:col-span-2 rounded-[2rem] border shadow-sm overflow-hidden bg-card">
+                    <CardHeader>
+                        <CardTitle>Expense Breakdown</CardTitle>
+                        <CardDescription>Monthly visualization of where your money is going</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
                             <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
                                 <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
-                                <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                                <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${currencySymbol}${v}`} />
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <Bar yAxisId="left" dataKey="distance" fill="var(--color-distance)" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
+                                <ChartLegend content={<ChartLegendContent />} />
+                                <Bar yAxisId="left" dataKey="fuel" stackId="a" fill="var(--color-fuel)" radius={[0, 0, 4, 4]} />
+                                <Bar yAxisId="left" dataKey="maintenance" stackId="a" fill="var(--color-maintenance)" />
+                                <Bar yAxisId="left" dataKey="custom" stackId="a" fill="var(--color-custom)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ChartContainer>
+                    </CardContent>
+                </Card>
+
+                {/* Predictive Vitals */}
+                <Card className="rounded-[2rem] border shadow-sm overflow-hidden bg-card flex flex-col">
+                    <CardHeader className="bg-muted/30 border-b pb-4">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
+                            Cadence Predictions
+                        </CardTitle>
+                        <CardDescription>Based on {totalDays} days of recorded tracking</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 p-6 flex flex-col justify-center space-y-8">
+
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <CalendarClock className="h-4 w-4" /> Refueling Frequency
+                            </div>
+                            <div className="text-xl font-semibold">Every {Math.round(daysBetweenRefuels)} days</div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                You typically visit a fuel station roughly every {Math.max(1, Math.round(daysBetweenRefuels / 7))} weeks.
+                            </p>
+                        </div>
+
+                        <div className="h-px w-full bg-border" />
+
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Activity className="h-4 w-4" /> Estimated Next Refuel
+                            </div>
+                            <div className="text-xl font-semibold text-primary">
+                                {projectedEmptyDate ? projectedEmptyDate.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' }) : 'Unknown'}
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                Based on your current driving cadence, you will likely need to refuel around this date.
+                            </p>
+                        </div>
+
                     </CardContent>
                 </Card>
             </div>
