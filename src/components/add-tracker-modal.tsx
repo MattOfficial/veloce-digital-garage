@@ -10,6 +10,7 @@ import { createTrackerCategory } from "@/app/actions/custom-trackers";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { useVehicleStore } from "@/store/vehicle-store";
+import { useRouter } from "next/navigation";
 
 const ICONS = [
     { name: "Sparkles", icon: Sparkles },
@@ -34,12 +35,13 @@ const COLORS = [
 ];
 
 export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => void }) {
-    const { fetchVehicles } = useVehicleStore();
+    const { fetchVehicles, selectedVehicleId } = useVehicleStore();
     const [open, setOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [selectedIcon, setSelectedIcon] = useState(ICONS[0].name);
     const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
+    const router = useRouter();
 
     async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -58,6 +60,7 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
             setOpen(false);
             setMessage(null);
             fetchVehicles();
+            router.refresh();
             if (onTrackerAdded) onTrackerAdded();
         }
         setIsSaving(false);
@@ -85,6 +88,7 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
                 </DialogHeader>
 
                 <form onSubmit={onSubmit} className="space-y-6 pt-4">
+                    <input type="hidden" name="vehicle_id" value={selectedVehicleId || ""} />
                     <div className="space-y-2">
                         <Label htmlFor="name">Tracker Name</Label>
                         <Input id="name" name="name" placeholder="e.g. Car Washes, Detailing, Tolls" className="rounded-xl" required />

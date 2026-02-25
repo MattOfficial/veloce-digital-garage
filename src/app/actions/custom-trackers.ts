@@ -17,15 +17,22 @@ export async function createTrackerCategory(formData: FormData) {
     const icon = formData.get("icon")?.toString();
     const color_theme = formData.get("color_theme")?.toString();
     const track_cost = formData.get("track_cost") === "true";
+    const vehicle_id = formData.get("vehicle_id")?.toString();
 
-    if (!name || !icon || !color_theme) {
+    if (!name || !icon || !color_theme || !vehicle_id) {
         return { error: "Please fill out all required fields." };
+    }
+
+    // Verify ownership of the vehicle
+    const { data: vehicle } = await supabase.from("vehicles").select("user_id").eq("id", vehicle_id).single();
+    if (!vehicle || vehicle.user_id !== user.id) {
+        return { error: "You don't have permission to add trackers to this vehicle." };
     }
 
     const { data, error } = await supabase
         .from("custom_log_categories")
         .insert({
-            user_id: user.id,
+            vehicle_id,
             name,
             icon,
             color_theme,
@@ -134,12 +141,19 @@ export async function deleteTrackerCategory(categoryId: string) {
         return { error: "You must be logged in to delete a tracker." };
     }
 
-    // Since custom_logs cascade delete, we only need to delete the category
+    // Check ownership by tracing from category -> vehicle
+    const { data: category } = await supabase.from("custom_log_categories").select("vehicle_id").eq("id", categoryId).single();
+    if (!category) return { error: "Category not found." };
+
+    const { data: vehicle } = await supabase.from("vehicles").select("user_id").eq("id", category.vehicle_id).single();
+    if (!vehicle || vehicle.user_id !== user.id) {
+        return { error: "You don't have permission to delete this tracker." };
+    }
+
     const { error } = await supabase
         .from("custom_log_categories")
         .delete()
-        .eq("id", categoryId)
-        .eq("user_id", user.id); // Ensure the user actually owns this category
+        .eq("id", categoryId);
 
     if (error) {
         console.error("Error deleting tracker category:", error);

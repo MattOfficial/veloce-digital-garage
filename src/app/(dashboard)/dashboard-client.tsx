@@ -61,6 +61,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
         );
     }
 
+    const vehicleCategories = categories.filter(c => c.vehicle_id === selectedVehicle.id);
+
     const currencySymbol = profile?.currency === "USD" ? "$" : profile?.currency === "EUR" ? "€" : profile?.currency === "GBP" ? "£" : "₹";
     const distanceUnit = profile?.distanceUnit || "km";
 
@@ -323,7 +325,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
                                         const ulog = log as LogUnion;
 
-                                        const cat = ulog.type === 'Other' ? categories.find(c => c.id === ulog.category_id) : null;
+                                        const cat = ulog.type === 'Other' ? vehicleCategories.find(c => c.id === ulog.category_id) : null;
                                         const IconComponent = ulog.type === 'Fuel' ? Droplet :
                                             ulog.type === 'Maintenance' ? Wrench :
                                                 cat && ICON_MAP[cat.icon] ? ICON_MAP[cat.icon] : Activity;

@@ -17,8 +17,8 @@ export default async function MaintenancePage() {
     // Fetch custom categories for the user so the dashboard can map tracking history names
     const { data: categories } = await supabase
         .from("custom_log_categories")
-        .select("*")
-        .eq("user_id", user.id)
+        .select("*, vehicles!inner(user_id)")
+        .eq("vehicles.user_id", user.id)
         .order("created_at", { ascending: false });
 
     return <MaintenanceClient categories={categories || []} />;

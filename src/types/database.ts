@@ -71,7 +71,7 @@ export type MaintenanceLog = {
 
 export type CustomLogCategory = {
   id: string;
-  user_id: string;
+  vehicle_id: string;
   name: string;
   icon: string;
   color_theme: string;

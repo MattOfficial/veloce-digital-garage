@@ -14,6 +14,7 @@ import { addCustomLog, deleteTrackerCategory } from "@/app/actions/custom-tracke
 import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const ICON_MAP: Record<string, React.ElementType> = {
     Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map, Zap, Battery, Car, Umbrella
@@ -42,6 +43,7 @@ export function CustomTrackerWidget({
 }) {
     const { profile } = useUserStore();
     const { fetchVehicles } = useVehicleStore();
+    const router = useRouter();
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -85,6 +87,7 @@ export function CustomTrackerWidget({
             setIsDeleting(false);
         } else {
             fetchVehicles();
+            router.refresh();
         }
     }
 

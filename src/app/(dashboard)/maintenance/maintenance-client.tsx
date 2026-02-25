@@ -34,6 +34,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
         );
     }
 
+    const vehicleCategories = categories.filter(c => c.vehicle_id === selectedVehicle.id);
+
     const { distanceUnit, currency } = profile;
     const currencySymbol = currency || '$';
     const numberFormat = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -387,7 +389,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             </p>
                         </div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {categories.map((category, i) => (
+                            {vehicleCategories.map((category, i) => (
                                 <MotionWrapper key={category.id} delay={0.3 + (i * 0.1)} className="min-h-[300px]">
                                     <CustomTrackerWidget
                                         category={category}
@@ -396,7 +398,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                     />
                                 </MotionWrapper>
                             ))}
-                            <MotionWrapper delay={0.3 + (categories.length * 0.1)} className="min-h-[300px]">
+                            <MotionWrapper delay={0.3 + (vehicleCategories.length * 0.1)} className="min-h-[300px]">
                                 <AddTrackerModal />
                             </MotionWrapper>
                         </div>
