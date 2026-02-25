@@ -88,7 +88,7 @@ export async function updateVehicle(id: string, formData: FormData) {
         return { error: "You must be logged in to update a vehicle." };
     }
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, string | number | null | object> = {};
 
     const stringFields = ["make", "model", "image_url", "vin", "license_plate", "color", "engine_type", "transmission", "notes"];
     stringFields.forEach((field) => {

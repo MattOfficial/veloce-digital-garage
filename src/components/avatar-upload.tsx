@@ -57,8 +57,8 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
                 .getPublicUrl(filePath);
 
             onUploadSuccess(data.publicUrl);
-        } catch (error: any) {
-            console.error("Error uploading avatar:", error.message);
+        } catch (error: unknown) {
+            console.error("Error uploading avatar:", error instanceof Error ? error.message : error);
             setUploadError("Failed to upload avatar.");
         } finally {
             setIsUploading(false);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +34,6 @@ const COLORS = [
 ];
 
 export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => void }) {
-    const router = useRouter();
     const { fetchVehicles } = useVehicleStore();
     const [open, setOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);

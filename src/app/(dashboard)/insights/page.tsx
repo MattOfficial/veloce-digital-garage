@@ -14,7 +14,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
 import { BarChart2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
@@ -27,9 +27,11 @@ export default function InsightsPage() {
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
+    const fuelEconomyUnit = getFuelEconomyUnit();
+
     const chartConfig = useMemo(() => ({
         efficiency: {
-            label: `Efficiency (${getFuelEconomyUnit()})`,
+            label: `Efficiency (${fuelEconomyUnit})`,
             color: "var(--chart-1)",
         },
         cost: {
@@ -40,7 +42,7 @@ export default function InsightsPage() {
             label: `Distance (${profile.distanceUnit})`,
             color: "var(--chart-3)",
         }
-    } satisfies ChartConfig), [profile.currency, profile.distanceUnit, getFuelEconomyUnit()]);
+    } satisfies ChartConfig), [profile.currency, profile.distanceUnit, fuelEconomyUnit]);
 
     // Process data for charts
     const { efficiencyData, costPerKmData, monthlyData } = useMemo(() => {

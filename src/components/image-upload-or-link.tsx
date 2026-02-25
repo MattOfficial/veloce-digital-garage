@@ -50,9 +50,9 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
 
             setPreviewUrl(data.publicUrl);
             onImageSelected(data.publicUrl);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Upload failed", error);
-            alert("Upload failed. " + error.message);
+            alert("Upload failed. " + (error instanceof Error ? error.message : "Unknown error"));
         } finally {
             setIsUploading(false);
         }

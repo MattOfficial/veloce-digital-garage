@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+
 import { CustomLog, CustomLogCategory } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,6 @@ export function CustomTrackerWidget({
     logs: CustomLog[];
     vehicleId: string;
 }) {
-    const router = useRouter();
     const { profile } = useUserStore();
     const { fetchVehicles } = useVehicleStore();
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
@@ -119,7 +118,7 @@ export function CustomTrackerWidget({
                         <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                             <DialogHeader>
                                 <DialogTitle>Log New: {category.name}</DialogTitle>
-                                <DialogDescription>Add a new entry to this tracker's timeline.</DialogDescription>
+                                <DialogDescription>Add a new entry to this tracker&apos;s timeline.</DialogDescription>
                             </DialogHeader>
 
                             <form onSubmit={onSubmitLog} className="space-y-6 pt-4">
@@ -192,6 +191,7 @@ export function CustomTrackerWidget({
                             <IconComponent className="h-8 w-8" />
                         </div>
                         <h3 className="text-base font-semibold tracking-tight text-foreground/80">No entries yet</h3>
+                        <p className="text-sm text-muted-foreground w-3/4 mb-4">You haven&apos;t created any custom trackers yet. Add one to start monitoring specific parts or services for your vehicle.</p>
                         <p className="text-muted-foreground text-sm max-w-[250px] mt-1 mb-5">
                             Start tracking events for your {category.name.toLowerCase()} here.
                         </p>

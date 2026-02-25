@@ -1,0 +1,397 @@
+"use client";
+
+import { useVehicleStore } from "@/store/vehicle-store";
+import { useUserStore } from "@/store/user-store";
+import { CustomLogCategory } from "@/types/database";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Wrench, CheckCircle2, AlertTriangle, AlertCircle, DollarSign, Activity, FileText, Sparkles } from "lucide-react";
+import { MotionWrapper } from "@/components/motion-wrapper";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
+import { AddTrackerModal } from "@/components/add-tracker-modal";
+import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
+import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
+import { MaintenanceLogActions } from "@/components/maintenance-log-actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'];
+
+export default function MaintenanceClient({ categories }: { categories: CustomLogCategory[] }) {
+    const { vehicles, selectedVehicleId } = useVehicleStore();
+    const { profile } = useUserStore();
+    const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+
+    if (!selectedVehicle) {
+        return (
+            <div className="flex items-center justify-center h-[50vh]">
+                <div className="text-center">
+                    <h2 className="text-2xl font-semibold mb-2">No Vehicle Selected</h2>
+                    <p className="text-muted-foreground">Select a vehicle to view maintenance schedules.</p>
+                </div>
+            </div>
+        );
+    }
+
+    const { distanceUnit, currency } = profile;
+    const currencySymbol = currency || '$';
+    const numberFormat = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurrency = (val: number) => `${currencySymbol}${numberFormat.format(val)}`;
+
+    const logs = [...(selectedVehicle.maintenance_logs || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const hasLogs = logs.length > 0;
+
+    // --- Analytics Calculations ---
+    let totalSpend = 0;
+
+    // Categorize spend for donut chart
+    const spendByCategory: Record<string, number> = {};
+
+    // Aggregate by month for the bar chart
+    const spendByMonth: Record<string, number> = {};
+
+    logs.forEach(log => {
+        totalSpend += log.cost;
+
+        // Extract a simplified category name (e.g., "Engine Oil Change" -> "Engine Oil")
+        const catName = log.service_type.split(' - ')[0] || log.service_type;
+        spendByCategory[catName] = (spendByCategory[catName] || 0) + log.cost;
+
+        const monthKey = new Date(log.date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+        spendByMonth[monthKey] = (spendByMonth[monthKey] || 0) + log.cost;
+    });
+
+    const categoryData = Object.entries(spendByCategory)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value); // sort largest to smallest
+
+    const barChartData = Object.entries(spendByMonth)
+        .map(([date, cost]) => ({ date, cost }));
+
+    // --- Distance & Cost Metrics ---
+    let currentOdometer = selectedVehicle.baseline_odometer || 0;
+    if (selectedVehicle.fuel_logs && selectedVehicle.fuel_logs.length > 0) {
+        const sortedLogs = [...selectedVehicle.fuel_logs].sort((a, b) => b.odometer - a.odometer);
+        currentOdometer = sortedLogs[0].odometer;
+    }
+
+    const distanceTracked = currentOdometer - (selectedVehicle.baseline_odometer || 0);
+    const costPerDistance = distanceTracked > 0 ? (totalSpend / distanceTracked) : 0;
+
+    // --- Predictive Maintenance Health Rings ---
+    const maintenanceSchedules = [
+        { name: "Engine Oil Change", interval: 10000, color: "text-amber-500", bg: "bg-amber-500" },
+        { name: "Tire Replacement", interval: 40000, color: "text-blue-500", bg: "bg-blue-500" },
+        { name: "Air Filter", interval: 20000, color: "text-emerald-500", bg: "bg-emerald-500" },
+        { name: "Brake Pads", interval: 30000, color: "text-rose-500", bg: "bg-rose-500" },
+    ];
+
+    const maintenanceStatus = maintenanceSchedules.map(schedule => {
+        let lastDoneDate = "Never";
+        // Convert interval from km to miles if user prefers miles (rough approx, ideal would use a fixed unit in backend)
+        let adjustedInterval = schedule.interval;
+        if (distanceUnit === 'miles') {
+            adjustedInterval = schedule.interval * 0.621371;
+        }
+
+        const relatedLogs = logs.filter(log =>
+            log.service_type.toLowerCase().includes(schedule.name.toLowerCase().split(' ')[0])
+        ).reverse(); // sort newest first
+
+        if (relatedLogs.length > 0) {
+            lastDoneDate = new Date(relatedLogs[0].date).toLocaleDateString();
+        }
+
+        const drivenSinceLast = distanceTracked; // Assuming baseline unless we had odo_at_service
+        const progress = (drivenSinceLast % adjustedInterval) / adjustedInterval;
+        const kmUntilNext = adjustedInterval - (drivenSinceLast % adjustedInterval);
+
+        let statusRaw: "good" | "warning" | "critical" = "good";
+        if (kmUntilNext <= (distanceUnit === 'miles' ? 620 : 1000)) statusRaw = "critical";
+        else if (kmUntilNext <= (distanceUnit === 'miles' ? 1860 : 3000)) statusRaw = "warning";
+
+        if (relatedLogs.length > 0) {
+            statusRaw = "good"; // For demo purposes, if they have logged it let's consider it good since we don't have accurate delta odos yet
+        }
+
+        return {
+            ...schedule,
+            lastDoneDate,
+            kmUntilNext,
+            status: statusRaw,
+            progressPercent: progress * 100,
+            adjustedInterval
+        };
+    });
+
+    const tableLogs = [...logs].reverse();
+
+    return (
+        <MotionWrapper className="max-w-6xl mx-auto space-y-6 pb-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <Wrench className="h-8 w-8 text-primary" />
+                        Maintenance Health
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                        Predictive vitals and expense tracking for your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
+                    </p>
+                </div>
+                <AddMaintenanceModal vehicleId={selectedVehicle.id} />
+            </div>
+
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+                <TabsList className="grid w-[400px] grid-cols-3 rounded-full">
+                    <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
+                    <TabsTrigger value="invoices" className="rounded-full">Service</TabsTrigger>
+                    <TabsTrigger value="trackers" className="rounded-full">Trackers</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="overview" className="space-y-6">
+                    {/* Vitals Row */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Card className="rounded-[2rem] shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance Cost</CardTitle>
+                                <DollarSign className="h-4 w-4 text-rose-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-black text-rose-600 dark:text-rose-400">
+                                    {formatCurrency(totalSpend)}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 font-medium">Total spent on keeping it running</p>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="rounded-[2rem] shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance Cost per {distanceUnit.toUpperCase()}</CardTitle>
+                                <Activity className="h-4 w-4 text-amber-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
+                                    {costPerDistance > 0 ? formatCurrency(costPerDistance) : '--'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 font-medium">Depreciation via service</p>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="rounded-[2rem] shadow-sm md:col-span-2 lg:col-span-1 border-primary/20 bg-primary/5">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-primary">Service Log Completeness</CardTitle>
+                                <FileText className="h-4 w-4 text-primary" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-black text-primary">
+                                    {logs.length}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 font-medium">Recorded invoices</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Pending Maintenance Health Monitor */}
+                    <Card className="rounded-[2rem] shadow-sm border">
+                        <CardHeader>
+                            <CardTitle>Health Monitor</CardTitle>
+                            <CardDescription>Estimated lifespan of critical components based on your odometer ({currentOdometer.toLocaleString()}{distanceUnit}).</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                {maintenanceStatus.map((item, index) => (
+                                    <div key={index} className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted/30">
+                                        {/* Simple circular gauge simulation */}
+                                        <div className="relative w-24 h-24 mb-3 flex items-center justify-center">
+                                            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="18" cy="18" r="16" fill="none" className="stroke-muted" strokeWidth="3"></circle>
+                                                <circle cx="18" cy="18" r="16" fill="none" className={`stroke-current ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`} strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - (item.status === 'good' ? 100 : item.progressPercent)} strokeLinecap="round"></circle>
+                                            </svg>
+                                            <div className="absolute flex flex-col items-center justify-center">
+                                                {item.status === 'good' ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> :
+                                                    item.status === 'warning' ? <AlertTriangle className="h-6 w-6 text-amber-500" /> :
+                                                        <AlertCircle className="h-6 w-6 text-red-500 animate-pulse" />
+                                                }
+                                            </div>
+                                        </div>
+                                        <h4 className="font-semibold text-center leading-tight mb-1">{item.name}</h4>
+                                        <p className={`text-xs font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                            {item.status === "good" ? "Healthy" : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">Last: {item.lastDoneDate}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {!hasLogs ? (
+                        <Card className="bg-muted/10 border-dashed border-2">
+                            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                                <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                                <h3 className="text-xl font-semibold tracking-tight">No maintenance logged</h3>
+                                <p className="text-muted-foreground mt-2 max-w-sm">
+                                    Log your first service to unlock spending breakdowns and historical analytics.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <>
+
+                            {/* Analytics Charts */}
+                            <div className="grid gap-6 md:grid-cols-5">
+                                <Card className="rounded-[2rem] shadow-sm md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle>Spend by Category</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="h-[250px] w-full pb-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={categoryData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    {categoryData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip
+                                                    formatter={(value: number) => formatCurrency(value)}
+                                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Legend
+                                                    layout="vertical"
+                                                    verticalAlign="middle"
+                                                    align="right"
+                                                    iconType="circle"
+                                                    wrapperStyle={{ fontSize: '12px' }}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-[2rem] shadow-sm md:col-span-3">
+                                    <CardHeader>
+                                        <CardTitle>Maintenance Timeline</CardTitle>
+                                        <CardDescription>Visualize the frequency and cost of shop visits.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
+                                                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                                <RechartsTooltip
+                                                    formatter={(value: number) => formatCurrency(value)}
+                                                    cursor={{ fill: 'transparent' }}
+                                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Total Cost" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="invoices" className="space-y-6 mt-6">
+                    {/* Service History Table */}
+                    <Card className="rounded-[2rem] shadow-sm overflow-hidden border">
+                        <CardHeader className="bg-muted/20 border-b pb-4">
+                            <CardTitle>Service Log</CardTitle>
+                            <CardDescription>Detailed history of all documented repairs and maintenance.</CardDescription>
+                        </CardHeader>
+                        <div className="overflow-x-auto">
+                            {tableLogs.length === 0 ? (
+                                <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                                    <FileText className="h-10 w-10 mb-4 opacity-20" />
+                                    <p className="font-medium text-foreground">No service records found</p>
+                                    <p className="text-sm mt-1">When you log your first service, it will appear here.</p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-muted-foreground uppercase bg-muted/10 border-b">
+                                        <tr>
+                                            <th className="px-6 py-4 font-medium">Date</th>
+                                            <th className="px-6 py-4 font-medium">Service Performed</th>
+                                            <th className="px-6 py-4 font-medium">Additional Notes</th>
+                                            <th className="px-6 py-4 font-medium text-right">Invoice Cost</th>
+                                            <th className="px-6 py-4 font-medium text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {tableLogs.map((log) => (
+                                            <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                                                <td className="px-6 py-4 font-medium whitespace-nowrap">
+                                                    {new Date(log.date).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 font-semibold text-primary">
+                                                    {log.service_type}
+                                                </td>
+                                                <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
+                                                    {log.notes || "--"}
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-bold text-foreground">
+                                                    {formatCurrency(log.cost)}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <MaintenanceLogActions log={log} vehicleId={selectedVehicle.id} />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="trackers" className="space-y-8 mt-6">
+                    {/* The Permanent Tyre Tracker Block */}
+                    <div className="relative z-20 mt-8 mb-6">
+                        <TyreTrackerWidget vehicle={selectedVehicle} latestOdometer={currentOdometer} />
+                    </div>
+
+                    {/* Custom Time-Series Trackers Section */}
+                    <div className="relative z-20 space-y-4 pt-6 mt-6 border-t border-border/50">
+                        <div className="flex items-center justify-between px-2">
+                            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
+                                <Sparkles className="h-5 w-5 mr-2 text-primary" />
+                                Custom Trackers
+                            </h2>
+                            <p className="text-sm text-muted-foreground mr-auto ml-4">
+                                Keep track of other vital health data like washer fluid, coolants, or accessories.
+                            </p>
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {categories.map(category => (
+                                <div key={category.id} className="min-h-[300px]">
+                                    <CustomTrackerWidget
+                                        category={category}
+                                        logs={selectedVehicle.custom_logs ? selectedVehicle.custom_logs.filter(l => l.category_id === category.id) : []}
+                                        vehicleId={selectedVehicle.id}
+                                    />
+                                </div>
+                            ))}
+                            <div className="min-h-[300px]">
+                                <AddTrackerModal />
+                            </div>
+                        </div>
+                    </div>
+
+                </TabsContent>
+            </Tabs>
+        </MotionWrapper>
+    );
+}

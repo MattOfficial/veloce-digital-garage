@@ -53,3 +53,81 @@ export async function submitMaintenanceLog(formData: FormData) {
 
     return { success: true };
 }
+
+export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: "You must be logged in to delete a maintenance log." };
+    }
+
+    const { error } = await supabase
+        .from("maintenance_logs")
+        .delete()
+        .eq("id", logId)
+        .eq("user_id", user.id); // Security: only delete if the user owns it
+
+    if (error) {
+        console.error("Error deleting maintenance log:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/maintenance");
+    revalidatePath(`/vehicles/${vehicleId}`);
+
+    return { success: true };
+}
+
+export async function editMaintenanceLog(logId: string, formData: FormData) {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { error: "You must be logged in to edit a maintenance log." };
+    }
+
+    const vehicle_id = formData.get("vehicle_id")?.toString();
+    const date = formData.get("date")?.toString();
+    const service_type = formData.get("service_type")?.toString();
+    const costStr = formData.get("cost")?.toString();
+    const notes = formData.get("notes")?.toString();
+
+    if (!vehicle_id || !date || !service_type || !costStr) {
+        return { error: "Missing required fields." };
+    }
+
+    const cost = parseFloat(costStr);
+    if (isNaN(cost) || cost < 0) {
+        return { error: "Cost must be a valid positive number." };
+    }
+
+    const { error: updateError } = await supabase
+        .from("maintenance_logs")
+        .update({
+            date,
+            service_type,
+            cost,
+            notes: notes || null,
+        })
+        .eq("id", logId)
+        .eq("user_id", user.id);
+
+    if (updateError) {
+        console.error("Error updating maintenance log:", updateError);
+        return { error: updateError.message };
+    }
+
+    revalidatePath("/maintenance");
+    revalidatePath(`/vehicles/${vehicle_id}`);
+
+    return { success: true };
+}

@@ -31,12 +31,5 @@ export default async function VehiclePage({
         redirect("/profile"); // Redirect back to garage if not found or unauthorized
     }
 
-    // Fetch custom categories for the user
-    const { data: categories } = await supabase
-        .from("custom_log_categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-    return <VehicleManagerClient vehicle={vehicle} categories={categories || []} />;
+    return <VehicleManagerClient vehicle={vehicle} />;
 }

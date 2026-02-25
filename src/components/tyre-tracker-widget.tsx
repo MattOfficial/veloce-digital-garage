@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { VehicleWithLogs, TyreInfo, TireItem } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Disc, AlertTriangle, Plus, Loader2, CalendarIcon, CheckCircle2 } from "lucide-react";
+import { Disc, Plus, Loader2, CalendarIcon, CheckCircle2 } from "lucide-react";
 import { updateVehicle } from "@/app/actions/vehicles";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -70,7 +69,6 @@ function calculateHealth(tire: TireItem | undefined, latestOdometer: number) {
 }
 
 export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: VehicleWithLogs, latestOdometer: number }) {
-    const router = useRouter();
     const { fetchVehicles } = useVehicleStore();
     const [openDialog, setOpenDialog] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -153,43 +151,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
         setIsSaving(false);
     }
 
-    const WheelComponent = ({ pos, tire, isTop }: { pos: WheelPos, tire: TireItem | undefined, isTop: boolean }) => {
-        const health = calculateHealth(tire, latestOdometer);
 
-        let colorClass = "bg-slate-500/80 border-slate-400/50";
-        if (health.status === 'good') colorClass = "bg-emerald-400 border-emerald-300 shadow-[0_0_25px_rgba(52,211,153,0.7)] text-white";
-        if (health.status === 'warning') colorClass = "bg-amber-400 border-amber-300 shadow-[0_0_25px_rgba(251,191,36,0.8)] text-black";
-        if (health.status === 'danger') colorClass = "bg-rose-500 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.8)] text-white";
-
-        return (
-            <div
-                className={cn(
-                    "relative w-24 h-32 group cursor-pointer transition-all duration-300 flex flex-col items-center",
-                    selectedWheel === pos ? "scale-110 z-10" : "hover:scale-105 hover:z-10"
-                )}
-                onClick={() => setSelectedWheel(pos)}
-            >
-                {/* 1. Static Wheel */}
-                <div className={cn("absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-20 h-10 rounded-xl border-[3px] overflow-hidden flex items-center justify-center transition-colors shadow-xl", colorClass)}>
-                    <div className="absolute inset-0 opacity-[0.25] bg-[repeating-linear-gradient(90deg,transparent,transparent_4px,#000_4px,#000_8px)]"></div>
-                    {/* Shadow for 3D effect */}
-                    <div className="absolute inset-x-0 w-full h-full bg-gradient-to-b from-black/50 via-transparent to-black/50"></div>
-                </div>
-
-                {/* 2. Fixed Position Label */}
-                <div className={cn("absolute left-1/2 -translate-x-1/2 text-[13px] font-black tracking-widest drop-shadow-md text-slate-500 dark:text-slate-400", isTop ? "top-1" : "bottom-1")}>
-                    {pos}
-                </div>
-
-                {/* 3. Fixed Detail Pill */}
-                {tire && (
-                    <div className={cn("absolute left-1/2 -translate-x-1/2 text-[11px] font-bold px-3 py-1 rounded-full bg-background/95 text-foreground border shadow-lg truncate min-w-[70px] text-center backdrop-blur-md", isTop ? "bottom-0" : "top-0")}>
-                        {tire.tread_depth ? `${tire.tread_depth} mm` : health.message}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
@@ -263,16 +225,16 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
 
                             {/* Static Wheels Array */}
                             <div className="absolute left-6 xl:left-8 top-[-2.5rem]">
-                                <WheelComponent pos="RL" tire={tires.RL} isTop={true} />
+                                <WheelComponent pos="RL" tire={tires.RL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
                             </div>
                             <div className="absolute right-6 xl:right-8 top-[-2.5rem]">
-                                <WheelComponent pos="FL" tire={tires.FL} isTop={true} />
+                                <WheelComponent pos="FL" tire={tires.FL} isTop={true} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
                             </div>
                             <div className="absolute left-6 xl:left-8 bottom-[-2.5rem]">
-                                <WheelComponent pos="RR" tire={tires.RR} isTop={false} />
+                                <WheelComponent pos="RR" tire={tires.RR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
                             </div>
                             <div className="absolute right-6 xl:right-8 bottom-[-2.5rem]">
-                                <WheelComponent pos="FR" tire={tires.FR} isTop={false} />
+                                <WheelComponent pos="FR" tire={tires.FR} isTop={false} selectedWheel={selectedWheel} setSelectedWheel={setSelectedWheel} latestOdometer={latestOdometer} />
                             </div>
 
                             {/* Mid-chassis visual */}
@@ -347,8 +309,55 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
     );
 }
 
+export function WheelComponent({ pos, tire, isTop, selectedWheel, setSelectedWheel, latestOdometer }: { pos: WheelPos, tire: TireItem | undefined, isTop: boolean, selectedWheel: WheelPos | null, setSelectedWheel: (pos: WheelPos) => void, latestOdometer: number }) {
+    const health = calculateHealth(tire, latestOdometer);
+
+    let colorClass = "bg-slate-500/80 border-slate-400/50";
+    if (health.status === 'good') colorClass = "bg-emerald-400 border-emerald-300 shadow-[0_0_25px_rgba(52,211,153,0.7)] text-white";
+    if (health.status === 'warning') colorClass = "bg-amber-400 border-amber-300 shadow-[0_0_25px_rgba(251,191,36,0.8)] text-black";
+    if (health.status === 'danger') colorClass = "bg-rose-500 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.8)] text-white";
+
+    return (
+        <div
+            className={cn(
+                "relative w-24 h-32 group cursor-pointer transition-all duration-300 flex flex-col items-center",
+                selectedWheel === pos ? "scale-110 z-10" : "hover:scale-105 hover:z-10"
+            )}
+            onClick={() => setSelectedWheel(pos)}
+        >
+            {/* 1. Static Wheel */}
+            <div className={cn("absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-20 h-10 rounded-xl border-[3px] overflow-hidden flex items-center justify-center transition-colors shadow-xl", colorClass)}>
+                <div className="absolute inset-0 opacity-[0.25] bg-[repeating-linear-gradient(90deg,transparent,transparent_4px,#000_4px,#000_8px)]"></div>
+                {/* Shadow for 3D effect */}
+                <div className="absolute inset-x-0 w-full h-full bg-gradient-to-b from-black/50 via-transparent to-black/50"></div>
+            </div>
+
+            {/* 2. Fixed Position Label */}
+            <div className={cn("absolute left-1/2 -translate-x-1/2 text-[13px] font-black tracking-widest drop-shadow-md text-slate-500 dark:text-slate-400", isTop ? "top-1" : "bottom-1")}>
+                {pos}
+            </div>
+
+            {/* 3. Fixed Detail Pill */}
+            {tire && (
+                <div className={cn("absolute left-1/2 -translate-x-1/2 text-[11px] font-bold px-3 py-1 rounded-full bg-background/95 text-foreground border shadow-lg truncate min-w-[70px] text-center backdrop-blur-md", isTop ? "bottom-0" : "top-0")}>
+                    {tire.tread_depth ? `${tire.tread_depth} mm` : health.message}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Extracted form to reduce nesting and duplication
-function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget, setApplyTarget, latestOdometer }: any) {
+interface TireFormProps {
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+    isSaving: boolean;
+    installDate: Date | undefined;
+    setInstallDate: (date: Date) => void;
+    applyTarget: ApplyTarget;
+    setApplyTarget: (target: ApplyTarget) => void;
+    latestOdometer: number;
+}
+function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget, setApplyTarget, latestOdometer }: TireFormProps) {
     return (
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
             <div className="space-y-2">

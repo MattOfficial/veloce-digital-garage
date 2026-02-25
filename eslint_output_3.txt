@@ -1,0 +1,40 @@
+
+> temp-app@0.1.0 lint
+> eslint
+
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\app\(dashboard)\insights\page.tsx
+  17:74  warning  'ResponsiveContainer' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\app\(dashboard)\profile\page.tsx
+  69:13  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\app\(dashboard)\profile\page.tsx:69:13
+  67 |     useEffect(() => {
+  68 |         if (!initialLoadDone.current && profile.displayName !== undefined) {
+> 69 |             setDisplayName(profile.displayName || "");
+     |             ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  70 |             setCurrency(profile.currency || "Ôé╣");
+  71 |             if (profile.distanceUnit) setDistanceUnit(profile.distanceUnit as "km" | "miles");
+  72 |             setAvatarUrl(profile.avatarUrl || null);  react-hooks/set-state-in-effect
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\app\(dashboard)\vehicles\[id]\vehicle-manager-client.tsx
+  5:27  warning  'CustomLogCategory' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\components\app-sidebar.tsx
+  19:10  warning  'createClient' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\components\custom-tracker-widget.tsx
+  121:83  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\components\tyre-tracker-widget.tsx
+  73:11  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 6 problems (2 errors, 4 warnings)
+

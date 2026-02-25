@@ -298,17 +298,30 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                         {allLogs.length > 0 ? (
                             <div className="divide-y max-h-[350px] overflow-y-auto">
                                 {allLogs.map((log, i) => {
-                                    const cat = log.type === 'Other' ? categories.find(c => c.id === (log as any).category_id) : null;
-                                    const IconComponent = log.type === 'Fuel' ? Droplet :
-                                        log.type === 'Maintenance' ? Wrench :
+                                    type LogUnion = typeof log & {
+                                        category_id?: string;
+                                        service_type?: string;
+                                        fuel_volume?: number;
+                                        gallons?: number;
+                                        odometer?: number;
+                                        notes?: string;
+                                        cost?: number;
+                                        total_cost?: number;
+                                    };
+
+                                    const ulog = log as LogUnion;
+
+                                    const cat = ulog.type === 'Other' ? categories.find(c => c.id === ulog.category_id) : null;
+                                    const IconComponent = ulog.type === 'Fuel' ? Droplet :
+                                        ulog.type === 'Maintenance' ? Wrench :
                                             cat && ICON_MAP[cat.icon] ? ICON_MAP[cat.icon] : Activity;
 
-                                    const themeColor = log.type === 'Other' && cat ? getColorHex(cat.color_theme) : null;
+                                    const themeColor = ulog.type === 'Other' && cat ? getColorHex(cat.color_theme) : null;
 
                                     return (
-                                        <div key={`${log.type}-${i}`} className="p-4 flex items-start gap-4 hover:bg-muted/20 transition-colors">
-                                            <div className={`p-2 rounded-full mt-0.5 shrink-0 ${log.type === 'Fuel' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
-                                                log.type === 'Maintenance' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' :
+                                        <div key={`${ulog.type}-${i}`} className="p-4 flex items-start gap-4 hover:bg-muted/20 transition-colors">
+                                            <div className={`p-2 rounded-full mt-0.5 shrink-0 ${ulog.type === 'Fuel' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
+                                                ulog.type === 'Maintenance' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' :
                                                     (!themeColor ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : '')
                                                 }`}
                                                 style={themeColor ? { backgroundColor: `${themeColor}20`, color: themeColor } : undefined}>
@@ -317,24 +330,24 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                             <div className="flex-1 space-y-1">
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-sm font-medium leading-none">
-                                                        {log.type === 'Fuel' ? 'Refueled' :
-                                                            log.type === 'Maintenance' ? (log as any).service_type :
+                                                        {ulog.type === 'Fuel' ? 'Refueled' :
+                                                            ulog.type === 'Maintenance' ? ulog.service_type :
                                                                 cat ? cat.name : 'Custom Entry'}
                                                     </p>
                                                     <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                                                        {new Date(log.date).toLocaleDateString()}
+                                                        {new Date(ulog.date).toLocaleDateString()}
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground line-clamp-1">
-                                                    {log.type === 'Fuel' ? `${(log as any).fuel_volume || (log as any).gallons || ''} units added at ${(log as any).odometer} ${distanceUnit}` :
-                                                        log.type === 'Maintenance' ? (log as any).notes || 'Maintenance logged' :
-                                                            (log as any).notes || 'Entry logged'}
+                                                    {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
+                                                        ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
+                                                            ulog.notes || 'Entry logged'}
                                                 </p>
                                             </div>
                                             <div className="text-sm font-semibold text-right flex items-center justify-end">
-                                                {log.type === 'Other' && cat && !cat.track_cost ? null :
-                                                    (log as any).cost != null ? `${currencySymbol}${Number((log as any).cost).toFixed(2)}` :
-                                                        (log as any).total_cost != null ? `${currencySymbol}${Number((log as any).total_cost).toFixed(2)}` : ''}
+                                                {ulog.type === 'Other' && cat && !cat.track_cost ? null :
+                                                    ulog.cost != null ? `${currencySymbol}${Number(ulog.cost).toFixed(2)}` :
+                                                        ulog.total_cost != null ? `${currencySymbol}${Number(ulog.total_cost).toFixed(2)}` : ''}
                                             </div>
                                         </div>
                                     );

@@ -16,7 +16,6 @@ import {
 import { Car, Fuel, Wrench, BarChart2, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect } from "react";
 import { logout } from "@/app/login/actions";

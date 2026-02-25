@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { VehicleWithLogs, CustomLogCategory } from "@/types/database";
+import { VehicleWithLogs } from "@/types/database";
 import { useUserStore } from "@/store/user-store";
 import { updateVehicle } from "@/app/actions/vehicles";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -13,27 +13,19 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X } from "lucide-react";
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
-import { AddTrackerModal } from "@/components/add-tracker-modal";
-import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
-import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 
-export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { vehicle: VehicleWithLogs; categories: CustomLogCategory[] }) {
+export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: VehicleWithLogs }) {
     const router = useRouter();
     const { profile } = useUserStore();
-    const { vehicles, fetchVehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
+    const { fetchVehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
     const [vehicle, setVehicle] = useState(initialVehicle);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditingSpecs, setIsEditingSpecs] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [customFields, setCustomFields] = useState<{ key: string, value: string }[]>([]);
-    const [isMounted, setIsMounted] = useState(false);
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
 
     // Sync global selected vehicle to this page's vehicle if it doesn't match
     useEffect(() => {
@@ -42,13 +34,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
         }
     }, [initialVehicle.id, selectedVehicleId, setSelectedVehicleId]);
 
-    // Sync local state with global store updates (e.g., when a modal adds a new log)
-    useEffect(() => {
-        const storeVehicle = vehicles?.find(v => v.id === initialVehicle.id);
-        if (storeVehicle) {
-            setVehicle(storeVehicle);
-        }
-    }, [vehicles, initialVehicle.id]);
+
 
     // Calculate Vitals
     const totalFuelCost = vehicle.fuel_logs.reduce((sum, log) => sum + log.total_cost, 0);
@@ -89,9 +75,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
         setIsSaving(false);
     }
 
-    if (!isMounted) {
-        return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse flex items-center gap-2"><Car className="h-6 w-6 text-muted-foreground" /> <span className="text-muted-foreground">Loading Vehicle Profile...</span></div></div>;
-    }
+
 
     return (
         <MotionWrapper className="space-y-6 pb-20">
@@ -182,7 +166,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
                         <CardHeader className="flex flex-row items-start justify-between">
                             <div>
                                 <CardTitle>Specifications & Details</CardTitle>
-                                <CardDescription>Manage your vehicle's identifying information and attributes.</CardDescription>
+                                <CardDescription>Manage your vehicle&apos;s identifying information and attributes.</CardDescription>
                             </div>
                             <Button
                                 variant="ghost"
@@ -380,11 +364,6 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
 
             </div>
 
-            {/* The Permanent Tyre Tracker Block */}
-            <div className="relative z-20 mt-8 mb-6">
-                <TyreTrackerWidget vehicle={vehicle} latestOdometer={latestOdometer} />
-            </div>
-
             {/* Service History Table Section */}
             <div className="relative z-20 mb-8">
                 <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
@@ -442,38 +421,13 @@ export function VehicleManagerClient({ vehicle: initialVehicle, categories }: { 
                                 </div>
                                 <h3 className="text-lg font-semibold tracking-tight text-foreground/90">No Service History</h3>
                                 <p className="text-muted-foreground text-sm max-w-sm mt-1 mb-6">
-                                    This vehicle doesn't have any maintenance records yet. Keep track of oil changes, tire rotations, and repairs to monitor its health.
+                                    This vehicle doesn&apos;t have any maintenance records yet. Keep track of oil changes, tire rotations, and repairs to monitor its health.
                                 </p>
                                 <AddMaintenanceModal vehicleId={vehicle.id} />
                             </div>
                         )}
                     </CardContent>
                 </Card>
-            </div>
-
-            {/* Custom Time-Series Trackers Section */}
-            <div className="relative z-20 space-y-4">
-                <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center">
-                        <Sparkles className="h-5 w-5 mr-2 text-primary" />
-                        Custom Trackers
-                    </h2>
-                </div>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {categories.map(category => (
-                        <div key={category.id} className="min-h-[300px]">
-                            <CustomTrackerWidget
-                                category={category}
-                                logs={vehicle.custom_logs ? vehicle.custom_logs.filter(l => l.category_id === category.id) : []}
-                                vehicleId={vehicle.id}
-                            />
-                        </div>
-                    ))}
-                    {/* The Add Tracker block */}
-                    <div className="min-h-[300px]">
-                        <AddTrackerModal />
-                    </div>
-                </div>
             </div>
 
         </MotionWrapper>

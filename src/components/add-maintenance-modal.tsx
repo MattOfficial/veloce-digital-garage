@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
-import { Wrench, CalendarIcon, Plus } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { Wrench, CalendarIcon, Plus, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
-import { submitMaintenanceLog } from "@/app/actions/maintenance";
+import { submitMaintenanceLog, editMaintenanceLog } from "@/app/actions/maintenance";
+import { MaintenanceLog } from "@/types/database";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,14 +38,22 @@ import {
 
 interface AddMaintenanceModalProps {
     vehicleId: string;
+    logToEdit?: MaintenanceLog;
+    trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
+export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddMaintenanceModalProps) {
     const { profile } = useUserStore();
     const { fetchVehicles } = useVehicleStore();
 
-    const [open, setOpen] = useState(false);
-    const [date, setDate] = useState<Date>(new Date());
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : uncontrolledOpen;
+    const setOpen = isControlled && controlledOnOpenChange ? controlledOnOpenChange : setUncontrolledOpen;
+
+    const [date, setDate] = useState<Date>(logToEdit ? parseISO(logToEdit.date) : new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +69,9 @@ export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
         formData.append("vehicle_id", vehicleId);
         formData.append("date", format(date, "yyyy-MM-dd"));
 
-        const result = await submitMaintenanceLog(formData);
+        const result = logToEdit
+            ? await editMaintenanceLog(logToEdit.id, formData)
+            : await submitMaintenanceLog(formData);
 
         if (result.error) {
             setError(result.error);
@@ -77,20 +88,22 @@ export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="rounded-full shadow-sm shadow-primary/20">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Log Maintenance
-                </Button>
+                {trigger ? trigger : (
+                    <Button size="sm" className="rounded-full shadow-sm shadow-primary/20">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Log Maintenance
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-[2rem] p-0 overflow-hidden border-primary/10 shadow-xl">
                 <div className="bg-muted/30 p-6 pb-4 border-b">
                     <DialogHeader>
                         <DialogTitle className="flex items-center text-xl">
-                            <Wrench className="w-5 h-5 mr-2 text-primary" />
-                            Log Service Record
+                            {logToEdit ? <Edit className="w-5 h-5 mr-2 text-primary" /> : <Wrench className="w-5 h-5 mr-2 text-primary" />}
+                            {logToEdit ? "Edit Service Record" : "Log Service Record"}
                         </DialogTitle>
                         <DialogDescription>
-                            This record will be permanently attached to this vehicle's history.
+                            {logToEdit ? "Update the details of this maintenance record." : "This record will be permanently attached to this vehicle's history."}
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -126,7 +139,7 @@ export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
                     {/* Service Type Dropdown */}
                     <div className="space-y-2">
                         <Label htmlFor="service_type">Service Performed</Label>
-                        <Select name="service_type" required defaultValue="Engine Oil Change">
+                        <Select name="service_type" required defaultValue={logToEdit?.service_type || "Engine Oil Change"}>
                             <SelectTrigger className="rounded-xl">
                                 <SelectValue placeholder="Select maintenance type" />
                             </SelectTrigger>
@@ -155,6 +168,7 @@ export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
                                 step="0.01"
                                 min="0"
                                 placeholder="0.00"
+                                defaultValue={logToEdit?.cost}
                                 required
                                 className="pl-7 rounded-xl"
                             />
@@ -168,6 +182,7 @@ export function AddMaintenanceModal({ vehicleId }: AddMaintenanceModalProps) {
                             id="notes"
                             name="notes"
                             placeholder="e.g. Jiffy Lube, included multi-point inspection."
+                            defaultValue={logToEdit?.notes || ""}
                             className="rounded-xl resize-none"
                             rows={3}
                         />

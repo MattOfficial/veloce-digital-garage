@@ -5,7 +5,7 @@ import { useUserStore } from "@/store/user-store";
 import { useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Fuel, TrendingUp, TrendingDown, DollarSign, Activity, Settings2 } from "lucide-react";
+import { Fuel, DollarSign, Activity, Settings2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';

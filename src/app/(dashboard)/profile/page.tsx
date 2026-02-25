@@ -33,7 +33,7 @@ const currencies = [
 ];
 
 export default function ProfilePage() {
-    const { profile, fetchProfile, updateProfileOptimistic, isLoading } = useUserStore();
+    const { profile, fetchProfile } = useUserStore();
 
     // We keep local state for formatting edits before save, initialized from the store
     const [displayName, setDisplayName] = useState(profile.displayName || "");
@@ -61,13 +61,8 @@ export default function ProfilePage() {
         initialize();
     }, [fetchProfile]);
 
-    // Resync local inputs when profile loads from network
-    useEffect(() => {
-        setDisplayName(profile.displayName || "");
-        setCurrency(profile.currency || "₹");
-        setDistanceUnit(profile.distanceUnit || "km");
-        setAvatarUrl(profile.avatarUrl);
-    }, [profile]);
+
+
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

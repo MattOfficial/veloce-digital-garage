@@ -1,0 +1,10 @@
+
+> temp-app@0.1.0 lint
+> eslint
+
+
+C:\Users\matru\Code\ai-antigravity-gen\Fuel-tracker\src\components\custom-tracker-widget.tsx
+  121:83  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+Ô£û 1 problem (1 error, 0 warnings)
+
