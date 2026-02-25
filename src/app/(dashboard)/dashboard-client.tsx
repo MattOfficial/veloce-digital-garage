@@ -4,7 +4,8 @@ import { useVehicleStore } from "@/store/vehicle-store";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Droplet, Wrench, Activity, CalendarDays, TrendingUp, Sparkles, Droplets, PaintBucket, Receipt, Map as MapIcon, Zap, Battery, Car, Umbrella } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { ArrowRight, Droplet, Wrench, Activity, CalendarDays, TrendingUp, Sparkles, Droplets, PaintBucket, Receipt, Map as MapIcon, Zap, Battery, Car, Umbrella, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useUserStore } from "@/store/user-store";
@@ -139,20 +140,18 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
         <MotionWrapper className="space-y-8 max-w-6xl mx-auto pb-12">
 
             {/* Header Area with Profile Link */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Tracking analytics and insights for your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
-                    </p>
-                </div>
+            <PageHeader
+                title="Dashboard Overview"
+                description={`Tracking analytics and insights for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                icon={LayoutDashboard}
+            >
                 <Link href={`/vehicles/${selectedVehicle.id}`}>
                     <Button variant="outline" className="rounded-full shadow-sm hover:bg-primary/5 hover:text-primary transition-colors border-primary/20">
                         View Full Vehicle Profile
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </Link>
-            </div>
+            </PageHeader>
 
             {/* Top Vitals Row */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Fuel, DollarSign, Activity, Settings2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
+import { PageHeader } from "@/components/page-header";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -111,18 +112,13 @@ export default function FuelPage() {
 
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                        <Fuel className="h-8 w-8 text-primary" />
-                        Fuel Analysis
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Metrics & history for your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
-                    </p>
-                </div>
+            <PageHeader
+                title="Fuel Analysis"
+                description={`Metrics & history for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                icon={Fuel}
+            >
                 <FuelLogModal vehicle={selectedVehicle} />
-            </div>
+            </PageHeader>
 
             {!hasLogs ? (
                 <Card className="bg-muted/10 border-dashed border-2">

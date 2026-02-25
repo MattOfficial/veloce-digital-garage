@@ -18,6 +18,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, 
 import { useMemo } from "react";
 import { BarChart2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { PageHeader } from "@/components/page-header";
 
 import { useUserStore } from "@/store/user-store";
 
@@ -117,12 +118,12 @@ export default function InsightsPage() {
     if (selectedVehicle.fuel_logs.length === 0) {
         return (
             <MotionWrapper className="max-w-6xl mx-auto space-y-6 px-4">
-                <div className="flex flex-col gap-2 bg-primary/5 p-8 rounded-[2rem] border-none shadow-sm mb-8">
-                    <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary">
-                        <BarChart2 className="h-10 w-10" />
-                        Performance Pulse
-                    </h1>
-                </div>
+                <PageHeader
+                    title="Insights"
+                    description={`Deep dive into the performance of your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                    icon={BarChart2}
+                    className="mb-4"
+                />
                 <div className="text-center py-20 border-none shadow-md rounded-[2rem] bg-card/50 backdrop-blur-sm">
                     <h2 className="text-xl font-medium">Not enough data</h2>
                     <p className="text-muted-foreground mt-1">Please log some fill-ups to see insights and graphs.</p>
@@ -133,15 +134,12 @@ export default function InsightsPage() {
 
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-8 pb-10 px-4">
-            <div className="flex flex-col gap-2 bg-gradient-to-br from-primary/10 to-blue-500/5 p-8 rounded-[2rem] border-none shadow-sm mb-8">
-                <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary">
-                    <BarChart2 className="h-10 w-10" />
-                    Performance Pulse
-                </h1>
-                <p className="text-muted-foreground text-lg ml-1">
-                    Deep dive into the performance of your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
-                </p>
-            </div>
+            <PageHeader
+                title="Insights"
+                description={`Deep dive into the performance of your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                icon={BarChart2}
+                className="mb-4"
+            />
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Efficiency Curve */}

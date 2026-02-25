@@ -13,6 +13,7 @@ import { AddTrackerModal } from "@/components/add-tracker-modal";
 import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
 import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 import { MaintenanceLogActions } from "@/components/maintenance-log-actions";
+import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'];
@@ -128,18 +129,13 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6 pb-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                        <Wrench className="h-8 w-8 text-primary" />
-                        Maintenance Health
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Predictive vitals and expense tracking for your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}.
-                    </p>
-                </div>
+            <PageHeader
+                title="Maintenance"
+                description={`Predictive vitals and expense tracking for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                icon={Wrench}
+            >
                 <AddMaintenanceModal vehicleId={selectedVehicle.id} />
-            </div>
+            </PageHeader>
 
             <Tabs defaultValue="overview" className="w-full space-y-6">
                 <TabsList className="grid w-[400px] grid-cols-3 rounded-full">
