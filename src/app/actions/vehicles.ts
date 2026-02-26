@@ -97,7 +97,7 @@ export async function updateVehicle(id: string, formData: FormData) {
 
     const updates: Record<string, string | number | null | object> = {};
 
-    const stringFields = ["make", "model", "image_url", "vin", "license_plate", "color", "engine_type", "transmission", "notes", "vehicle_type", "powertrain"];
+    const stringFields = ["make", "model", "image_url", "vin", "license_plate", "color", "nickname", "engine_type", "transmission", "notes", "vehicle_type", "powertrain"];
     stringFields.forEach((field) => {
         if (formData.has(field)) {
             updates[field] = formData.get(field)?.toString() || null;
