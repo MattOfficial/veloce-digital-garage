@@ -1,0 +1,30 @@
+Initialising login role...
+Connecting to remote database...
+Do you want to push these migrations to the remote database?
+ ÔÇó 20260222000001_add_distance_unit_to_users.sql
+ ÔÇó 20260222000002_add_currency_to_users.sql
+ ÔÇó 20260222000003_add_image_url_to_vehicles.sql
+ ÔÇó 20260222000004_add_profiles_and_avatars.sql
+ ÔÇó 20260222000005_expand_vehicle_details.sql
+ ÔÇó 20260223052429_add_custom_fields_to_vehicles.sql
+ ÔÇó 20260223145804_add_custom_trackers.sql
+ ÔÇó 20260223152722_add_tyre_info.sql
+ ÔÇó 20260224000000_vehicle_custom_trackers.sql
+ ÔÇó 20260226000001_add_vehicle_nickname.sql
+ ÔÇó 20260226000002_document_vault.sql
+ ÔÇó 20260226000003_service_reminders.sql
+
+ [Y/n] Applying migration 20260222000001_add_distance_unit_to_users.sql...
+NOTICE (42701): column "distance_unit" of relation "users" already exists, skipping
+Applying migration 20260222000002_add_currency_to_users.sql...
+NOTICE (42701): column "currency" of relation "users" already exists, skipping
+Applying migration 20260222000003_add_image_url_to_vehicles.sql...
+NOTICE (42701): column "image_url" of relation "vehicles" already exists, skipping
+ERROR: policy "Public user can read vehicle images" for table "objects" already exists (SQLSTATE 42710)
+At statement: 2                                                                                        
+-- Storage Policies for 'vehicles' bucket                                                              
+-- Policy for public reading of vehicle images                                                         
+CREATE POLICY "Public user can read vehicle images"                                                    
+  ON storage.objects FOR SELECT                                                                        
+  USING (bucket_id = 'vehicles')                                                                       
+Try rerunning the command with --debug to troubleshoot the error.
