@@ -199,6 +199,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 <form onSubmit={handleUpdateSpecs} className="space-y-6">
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
+                                            <Label htmlFor="nickname">Vehicle Nickname</Label>
+                                            <Input id="nickname" name="nickname" defaultValue={vehicle.nickname || ""} placeholder="e.g. Froggy2, The Beast" className="rounded-xl" />
+                                        </div>
+                                        <div className="space-y-2">
                                             <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
                                             <Input id="vin" name="vin" defaultValue={vehicle.vin || ""} placeholder="17-character VIN" className="rounded-xl font-mono uppercase" />
                                         </div>
@@ -316,6 +320,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                             ) : (
                                 <div className="space-y-6 animate-in fade-in duration-300">
                                     <div className="grid gap-5 sm:grid-cols-2">
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Vehicle Nickname</p>
+                                            <p className="font-medium text-foreground tracking-wide">{vehicle.nickname || "—"}</p>
+                                        </div>
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium text-muted-foreground">VIN (Vehicle Identification Number)</p>
                                             <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.vin || "—"}</p>

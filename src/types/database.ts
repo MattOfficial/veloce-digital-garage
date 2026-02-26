@@ -35,6 +35,7 @@ export type Vehicle = {
   vin: string | null;
   license_plate: string | null;
   color: string | null;
+  nickname: string | null;
   engine_type: string | null;
   transmission: string | null;
   notes: string | null;
