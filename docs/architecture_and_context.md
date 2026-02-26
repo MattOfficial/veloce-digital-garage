@@ -1,15 +1,15 @@
 # Veloce Tracker - Core Architecture & Context
 
 ## Application Overview
-Veloce Tracker is a premium, dark-mode, glassmorphic Next.js (App Router) web application designed for comprehensive vehicle management. It tracks fuel efficiency, maintenance schedules, and custom health metrics to calculate Total Cost of Ownership (TCO).
+Veloce Tracker is a premium, dark-mode, glassmorphic Next.js (App Router) web application designed for comprehensive multi-modal vehicle management. It natively tracks dynamic health metrics, efficiency, and maintenance for **Internal Combustion (ICE), Electric (EV), Plug-in Hybrid (PHEV), and Motorcycles**, calculating Total Cost of Ownership (TCO).
 
 ## Tech Stack & Tooling
-- **Framework**: Next.js 14+ (App Router)
+- **Framework**: Next.js 14+ (App Router) with React Suspense Boundaries
 - **Language**: TypeScript (`strict` mode)
 - **Database / Auth**: Supabase (PostgreSQL, Row Level Security)
-- **State Management**: Zustand (Client-side localized stores: `useVehicleStore`, `useUserStore`)
+- **State Management**: Zustand (Client-side localized stores with local storage `persist` middleware: `useVehicleStore`, `useUserStore`)
 - **Styling**: Tailwind CSS V4 (utilizing `@theme` and `@custom-variant` directives in `globals.css`)
-- **Animation**: Framer Motion (`framer-motion`)
+- **Animation & UX**: Framer Motion (`framer-motion`) and `nextjs-toploader`
 - **UI Components**: custom Shadcn UI + Radix primitives + Lucide React icons
 - **Data Visualization**: Recharts
 
@@ -22,19 +22,21 @@ Manages the authenticated user's profile state, including localization preferenc
 ### `vehicle-store.ts`
 Manages the user's "Digital Garage". A complex store holding an array of `VehicleWithLogs` (a nested relational type containing the vehicle data and all associated arrays of logs).
 - Tracks `vehicles: VehicleWithLogs[]`, `selectedVehicleId: string | null`, `isLoading: boolean`.
+- **Persistence**: Employs `zustand/middleware` `persist` to save `selectedVehicleId` directly to local storage to persist active vehicle contexts across page reloads.
 - Core action: `fetchVehicles()` - performs a massive relational join `* , fuel_logs(*), maintenance_logs(*), custom_logs(*)` filtering by `user_id`.
 
 ## Routing Architecture (App Router)
 - `/(auth)/login`: Supabase magic link / OAuth entry point.
 - `/(dashboard)/`: Protected layout (`layout.tsx` validates session). Wraps children in `AppSidebar` and interactive dot-matrix background.
-- `/(dashboard)/fuel`: Fuel efficiency tracking and analytics.
-- `/(dashboard)/maintenance`: Maintenance schedules, service invoices, custom time-series trackers, and interactive tire lifecycle map.
+- `/(dashboard)/loading.tsx`: A framer-motion powered Suspense boundary serving as a skeleton/loading state during route transitions.
+- `/(dashboard)/fuel`: Efficiency tracking (supports both liquid Fuel volume and EV Battery range trends).
+- `/(dashboard)/maintenance`: Maintenance schedules, `vehicle_id`-bound custom time-series trackers, and interactive tire lifecycle map (dynamically renders 2-wheel vs 4-wheel chassis arrays).
 - `/(dashboard)/insights`: High-level TCO dashboard (predictive cadence, aggregated expense breakdowns).
-- `/(dashboard)/profile`: User settings (localization, currency).
-- `/(dashboard)/vehicles/[id]`: Vehicle management (edit details, delete vehicle).
+- `/(dashboard)/profile`: User settings (localization, currency) and Garage Management (vehicle creation/powertrain tuning).
 
 ## Development Rules for Future Agents
-1. **Never use `router.refresh()` for state updates.** Always rely on Zustand `fetchVehicles()` or optimistic updates to trigger client re-renders after a server action mutation. Next.js router cache invalidation causes UI stuttering in this architecture.
+1. **Never use `router.refresh()` for state updates**, UNLESS fetching RSC props (like dashboard server queries). Always rely on Zustand `fetchVehicles()` to immediately trigger client re-renders after a server action mutation, followed by `router.refresh()` strictly to keep Next.js Server Components in sync (e.g., custom trackers).
 2. **Server Actions (`src/app/actions/...`)**: All database mutations must occur via async functions exported with `"use server"`. Use `supabase/server.ts` to instantiate the client to adhere to RLS.
-3. **Data Fetching**: Initial data load relies on Next.js server components passing initial payload to client components (e.g., `page.tsx` -> `<ClientComponent initialData={data} />`). However, dynamic polling relies on Zustand.
-4. **Veloce Aesthetics**: Always maintain the dark glassmorphic design system. Do not introduce opaque white components.
+3. **Multi-Powertrain Polymorphism**: Always respect `vehicle.powertrain` ('ev', 'ice', 'phev') and `vehicle.vehicle_type` ('car', 'motorcycle') when building components. UIs must dynamically collapse non-applicable fields (e.g., don't ask for Engine Type on an EV; only render 2 tires for motorcycles).
+4. **Data Fetching**: Initial data load relies on Next.js server components passing initial payload to client components. Dynamic polling relies on Zustand.
+5. **Veloce Aesthetics**: Always maintain the dark glassmorphic design system. Do not introduce opaque white components. Leverage Suspense and TopLoaders instead of primitive blocking "loading..." text arrays.

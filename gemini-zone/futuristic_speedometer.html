@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veloce Neon Speedometer</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.6);
+            --bg: #09090b;
+            --gauge-bg: rgba(255, 255, 255, 0.03);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* SVG Gauge Container */
+        .gauge-wrapper {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Glow behind the gauge */
+        .ambient-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            filter: blur(40px);
+            z-index: 0;
+            opacity: 0.5;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        svg {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            transform: rotate(135deg);
+            /* Start at bottom left */
+        }
+
+        .track {
+            fill: none;
+            stroke: var(--gauge-bg);
+            stroke-width: 15;
+            stroke-linecap: round;
+        }
+
+        .progress {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 15;
+            stroke-linecap: round;
+            stroke-dasharray: 880;
+            /* Circ of 140r is ~880 */
+            stroke-dashoffset: 880;
+            transition: stroke-dashoffset 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 0 10px var(--primary));
+        }
+
+        .ticks circle {
+            fill: var(--primary);
+            opacity: 0.2;
+            transition: opacity 0.2s;
+        }
+
+        /* Center text */
+        .readout {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .speed {
+            font-size: 5rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -2px;
+            text-shadow: 0 0 20px var(--primary-glow);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .unit {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
+
+        .revs {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            gap: 5px;
+        }
+
+        .controls {
+            margin-top: 50px;
+            display: flex;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* Grid background */
+        .bg-grid {
+            position: fixed;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes gridMove {
+            0% {
+                transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px);
+            }
+
+            100% {
+                transform: perspective(500px) rotateX(60deg) translateY(50px) translateZ(-200px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <div class="gauge-wrapper">
+            <div class="ambient-glow" id="glow"></div>
+            <svg viewBox="0 0 300 300">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#10b981" />
+                        <stop offset="100%" stop-color="#3b82f6" />
+                    </linearGradient>
+                </defs>
+                <!-- 270 degree arc -->
+                <circle class="track" cx="150" cy="150" r="130" stroke-dasharray="816" stroke-dashoffset="204" />
+                <circle class="progress" id="gauge" cx="150" cy="150" r="130" stroke-dasharray="816"
+                    stroke-dashoffset="816" stroke="url(#gradient)" />
+            </svg>
+
+            <div class="readout">
+                <div class="speed" id="speed">000</div>
+                <div class="unit">KM/H</div>
+                <div class="revs">RPM <span id="rpm">1000</span></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btnAccelerate">Accelerate</button>
+            <button id="btnBrake">Brake</button>
+        </div>
+    </div>
+
+    <script>
+        const gauge = document.getElementById('gauge');
+        const speedText = document.getElementById('speed');
+        const rpmText = document.getElementById('rpm');
+        const glow = document.getElementById('glow');
+        const btnAcc = document.getElementById('btnAccelerate');
+        const btnBrake = document.getElementById('btnBrake');
+
+        // Constants
+        const MAX_SPEED = 240;
+        const TOTAL_DASH = 816; // Circumference of r=130 is ~816
+        const ACTIVE_DASH = 816 * 0.75; // We only use 270 degrees (75%)
+        let currentSpeed = 0;
+        let targetSpeed = 0;
+        let isAccelerating = false;
+        let isBraking = false;
+        let animationFrame;
+
+        // Set initial dashoffset to hide the bar
+        gauge.style.strokeDashoffset = TOTAL_DASH;
+
+        function updateGauge() {
+            // Physics logic
+            if (isAccelerating) {
+                targetSpeed = Math.min(targetSpeed + 2.5, MAX_SPEED);
+                document.querySelector('.bg-grid').style.animationDuration = Math.max(0.5, 20 - (currentSpeed / 15)) + 's';
+            } else if (isBraking) {
+                targetSpeed = Math.max(targetSpeed - 5, 0);
+                document.querySelector('.bg-grid').style.animationDuration = '20s';
+            } else {
+                // Coasting friction
+                targetSpeed = Math.max(targetSpeed - 0.5, 0);
+            }
+
+            // Smooth interpolation
+            currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+
+            // Update Readout
+            speedText.innerText = Math.round(currentSpeed).toString().padStart(3, '0');
+
+            // Fake Gears / RPM
+            let gear = Math.floor(currentSpeed / 40) + 1;
+            let rpm = 1000 + ((currentSpeed % 40) * 150);
+            if (currentSpeed < 1) rpm = 800 + Math.random() * 50; // Idle wobble
+            rpmText.innerText = Math.round(rpm);
+
+            // Update SVG Dashoffset
+            // 0 speed = TOTAL_DASH
+            // MAX speed = TOTAL_DASH - ACTIVE_DASH
+            const ratio = currentSpeed / MAX_SPEED;
+            const offset = TOTAL_DASH - (ACTIVE_DASH * ratio);
+            gauge.style.strokeDashoffset = offset;
+
+            // Visuals
+            const glowIntensity = Math.max(0.2, ratio * 1.5);
+            glow.style.opacity = glowIntensity;
+            glow.style.transform = `translate(-50%, -50%) scale(${1 + (ratio * 0.3)})`;
+
+            animationFrame = requestAnimationFrame(updateGauge);
+        }
+
+        // Event Listeners
+        btnAcc.addEventListener('mousedown', () => isAccelerating = true);
+        btnAcc.addEventListener('mouseup', () => isAccelerating = false);
+        btnAcc.addEventListener('mouseleave', () => isAccelerating = false);
+
+        btnAcc.addEventListener('touchstart', (e) => { e.preventDefault(); isAccelerating = true });
+        btnAcc.addEventListener('touchend', () => isAccelerating = false);
+
+        btnBrake.addEventListener('mousedown', () => isBraking = true);
+        btnBrake.addEventListener('mouseup', () => isBraking = false);
+        btnBrake.addEventListener('mouseleave', () => isBraking = false);
+
+        btnBrake.addEventListener('touchstart', (e) => { e.preventDefault(); isBraking = true });
+        btnBrake.addEventListener('touchend', () => isBraking = false);
+
+        // Keyboard support
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') isAccelerating = true;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') isBraking = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') isAccelerating = false;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') isBraking = false;
+        });
+
+        // Start loop
+        updateGauge();
+    </script>
+</body>
+
+</html>

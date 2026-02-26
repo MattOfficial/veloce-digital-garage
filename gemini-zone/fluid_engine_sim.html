@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veloce Engine Fuel Particle Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: #030712;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', system-ui, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.1);
+            background: radial-gradient(circle at center, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+            color: #10b981;
+            letter-spacing: 1px;
+        }
+
+        p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .stat-val {
+            color: #10b981;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        button {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        button:hover {
+            background: rgba(16, 185, 129, 0.4);
+        }
+
+        button.active {
+            background: #10b981;
+            color: #030712;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container">
+        <div class="ui-overlay">
+            <h1>Combustion Chamber</h1>
+            <p>Interactive Fluid Dynamics</p>
+            <div class="stat">
+                <span>Particles:</span>
+                <span class="stat-val" id="particle-count">0</span>
+            </div>
+            <div class="stat">
+                <span>Pressure:</span>
+                <span class="stat-val" id="pressure-val">1.0x</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="mode-fuel" class="active">Inject Fuel</button>
+            <button id="mode-spark">Spark / Ignite</button>
+            <button id="mode-exhaust">Exhaust</button>
+        </div>
+
+        <canvas id="simCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const countEl = document.getElementById('particle-count');
+        const pressureEl = document.getElementById('pressure-val');
+
+        // Config
+        const width = 800;
+        const height = 600;
+        let particles = [];
+        const maxParticles = 3000;
+
+        // Interaction state
+        let mouseX = width / 2;
+        let mouseY = height / 2;
+        let isMouseDown = false;
+        let mode = 'fuel'; // fuel, spark, exhaust
+
+        // Physics parameters
+        let globalPressure = 1.0;
+
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1.0;
+                this.type = type; // 'fuel', 'fire', 'exhaust'
+                this.size = Math.random() * 3 + 1;
+                this.friction = 0.98;
+            }
+
+            update() {
+                // Apply mode-specific forces
+                if (this.type === 'fuel') {
+                    this.vy += 0.05; // slight gravity
+                    this.friction = 0.98;
+                } else if (this.type === 'fire') {
+                    this.vy -= 0.1; // heat rises
+                    this.vx += (Math.random() - 0.5) * 0.5; // turbulence
+                    this.life -= 0.015;
+                    this.size += 0.1; // expands
+                } else if (this.type === 'exhaust') {
+                    this.vy -= 0.05;
+                    this.life -= 0.005;
+                    this.friction = 0.95;
+                }
+
+                // Move
+                this.x += this.vx * globalPressure;
+                this.y += this.vy * globalPressure;
+
+                // Apply friction
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                // Mouse interaction (repel/attract based on mode)
+                if (isMouseDown) {
+                    const dx = mouseX - this.x;
+                    const dy = mouseY - this.y;
+                    const dist2 = dx * dx + dy * dy;
+
+                    if (dist2 < 20000) { // Interaction radius
+                        const force = 500 / (dist2 + 100);
+                        if (mode === 'spark' && this.type === 'fuel') {
+                            // Ignite!
+                            this.type = 'fire';
+                            this.vx -= dx * force * 0.1; // Explosion push away
+                            this.vy -= dy * force * 0.1;
+                            globalPressure = Math.min(globalPressure + 0.05, 3.0);
+                        } else if (mode === 'exhaust') {
+                            // Suck towards cursor and kill
+                            this.vx += dx * force * 0.05;
+                            this.vy += dy * force * 0.05;
+                            if (dist2 < 1000) this.life = -1; // consume
+                        } else if (mode === 'fuel') {
+                            // Gentle swill
+                            this.vx -= dy * force * 0.02; // circular
+                            this.vy += dx * force * 0.02;
+                        }
+                    }
+                }
+
+                // Bounce off walls
+                if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
+                if (this.x > width) { this.x = width; this.vx *= -0.5; }
+                if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
+                if (this.y > height) { this.y = height; this.vy *= -0.5; }
+
+                // Age
+                if (this.type === 'fuel') this.life -= 0.0005;
+
+                // Turn fire to exhaust
+                if (this.type === 'fire' && this.life < 0) {
+                    this.type = 'exhaust';
+                    this.life = 1.0;
+                    this.size = Math.random() * 2 + 1;
+                }
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+
+                if (this.type === 'fuel') {
+                    // Liquid droplet look
+                    ctx.fillStyle = `rgba(16, 185, 129, ${this.life * 0.8})`;
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#10b981';
+                } else if (this.type === 'fire') {
+                    // Hot core
+                    const heat = this.life;
+                    ctx.fillStyle = `rgba(255, ${Math.floor(200 * heat)}, ${Math.floor(100 * heat)}, ${heat})`;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#f59e0b';
+                } else if (this.type === 'exhaust') {
+                    // Smoke
+                    ctx.fillStyle = `rgba(100, 116, 139, ${this.life * 0.3})`;
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fill();
+                ctx.shadowBlur = 0; // reset for performance
+            }
+        }
+
+        // Input handlers
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', () => isMouseDown = true);
+        canvas.addEventListener('mouseup', () => isMouseDown = false);
+        canvas.addEventListener('mouseleave', () => isMouseDown = false);
+
+        document.getElementById('mode-fuel').addEventListener('click', (e) => setMode('fuel', e.target));
+        document.getElementById('mode-spark').addEventListener('click', (e) => setMode('spark', e.target));
+        document.getElementById('mode-exhaust').addEventListener('click', (e) => setMode('exhaust', e.target));
+
+        function setMode(newMode, btn) {
+            mode = newMode;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Main loop
+        function animate() {
+            // Clear background with trail effect
+            ctx.fillStyle = 'rgba(3, 7, 18, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Inject fuel if mouse is down in fuel mode
+            if (isMouseDown && mode === 'fuel' && particles.length < maxParticles) {
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new Particle(mouseX + (Math.random() - 0.5) * 20, mouseY + (Math.random() - 0.5) * 20, 'fuel'));
+                }
+            }
+
+            // Update and draw
+            let livingParticles = [];
+            ctx.globalCompositeOperation = 'lighter'; // Additive blending for cool glows
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.update();
+                if (p.life > 0 || p.type === 'fire') {
+                    p.draw(ctx);
+                    livingParticles.push(p);
+                }
+            }
+
+            ctx.globalCompositeOperation = 'source-over'; // Reset
+
+            particles = livingParticles;
+
+            // Pressure bleeding off
+            globalPressure = Math.max(1.0, globalPressure - 0.02);
+
+            // Update UI
+            if (Math.random() < 0.1) { // Throttle DOM updates
+                countEl.innerText = particles.length;
+                pressureEl.innerText = globalPressure.toFixed(2) + 'x';
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start
+        for (let i = 0; i < 300; i++) { // Initial fuel puddle
+            particles.push(new Particle(width / 2 + (Math.random() - 0.5) * 100, height - 50 + (Math.random() - 0.5) * 20, 'fuel'));
+        }
+        animate();
+
+    </script>
+</body>
+
+</html>

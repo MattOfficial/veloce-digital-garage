@@ -6,6 +6,7 @@ Extended user model tied 1-to-1 with Supabase Auth (`auth.users`).
 - `first_name`, `last_name` (text, nullable)
 - `distanceUnit` (text, default 'km', or 'miles')
 - `currency` (text, default 'USD')
+- `volumeUnit` (text, nullable)
 
 ## `vehicles`
 The core application namespace. Everything belongs to a vehicle, which belongs to a user.
@@ -16,29 +17,36 @@ The core application namespace. Everything belongs to a vehicle, which belongs t
 - `plate_number` (text)
 - `vin` (text, nullable)
 - `baseline_odometer` (int4, default 0)
-- `fuel_capacity` (numeric)
+- `fuel_capacity` (numeric) // Deprecated for EVs, kept for legacy ICE
+- `vehicle_type` (text: 'car', 'motorcycle', 'truck' - default 'car')
+- `powertrain` (text: 'ice', 'ev', 'hev', 'phev', 'rex' - default 'ice')
+- `battery_capacity_kwh` (numeric, nullable)
 - `tyre_info` (jsonb, highly nested)
 - `created_at` (timestamptz)
 
 ### `tyre_info` JSONB Structure
 ```json
+// For Cars/Trucks:
 {
   "front_left": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
   "front_right": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
   "rear_left": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
   "rear_right": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number }
 }
+// For Motorcycles, only front_left (mapped to Front) and rear_left (mapped to Rear) are utilized.
 ```
 
 ## `fuel_logs`
-Time-series data for fuel fill-ups.
+Time-series data for fuel fill-ups AND electrical charging sessions (polymorphic based on vehicle powertrain).
 - `id` (uuid, primary key)
 - `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
 - `date` (timestamptz)
 - `odometer` (int4)
-- `fuel_volume` (numeric)
+- `fuel_volume` (numeric) // Used for liquid fuels (Liters/Gallons) AND Electrical Energy (kWh) depending on powertrain.
 - `total_cost` (numeric)
 - `full_tank` (boolean)
+- `energy_type` (text: 'liquid_fuel' or 'electric_charge')
+- `estimated_range` (numeric, nullable) // Used to track battery degradation over time
 - `notes` (text, nullable)
 
 ## `maintenance_logs`
@@ -54,15 +62,15 @@ Event logs for specific maintenance repairs.
 - `receipt_url` (text, nullable - pointer to Supabase Storage bucket)
 
 ## `custom_log_categories`
-User-defined metric categories across their entire garage.
+User-defined metric categories scoped entirely to a specific vehicle instance.
 - `id` (uuid, primary key)
-- `user_id` (uuid, references `profiles.id`)
+- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
 - `name` (text - e.g. "Washer Fluid", "Coolant")
 - `unit` (text, nullable)
 - `icon` (text, nullable - string representation of Lucide icon name)
 
 ## `custom_logs`
-Time-series data attaching a specific vehicle to a custom tracker category.
+Time-series data attaching a log entry to a custom tracker category.
 - `id` (uuid, primary key)
 - `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
 - `category_id` (uuid, references `custom_log_categories.id`, ON DELETE CASCADE)
@@ -75,5 +83,5 @@ Time-series data attaching a specific vehicle to a custom tracker category.
 In Supabase Database -> Authentication:
 All tables enforce strictly authenticated Row Level Security (`RLS`).
 - `profiles`: Users can only read (`SELECT`) and write (`UPDATE`) rows where `auth.uid() = id`.
-- `vehicles`, `custom_log_categories`: Users can only interact with rows where `auth.uid() = user_id`.
-- `fuel_logs`, `maintenance_logs`, `custom_logs`: These tables rely on the cascading validation, but generally specify RLS either directly checking a `user_id` column or by joining the parent `vehicles` table where `user_id = auth.uid()`.
+- `vehicles`: Users can only interact with rows where `auth.uid() = user_id`.
+- `fuel_logs`, `maintenance_logs`, `custom_logs`, `custom_log_categories`: These tables strictly enforce safety via complex relational joins ensuring `vehicles.id = table.vehicle_id` AND `vehicles.user_id = auth.uid()`.

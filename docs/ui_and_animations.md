@@ -16,15 +16,19 @@ Do NOT use generic standard Tailwind light-mode styles (e.g. `bg-white`, `text-b
    - To build depth, leverage `shadow-md`, `shadow-lg`, inner shadows (`shadow-inner`), and specific drop shadows.
 
 3. **Background Effects:**
-   - The Root Layout (`src/app/(dashboard)/layout.tsx`) includes an `<InteractiveBackground />` component. This component tracks the user's cursor position (`useMousePosition`) and renders a radial highlight interacting with a static "dot matrix" SVG pattern (`bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))]`).
+   - The Root Layout (`src/app/layout.tsx`) includes an `<InteractiveBackground />` component. This component tracks the user's cursor position (`useMousePosition`) and renders a radial highlight interacting with a static "dot matrix" SVG pattern (`bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))]`).
    - The glassmorphic surfaces (see point 1) allow this interactive light effect to softly bleed into the application containers.
 
 4. **Accents:**
    - Instead of raw solid colors, try leveraging soft mesh gradients, e.g. `bg-gradient-to-br from-indigo-500/10 to-blue-600/10`.
    - Ensure `lucide-react` icons are distinct but not stark white. Rely on theme opacity (`text-white/70`, `text-primary`, `text-muted-foreground`).
 
-## Animation (`framer-motion`)
-We use a standard wrapper component across the entire dashboard to manage synchronized progressive entry effects.
+## Animation (`framer-motion` & Next.js Top Loader)
+We use a combination of synchronized `framer-motion` entries and global Next.js loading transitions to maintain a buttery smooth interface that never feels like it's blocking the user.
+
+### Next.js Route Transitions
+Veloce Tracker uses **`nextjs-toploader`** integrated into `RootLayout` alongside React **`<Suspense>` boundaries**. 
+When transitioning across `/(dashboard)/*` routes, `nextjs-toploader` immediately shoots a glowing line across the top of the browser to guarantee responsive UI feedback. During the server fetch, `loading.tsx` renders a sleek, pulsing `framer-motion` skeleton that dynamically bleeds background ambient light. Do NOT attempt to build custom loading boolean states for route transitions; rely on these native Suspense fallbacks.
 
 ### The `MotionWrapper` Component
 Located statically at `src/components/motion-wrapper.tsx`. By default, this component creates a smooth `slide-up` (from `y: 20` to `0`) and `fade-in` (from `opacity: 0` to `1`) animation using the viewport (`whileInView`).
@@ -43,13 +47,6 @@ export default function AnalyticsDashboard() {
         <MotionWrapper delay={0.1}>
             <Card className="bg-white/5 backdrop-blur-2xl border-white/5 shadow-md">
                 ... 
-            </Card>
-        </MotionWrapper>
-
-        {/* KPI 2 follows slightly behind at 200ms */}
-        <MotionWrapper delay={0.2}>
-            <Card className="bg-white/5 backdrop-blur-2xl border-white/5 shadow-md">
-                ...
             </Card>
         </MotionWrapper>
 
