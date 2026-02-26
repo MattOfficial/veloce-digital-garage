@@ -10,6 +10,8 @@ import { Card } from "./ui/card";
 import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessage {
     id: string;
@@ -99,6 +101,8 @@ export function VeloceCopilot() {
                 toast.error(result.error);
             } else {
                 toast.success("Fuel log saved to your vehicle!");
+                await fetchVehicles(); // Force a UI refresh to show the new log immediately
+
                 // Optionally remove the pending action from the chat so it can't be clicked twice
                 setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined } : m));
             }
@@ -117,6 +121,7 @@ export function VeloceCopilot() {
                 toast.error(result.error);
             } else {
                 toast.success("Maintenance log saved to your vehicle!");
+                await fetchVehicles(); // Force a UI refresh to show the new log immediately
                 setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined } : m));
             }
         }
@@ -173,11 +178,15 @@ export function VeloceCopilot() {
                                     </div>
                                 )}
 
-                                <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${msg.role === 'user'
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
                                     ? 'bg-primary text-primary-foreground rounded-tr-sm'
                                     : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
                                     }`}>
-                                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                                    <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
 
                                     {/* Pending Action Card inside Chat */}
                                     {msg.pendingAction && (
