@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { GoogleAuthButton } from "@/components/google-auth-button";
 
 export default async function LoginPage({
     searchParams,
@@ -65,6 +66,15 @@ export default async function LoginPage({
                                 <Button formAction={login} className="w-full">
                                     Sign In
                                 </Button>
+                                <div className="relative w-full py-4 text-center">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t border-border" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                                    </div>
+                                </div>
+                                <GoogleAuthButton text="Sign in with Google" />
                                 {resolvedSearchParams?.message && (
                                     <p className="mt-4 p-4 bg-destructive/10 text-destructive text-center text-sm rounded-md border border-destructive/20">
                                         {resolvedSearchParams.message}
@@ -104,6 +114,15 @@ export default async function LoginPage({
                                 <Button formAction={signup} className="w-full">
                                     Sign Up
                                 </Button>
+                                <div className="relative w-full py-4 text-center">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t border-border" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-card px-2 text-muted-foreground">Or sign up with</span>
+                                    </div>
+                                </div>
+                                <GoogleAuthButton text="Sign up with Google" />
                                 {resolvedSearchParams?.message && (
                                     <p className="mt-4 p-4 bg-destructive/10 text-destructive text-center text-sm rounded-md border border-destructive/20">
                                         {resolvedSearchParams.message}
