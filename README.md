@@ -23,55 +23,91 @@ cd Fuel-tracker
 npm install
 ```
 
-### Step 2: Set up Supabase
+### Step 2: Set up Supabase (Database & Auth)
 
-1.  **Create a Supabase Project**:
-    *   Go to [Supabase](https://supabase.com/).
-    *   Sign in and click **"New Project"**.
-    *   Choose an organization, give your project a name (e.g., "Digital Garage"), set a secure database password, and choose a region close to you.
-    *   Click **"Create new project"**. It will take a minute or two to provision the database.
+1. **Create a Supabase Project**:
+   * Go to [Supabase](https://supabase.com/) and create an account if you don't have one.
+   * Click **"New Project"**, choose an organization, and give your project a name.
+   * Set a secure database password and choose your region. Click **"Create new project"**.
+   * Wait a minute or two for the database to provision.
 
-2.  **Get Environment Variables**:
-    *   In your Supabase project dashboard, navigate to **Project Settings** (the gear icon on the left sidebar) > **API**.
-    *   Under **Project URL**, copy the `URL`.
-    *   Under **Project API keys**, copy the `anon` `public` key.
+2. **Get Supabase Environment Variables**:
+   * In your Supabase dashboard, click the **Settings** gear icon (bottom left).
+   * Go to **API** under Project Settings.
+   * Copy the `Project URL` and the `Project API keys` (specifically the `anon` `public` key).
 
-3.  **Configure Local Environment**:
-    *   Create a file named `.env.local` in the root of the `Fuel-tracker` directory.
-    *   Add the variables you copied in the previous step:
-        ```text
-        NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-        NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-        ```
+### Step 3: Google Cloud Setup (Authentication & Veloce Copilot)
+To enable Google Sign-In and the AI Copilot, you need a Google Cloud project.
 
-### Step 3: Run Database Migrations (Schema & Seed)
+1. **Create a Google Cloud Project**:
+   * Go to the [Google Cloud Console](https://console.cloud.google.com/).
+   * Click the project dropdown near the top left and select **"New Project"**.
+   * Name it and click **"Create"**. Make sure you select this new project.
 
-We need to create the required tables (`users`, `vehicles`, `fuel_logs`, `maintenance_logs`) and setup Row Level Security (RLS). You can do this easily through the Supabase SQL Editor.
+2. **Configure OAuth Consent Screen (For Google Login)**:
+   * Navigate to **APIs & Services** > **OAuth consent screen**.
+   * Choose **External** and click **Create**.
+   * Fill in the mandatory fields (App name, User support email, Developer contact info) and click **Save and Continue** until finished.
 
-1.  **Open the SQL Editor**:
-    *   In your Supabase project dashboard, click on **SQL Editor** on the left sidebar.
-    *   Click **"New query"**.
+3. **Get Google OAuth Client ID & Secret**:
+   * Go to **APIs & Services** > **Credentials**.
+   * Click **+ CREATE CREDENTIALS** > **OAuth client ID**.
+   * **Application type**: Web application. Name it whatever you like.
+   * **Authorized redirect URIs**: You need to add your Supabase callback URL here.
+     * *To find this*: Go to your **Supabase Dashboard** > **Authentication** > **Providers** > **Google**. There you will see a **Callback URL (for OAuth)**. It looks like `https://<your-project-id>.supabase.co/auth/v1/callback`.
+     * Copy that from Supabase, paste it into Google Cloud as an Authorized redirect URI, and click **Create**.
+   * A pop-up will show your **Client ID** and **Client Secret**. Keep this open.
 
-2.  **Run the Schema Script**:
-    *   Copy all the code from the `supabase/schema.sql` file located in this repository.
-    *   Paste it into the Supabase SQL Editor.
-    *   Click **"Run"** in the bottom right corner.
-    *   Check for a "Success" message to ensure the tables and policies were created.
+4. **Connect Google Auth to Supabase**:
+   * Go back to your **Supabase Dashboard** > **Authentication** > **Providers**.
+   * Expand **Google** and toggle "Enable Sign in with Google".
+   * Paste the **Client ID** and **Client Secret** you just got from Google Cloud.
+   * Click **Save**.
 
-3.  **Enable Email Autoconfirmation (Optional but Recommended for Dev)**:
-    *   Go to **Authentication** > **Configuration** > **Sign In / Up** (it used to be under Providers > Email).
-    *   Find the **Confirm email** toggle and turn it off to make creating test accounts locally faster. Note: keep this on for production apps.
+5. **Get your Gemini API Key (For the AI Copilot)**:
+   * Go to [Google AI Studio](https://aistudio.google.com/app/apikey) (make sure you are signed in).
+   * Click **Create API key** and choose the Google Cloud Project you just made.
+   * Copy the API key generated.
 
-4.  *(Optional but highly recommended)* **Seed Initial Data**:
-    *   After the schema is created, you'll want some mock data to test the UI.
-    *   First, you must create a user account. Before running the seed script, run the dev server (Step 4), sign up for an account through the app (if auth UI was implemented), or manually insert a dummy user in the `auth.users` table.
-    *   Once you have a User ID (UUID) from Supabase, open `supabase/seed.sql`.
-    *   Replace `'YOUR_USER_UUID'` with your actual User UUID.
-    *   Copy the modified contents of `seed.sql`, paste it into the Supabase SQL Editor, and click **"Run"**.
+### Step 4: Configure Local Environment
 
-### Step 4: Run the Development Server
+1. In the root of your cloned `Fuel-tracker` repository, copy the example environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Open `.env.local` in your code editor and paste the keys you gathered:
+   ```text
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
 
-1.  Start the Next.js development server:
+### Step 5: Run Database Migrations (Schema & Seed)
+
+We need to create the required tables (`users`, `vehicles`, `fuel_logs`, `maintenance_logs`, etc.) and set up permissions.
+
+1. **Install Supabase CLI** (If you haven't):
+   * This is required to push the database schema directly to your project.
+   * See [Supabase CLI Docs](https://supabase.com/docs/guides/cli) for installation instructions based on your OS.
+
+2. **Link and Push Migrations**:
+   * In your terminal, authenticate the CLI with your Supabase account:
+     ```bash
+     npx supabase login
+     ```
+   * Link your local project to your new Supabase project (you'll need your database password from Step 2):
+     ```bash
+     npx supabase link --project-ref <your-supabase-project-id>
+     ```
+     *(Your project ID is the random string in your Supabase project URL: `https://[PROJECT-ID].supabase.co`)*
+   * Push the database schema:
+     ```bash
+     npx supabase db push
+     ```
+
+### Step 6: Run the Development Server
+
+1. Start the Next.js development server:
 
 ```bash
 npm run dev
