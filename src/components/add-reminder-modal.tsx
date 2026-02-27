@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,21 +11,20 @@ import { useUserStore } from "@/store/user-store";
 
 export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
     const [open, setOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     const { profile } = useUserStore();
 
-    async function onSubmit(formData: FormData) {
-        setIsLoading(true);
+    function onSubmit(formData: FormData) {
         setError(null);
-        try {
-            await createServiceReminder(formData);
-            setOpen(false);
-        } catch (e: any) {
-            setError(e.message || "Failed to create reminder");
-        } finally {
-            setIsLoading(false);
-        }
+        startTransition(async () => {
+            try {
+                await createServiceReminder(formData);
+                setOpen(false);
+            } catch (e: any) {
+                setError(e.message || "Failed to create reminder");
+            }
+        });
     }
 
     return (
@@ -115,8 +114,8 @@ export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
 
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                            {isLoading ? "Saving..." : "Start Tracking"}
+                        <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            {isPending ? "Saving..." : "Start Tracking"}
                         </Button>
                     </div>
                 </form>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,33 +37,33 @@ const COLORS = [
 export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => void }) {
     const { fetchVehicles, selectedVehicleId } = useVehicleStore();
     const [open, setOpen] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [selectedIcon, setSelectedIcon] = useState(ICONS[0].name);
     const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
 
-    async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setIsSaving(true);
         setMessage(null);
 
         const formData = new FormData(e.currentTarget);
         formData.append("icon", selectedIcon);
         formData.append("color_theme", selectedColor);
 
-        const result = await createTrackerCategory(formData);
+        startTransition(async () => {
+            const result = await createTrackerCategory(formData);
 
-        if (result.error) {
-            setMessage({ type: 'error', text: result.error });
-        } else {
-            setOpen(false);
-            setMessage(null);
-            fetchVehicles();
-            router.refresh();
-            if (onTrackerAdded) onTrackerAdded();
-        }
-        setIsSaving(false);
+            if (result.error) {
+                setMessage({ type: 'error', text: result.error });
+            } else {
+                setOpen(false);
+                setMessage(null);
+                fetchVehicles();
+                router.refresh();
+                if (onTrackerAdded) onTrackerAdded();
+            }
+        });
     }
 
     return (
@@ -155,8 +155,8 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
                         </div>
                     )}
 
-                    <Button type="submit" disabled={isSaving} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all">
-                        {isSaving ? (
+                    <Button type="submit" disabled={isPending} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all">
+                        {isPending ? (
                             <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Tracker...</>
                         ) : (
                             "Build Tracker"

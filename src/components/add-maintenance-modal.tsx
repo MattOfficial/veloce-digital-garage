@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Wrench, CalendarIcon, Plus, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,14 +54,13 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
     const setOpen = isControlled && controlledOnOpenChange ? controlledOnOpenChange : setUncontrolledOpen;
 
     const [date, setDate] = useState<Date>(logToEdit ? parseISO(logToEdit.date) : new Date());
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isPending, startTransition] = useTransition();
 
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setIsSubmitting(true);
         setError(null);
 
         const formData = new FormData(e.currentTarget);
@@ -69,20 +68,19 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
         formData.append("vehicle_id", vehicleId);
         formData.append("date", format(date, "yyyy-MM-dd"));
 
-        const result = logToEdit
-            ? await editMaintenanceLog(logToEdit.id, formData)
-            : await submitMaintenanceLog(formData);
+        startTransition(async () => {
+            const result = logToEdit
+                ? await editMaintenanceLog(logToEdit.id, formData)
+                : await submitMaintenanceLog(formData);
 
-        if (result.error) {
-            setError(result.error);
-            setIsSubmitting(false);
-        } else {
-            // Success! Refresh global state and close modal
-            fetchVehicles();
-            setOpen(false);
-            setIsSubmitting(false);
-            // Optionally could show a global toast here depending on setup
-        }
+            if (result.error) {
+                setError(result.error);
+            } else {
+                // Success! Refresh global state and close modal
+                fetchVehicles();
+                setOpen(false);
+            }
+        });
     }
 
     return (
@@ -205,10 +203,10 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isSubmitting}
+                            disabled={isPending}
                             className="rounded-full shadow-md px-6"
                         >
-                            {isSubmitting ? "Saving..." : "Save Record"}
+                            {isPending ? "Saving..." : "Save Record"}
                         </Button>
                     </div>
                 </form>

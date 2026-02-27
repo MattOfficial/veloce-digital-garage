@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { VehicleWithLogs, TyreInfo, TireItem } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ function calculateHealth(tire: TireItem | undefined, latestOdometer: number) {
 export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: VehicleWithLogs, latestOdometer: number }) {
     const { fetchVehicles } = useVehicleStore();
     const [openDialog, setOpenDialog] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isPending, startTransition] = useTransition();
 
     // Form State
     const [applyTarget, setApplyTarget] = useState<ApplyTarget>('ALL');
@@ -88,29 +88,31 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
         dot_code: tyreInfo.dot_code
     } : undefined;
 
-    let tires: Partial<Record<WheelPos, TireItem | undefined>> = {};
     const isMoto = vehicle.vehicle_type === 'motorcycle';
 
-    if (isMoto) {
-        // For motorcycles, front_left = Front, rear_left = Rear (repurposing DB fields)
-        tires = {
-            F: tyreInfo?.front_left || legacyTire,
-            R: tyreInfo?.rear_left || legacyTire,
-        };
-    } else {
-        tires = {
-            FL: tyreInfo?.front_left || legacyTire,
-            FR: tyreInfo?.front_right || legacyTire,
-            RL: tyreInfo?.rear_left || legacyTire,
-            RR: tyreInfo?.rear_right || legacyTire,
-        };
-    }
+    const tires = useMemo(() => {
+        let mappedTires: Partial<Record<WheelPos, TireItem | undefined>> = {};
+        if (isMoto) {
+            // For motorcycles, front_left = Front, rear_left = Rear (repurposing DB fields)
+            mappedTires = {
+                F: tyreInfo?.front_left || legacyTire,
+                R: tyreInfo?.rear_left || legacyTire,
+            };
+        } else {
+            mappedTires = {
+                FL: tyreInfo?.front_left || legacyTire,
+                FR: tyreInfo?.front_right || legacyTire,
+                RL: tyreInfo?.rear_left || legacyTire,
+                RR: tyreInfo?.rear_right || legacyTire,
+            };
+        }
+        return mappedTires;
+    }, [tyreInfo, isMoto, legacyTire]);
 
     const hasAnyTires = Object.values(tires).some(t => t !== undefined);
 
-    async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setIsSaving(true);
 
         const formData = new FormData(e.currentTarget);
         const treadRaw = formData.get("tread_depth") as string;
@@ -162,15 +164,16 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
         const updateData = new FormData();
         updateData.append("tyre_info", JSON.stringify(updatedTyreInfo));
 
-        const result = await updateVehicle(vehicle.id, updateData);
+        startTransition(async () => {
+            const result = await updateVehicle(vehicle.id, updateData);
 
-        if (!result.error) {
-            fetchVehicles();
-            setOpenDialog(false);
-            setInstallDate(new Date());
-            setSelectedWheel(null);
-        }
-        setIsSaving(false);
+            if (!result.error) {
+                fetchVehicles();
+                setOpenDialog(false);
+                setInstallDate(new Date());
+                setSelectedWheel(null);
+            }
+        });
     }
 
 
@@ -199,7 +202,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                             </DialogHeader>
                             <TireForm
                                 onSubmit={onSubmit}
-                                isSaving={isSaving}
+                                isSaving={isPending}
                                 installDate={installDate}
                                 setInstallDate={setInstallDate}
                                 applyTarget={applyTarget}
@@ -231,7 +234,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                 </DialogHeader>
                                 <TireForm
                                     onSubmit={onSubmit}
-                                    isSaving={isSaving}
+                                    isSaving={isPending}
                                     installDate={installDate}
                                     setInstallDate={setInstallDate}
                                     applyTarget={applyTarget}

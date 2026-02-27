@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ interface OcrReviewModalProps {
 
 export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, onSuccess }: OcrReviewModalProps) {
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [ocrData, setOcrData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,51 +53,50 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
         e.preventDefault();
         if (!ocrData) return;
 
-        setIsSaving(true);
         setError(null);
-        try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Not authenticated");
+        startTransition(async () => {
+            try {
+                const supabase = createClient();
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error("Not authenticated");
 
-            // For simplicity, we create one maintenance log for the primary provider
-            // and append line items to the notes section. In a full production app,
-            // we'd probably create multiple rows or a dedicated line_items table.
+                // For simplicity, we create one maintenance log for the primary provider
+                // and append line items to the notes section. In a full production app,
+                // we'd probably create multiple rows or a dedicated line_items table.
 
-            const lineItemsText = ocrData.line_items?.map((i: any) => `- ${i.service}: $${i.cost}`).join("\n") || "";
-            const notes = `Auto-extracted from receipt.\n\nLine Items:\n${lineItemsText}`;
+                const lineItemsText = ocrData.line_items?.map((i: any) => `- ${i.service}: $${i.cost}`).join("\n") || "";
+                const notes = `Auto-extracted from receipt.\n\nLine Items:\n${lineItemsText}`;
 
-            const maintenanceEntry = {
-                vehicle_id: vehicleId,
-                user_id: session.user.id,
-                date: ocrData.date || new Date().toISOString().split('T')[0],
-                service_type: ocrData.provider ? `Service at ${ocrData.provider}` : "General Maintenance",
-                cost: parseFloat(ocrData.total_cost) || 0,
-                provider: ocrData.provider || null,
-                notes: notes,
-                receipt_url: filePath // Link back to the storage path
-            };
-
-            const { error: insertError } = await supabase.from('maintenance_logs').insert(maintenanceEntry);
-            if (insertError) throw insertError;
-
-            // Also record the document in our new documents table
-            if (filePath) {
-                const docName = filePath.split('/').pop() || 'Invoice.pdf';
-                await supabase.from('documents').insert({
+                const maintenanceEntry = {
                     vehicle_id: vehicleId,
-                    file_path: filePath,
-                    file_name: docName,
-                });
-            }
+                    user_id: session.user.id,
+                    date: ocrData.date || new Date().toISOString().split('T')[0],
+                    service_type: ocrData.provider ? `Service at ${ocrData.provider}` : "General Maintenance",
+                    cost: parseFloat(ocrData.total_cost) || 0,
+                    provider: ocrData.provider || null,
+                    notes: notes,
+                    receipt_url: filePath // Link back to the storage path
+                };
 
-            onSuccess();
-            onClose();
-        } catch (err: any) {
-            setError(err.message || "Failed to save records.");
-        } finally {
-            setIsSaving(false);
-        }
+                const { error: insertError } = await supabase.from('maintenance_logs').insert(maintenanceEntry);
+                if (insertError) throw insertError;
+
+                // Also record the document in our new documents table
+                if (filePath) {
+                    const docName = filePath.split('/').pop() || 'Invoice.pdf';
+                    await supabase.from('documents').insert({
+                        vehicle_id: vehicleId,
+                        file_path: filePath,
+                        file_name: docName,
+                    });
+                }
+
+                onSuccess();
+                onClose();
+            } catch (err: any) {
+                setError(err.message || "Failed to save records.");
+            }
+        });
     };
 
     return (
@@ -204,9 +203,9 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                         </div>
 
                         <DialogFooter className="pt-4 border-t border-white/10 flex sm:justify-between">
-                            <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving} className="text-muted-foreground">Discard</Button>
-                            <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
-                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Verify & Save</>}
+                            <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground">Discard</Button>
+                            <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Verify & Save</>}
                             </Button>
                         </DialogFooter>
                     </form>

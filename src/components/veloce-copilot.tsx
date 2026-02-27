@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings, RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -11,10 +11,13 @@ import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
 import { useUserStore } from "@/store/user-store";
-import { parseMessage } from "@/utils/nlp-engine";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-white/10 h-4 w-3/4 rounded"></div>
+});
 
 interface ChatMessage {
     id: string;
@@ -53,6 +56,9 @@ export function VeloceCopilot() {
 
         try {
             // 1. Try Local NLP First (Zero Latency & Cost)
+            // Dynamically import heavy nlp-engine to keep initial bundle small
+            const { parseMessage } = await import("@/utils/nlp-engine");
+
             // Pass the entire conversation history instead of just the latest text
             const nlpResult = parseMessage([...messages, userMsg], vehicles);
 
@@ -152,8 +158,10 @@ export function VeloceCopilot() {
                 toast.success("Fuel log saved to your vehicle!");
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
-                // Optionally remove the pending action from the chat so it can't be clicked twice
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined } : m));
+                // Easiest way to clear context is to reset the chat.
+                // We'll reset it to empty so the NLP engine starts fresh for the next command.
+                setTimeout(() => setMessages([]), 1500);
+                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
             }
         } else if (action.type === 'log_maintenance_draft') {
             const formData = new FormData();
@@ -171,9 +179,18 @@ export function VeloceCopilot() {
             } else {
                 toast.success("Maintenance log saved to your vehicle!");
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined } : m));
+
+                setTimeout(() => setMessages([]), 1500);
+                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
             }
         }
+    };
+
+    const handleDismissAction = (messageId: string) => {
+        // We can just clear the chat context entirely to start fresh, 
+        // or just clear the pending action. Let's clear the pending action and append a system message, 
+        // but since the NLP uses the full array, resetting the entire history on dismiss prevents the bug.
+        setMessages([]);
     };
 
     return (
@@ -202,9 +219,20 @@ export function VeloceCopilot() {
                                 <p className="text-[10px] text-emerald-400">Online</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
-                            <X className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            {messages.length > 0 && (
+                                <button
+                                    onClick={() => setMessages([])}
+                                    className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                                    title="New Chat / Clear Context"
+                                >
+                                    <RotateCcw className="h-4 w-4" />
+                                </button>
+                            )}
+                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors" title="Close">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Chat Area */}
@@ -232,9 +260,7 @@ export function VeloceCopilot() {
                                     : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
                                     }`}>
                                     <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {msg.content}
-                                        </ReactMarkdown>
+                                        <DynamicChatMarkdown content={msg.content} />
                                     </div>
 
                                     {/* Pending Action Card inside Chat */}
@@ -264,7 +290,7 @@ export function VeloceCopilot() {
                                                     size="sm"
                                                     variant="outline"
                                                     className="h-7 w-full text-xs border-white/10 text-white"
-                                                    onClick={() => setMessages(messages.map(m => m.id === msg.id ? { ...m, pendingAction: undefined } : m))}
+                                                    onClick={() => handleDismissAction(msg.id)}
                                                 >
                                                     Dismiss
                                                 </Button>

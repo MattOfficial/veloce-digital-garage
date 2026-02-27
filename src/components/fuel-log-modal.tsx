@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useVehicleStore } from "@/store/vehicle-store";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
 
@@ -42,8 +42,8 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
     const { fetchVehicles } = useVehicleStore();
     const { profile, getVolumeUnit } = useUserStore();
     const [open, setOpen] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [isPending, startTransition] = useTransition();
 
     const isEV = vehicle.powertrain === 'ev';
     const isPHEV = vehicle.powertrain === 'phev' || vehicle.powertrain === 'rex';
@@ -66,8 +66,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
         },
     });
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-        setIsSubmitting(true);
+    function onSubmit(values: z.infer<typeof formSchema>) {
         setMessage(null);
 
         const formData = new FormData();
@@ -81,30 +80,30 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
             formData.append("estimated_range", values.estimated_range.toString());
         }
 
-        try {
-            const result = await submitFuelLog(formData);
-            if (result.success) {
-                setMessage({ type: "success", text: "Fuel log successfully added!" });
-                fetchVehicles(); // Refresh data for the dashboard
-                setTimeout(() => {
-                    setOpen(false);
-                    setMessage(null);
-                    form.reset({
-                        date: values.date, // Keep the date they just entered in case of back to back logs
-                        odometer: values.odometer,
-                        fuel_volume: 0,
-                        total_cost: 0,
-                        estimated_range: undefined,
-                    });
-                }, 1000);
-            } else {
-                setMessage({ type: "error", text: result.error || "Failed to add log." });
+        startTransition(async () => {
+            try {
+                const result = await submitFuelLog(formData);
+                if (result.success) {
+                    setMessage({ type: "success", text: "Fuel log successfully added!" });
+                    fetchVehicles(); // Refresh data for the dashboard
+                    setTimeout(() => {
+                        setOpen(false);
+                        setMessage(null);
+                        form.reset({
+                            date: values.date, // Keep the date they just entered in case of back to back logs
+                            odometer: values.odometer,
+                            fuel_volume: 0,
+                            total_cost: 0,
+                            estimated_range: undefined,
+                        });
+                    }, 1000);
+                } else {
+                    setMessage({ type: "error", text: result.error || "Failed to add log." });
+                }
+            } catch {
+                setMessage({ type: "error", text: "An unexpected error occurred." });
             }
-        } catch {
-            setMessage({ type: "error", text: "An unexpected error occurred." });
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     }
 
     return (
@@ -218,9 +217,9 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
                             </div>
                         )}
 
-                        <Button type="submit" className="w-full rounded-full h-11 text-base font-semibold" disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                            {isSubmitting ? "Saving..." : "Save Log"}
+                        <Button type="submit" className="w-full rounded-full h-11 text-base font-semibold" disabled={isPending}>
+                            {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                            {isPending ? "Saving..." : "Save Log"}
                         </Button>
                     </form>
                 </Form>

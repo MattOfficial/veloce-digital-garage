@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useMemo } from "react";
 
 import { CustomLog, CustomLogCategory } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,31 +47,31 @@ export function CustomTrackerWidget({
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
 
     const [openDialog, setOpenDialog] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [isPending, startTransition] = useTransition();
 
     const IconComponent = ICON_MAP[category.icon] || Wrench;
     const themeColor = getColorHex(category.color_theme);
 
-    async function onSubmitLog(e: React.FormEvent<HTMLFormElement>) {
+    function onSubmitLog(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setIsSaving(true);
         setMessage(null);
 
         const formData = new FormData(e.currentTarget);
         formData.append("vehicle_id", vehicleId);
         formData.append("category_id", category.id);
 
-        const result = await addCustomLog(formData);
+        startTransition(async () => {
+            const result = await addCustomLog(formData);
 
-        if (result.error) {
-            setMessage({ type: 'error', text: result.error });
-        } else {
-            setOpenDialog(false);
-            setMessage(null);
-            fetchVehicles();
-        }
-        setIsSaving(false);
+            if (result.error) {
+                setMessage({ type: 'error', text: result.error });
+            } else {
+                setOpenDialog(false);
+                setMessage(null);
+                fetchVehicles();
+            }
+        });
     }
 
     const [isDeleting, setIsDeleting] = useState(false);
@@ -91,8 +91,10 @@ export function CustomTrackerWidget({
         }
     }
 
-    // Sort logs descending by date
-    const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort logs descending by date, cached unless `logs` array changes
+    const sortedLogs = useMemo(() => {
+        return [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [logs]);
 
     return (
         <Card className="rounded-[2rem] shadow-sm border overflow-hidden h-full flex flex-col">
@@ -148,8 +150,8 @@ export function CustomTrackerWidget({
                                     </div>
                                 )}
 
-                                <Button type="submit" disabled={isSaving} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all" style={{ backgroundColor: themeColor, color: '#fff' }}>
-                                    {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Log"}
+                                <Button type="submit" disabled={isPending} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all" style={{ backgroundColor: themeColor, color: '#fff' }}>
+                                    {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Log"}
                                 </Button>
                             </form>
                         </DialogContent>
