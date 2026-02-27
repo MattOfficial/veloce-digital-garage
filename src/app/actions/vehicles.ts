@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { evaluateBadges } from "./badges";
 
 export async function addVehicle(formData: FormData) {
     const supabase = await createClient();
@@ -56,7 +57,9 @@ export async function addVehicle(formData: FormData) {
         return { error: error.message };
     }
 
-    return { success: true, vehicle: data };
+    const newBadges = await evaluateBadges(user.id);
+
+    return { success: true, vehicle: data, newBadges };
 }
 
 export async function deleteVehicle(vehicleId: string) {

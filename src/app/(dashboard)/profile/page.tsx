@@ -2,15 +2,17 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircle2 } from "lucide-react";
+import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircle2, Flag, Droplet, Wrench, Fuel, Timer, ShieldCheck, Bot, Trophy } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { getUserBadges } from "@/app/actions/badges";
+import { BADGE_REGISTRY } from "@/lib/badges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { ImageUploadOrLink } from "@/components/image-upload-or-link";
-import { updateProfile } from "./actions";
+import { updateProfile, deleteLlmKey } from "./actions";
 import { addVehicle, deleteVehicle } from "@/app/actions/vehicles";
 import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -23,6 +25,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 const currencies = [
     { value: "₹", label: "Indian Rupee (₹)" },
@@ -55,16 +58,28 @@ export default function ProfilePage() {
     const [selectedPowertrain, setSelectedPowertrain] = useState<string>("ice");
     const addFormRef = useRef<HTMLFormElement>(null);
 
+    // Badges State
+    const [earnedBadges, setEarnedBadges] = useState<{ badge_id: string, earned_at: string }[]>([]);
+
     // Initial fetch to sync store if not already loaded, and set local state
     useEffect(() => {
         const initialize = async () => {
             await fetchProfile();
+            const badges = await getUserBadges();
+            setEarnedBadges(badges);
         };
         initialize();
     }, [fetchProfile]);
 
-
-
+    // Sync profile to local state when loaded
+    useEffect(() => {
+        if (profile) {
+            setDisplayName(profile.displayName || "");
+            setCurrency(profile.currency || "₹");
+            setDistanceUnit((profile.distanceUnit as "km" | "miles") || "km");
+            setAvatarUrl(profile.avatarUrl || null);
+        }
+    }, [profile]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,6 +115,21 @@ export default function ProfilePage() {
         setMessage({ type: 'success', text: "Image uploaded! Don't forget to save." });
     };
 
+    const handleDeleteKey = async () => {
+        if (!confirm("Are you sure you want to delete your API key? You'll lose access to AI Copilot features.")) return;
+
+        setIsSaving(true);
+        const result = await deleteLlmKey();
+        if (result?.error) {
+            setMessage({ type: 'error', text: result.error });
+        } else {
+            setMessage({ type: 'success', text: "API key deleted successfully." });
+            setLlmKey("");
+            await fetchProfile(); // Re-fetch to update hasLlmKey status
+        }
+        setIsSaving(false);
+    };
+
     const handleAddVehicle = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!addFormRef.current) return;
@@ -114,6 +144,9 @@ export default function ProfilePage() {
             setVehicleMessage({ type: 'error', text: result.error });
         } else {
             setVehicleMessage({ type: 'success', text: "Vehicle added successfully!" });
+            if (result.newBadges?.length) {
+                result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+            }
             setDialogOpen(false);
             setNewVehicleImageUrl(""); // Reset local image state
             setSelectedPowertrain("ice");
@@ -139,15 +172,86 @@ export default function ProfilePage() {
 
     return (
         <MotionWrapper className="max-w-3xl mx-auto space-y-8 pb-10 px-4">
-            <div className="flex flex-col gap-2 bg-gradient-to-br from-primary/10 to-indigo-500/5 p-8 rounded-[2rem] border-none shadow-sm mb-8">
-                <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary">
+            <div className="flex flex-col gap-2 bg-gradient-to-br from-primary/10 to-indigo-500/5 p-8 rounded-[2rem] border-none shadow-sm mb-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
+                <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary relative z-10">
                     <User className="h-10 w-10" />
                     Your Profile
                 </h1>
-                <p className="text-muted-foreground text-lg ml-1">
-                    Manage your personal information and display picture.
+                <p className="text-muted-foreground text-lg ml-1 relative z-10">
+                    Manage your personal information and view your Veloce rewards.
                 </p>
             </div>
+
+            {/* Trophy Cabinet */}
+            <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm mb-8 overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600" />
+                <CardHeader className="pb-6">
+                    <CardTitle className="text-2xl flex items-center gap-2 text-amber-500">
+                        <Trophy className="h-6 w-6" />
+                        Trophy Cabinet
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                        Your unlocked Veloce achievements. Keep logging data to unlock more!
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {Object.values(BADGE_REGISTRY).map(badge => {
+                            const earned = earnedBadges.find(b => b.badge_id === badge.id);
+                            const isEarned = !!earned;
+
+                            // Map string icon to lucide component dynamically
+                            const renderIcon = () => {
+                                const props = { className: "h-8 w-8 mb-2" };
+                                switch (badge.icon) {
+                                    case 'Flag': return <Flag {...props} />;
+                                    case 'Droplet': return <Droplet {...props} />;
+                                    case 'Wrench': return <Wrench {...props} />;
+                                    case 'Fuel': return <Fuel {...props} />;
+                                    case 'Timer': return <Timer {...props} />;
+                                    case 'ShieldCheck': return <ShieldCheck {...props} />;
+                                    case 'Car': return <Car {...props} />;
+                                    case 'Bot': return <Bot {...props} />;
+                                    default: return <Trophy {...props} />;
+                                }
+                            };
+
+                            const getTierStyles = () => {
+                                if (!isEarned) return "opacity-50 grayscale border-white/5 bg-white/5";
+                                switch (badge.tier) {
+                                    case 'bronze': return "border-[#cd7f32]/50 bg-gradient-to-br from-[#cd7f32]/20 to-transparent text-[#cd7f32] shadow-[0_0_15px_-3px_rgba(205,127,50,0.3)]";
+                                    case 'silver': return "border-slate-300/50 bg-gradient-to-br from-slate-300/20 to-transparent text-slate-300 shadow-[0_0_15px_-3px_rgba(203,213,225,0.3)]";
+                                    case 'gold': return "border-yellow-400/50 bg-gradient-to-br from-yellow-400/20 to-transparent text-yellow-400 shadow-[0_0_15px_-3px_rgba(250,204,21,0.4)]";
+                                    case 'platinum': return "border-cyan-300/50 bg-gradient-to-br from-cyan-300/20 to-transparent text-cyan-300 shadow-[0_0_15px_-3px_rgba(103,232,249,0.5)]";
+                                    default: return "border-primary/50 bg-primary/10 text-primary";
+                                }
+                            };
+
+                            return (
+                                <div
+                                    key={badge.id}
+                                    title={badge.description}
+                                    className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border backdrop-blur-md transition-all duration-300 ${getTierStyles()}`}
+                                >
+                                    {!isEarned && (
+                                        <div className="absolute top-2 right-2 opacity-50">
+                                            <Lock className="h-3 w-3" />
+                                        </div>
+                                    )}
+                                    {renderIcon()}
+                                    <span className="text-xs font-bold text-center leading-tight">{badge.name}</span>
+                                    {isEarned && earned?.earned_at && (
+                                        <span className="text-[10px] opacity-70 mt-1">
+                                            {new Date(earned.earned_at).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm">
                 <CardHeader className="pb-6">
@@ -254,11 +358,25 @@ export default function ProfilePage() {
                                             onChange={(e) => setLlmKey(e.target.value)}
                                             className="h-12 rounded-xl pr-10"
                                         />
-                                        {profile.hasLlmKey && !llmKey && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" title="Key is stored securely">
-                                                <CheckCircle2 className="h-5 w-5" />
-                                            </div>
-                                        )}
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {profile.hasLlmKey && !llmKey && (
+                                                <>
+                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                                        onClick={handleDeleteKey}
+                                                        title="Delete Key"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-sm text-muted-foreground">
                                         {profile.hasLlmKey

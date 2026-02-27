@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { evaluateBadges } from "./badges";
 
 export async function submitFuelLog(formData: FormData) {
     const supabase = await createClient();
@@ -75,5 +76,8 @@ export async function submitFuelLog(formData: FormData) {
     revalidatePath("/");
     revalidatePath("/fuel");
 
-    return { success: true };
+    const { data: { user } } = await supabase.auth.getUser();
+    const newBadges = user ? await evaluateBadges(user.id) : [];
+
+    return { success: true, newBadges };
 }

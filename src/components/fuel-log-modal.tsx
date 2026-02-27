@@ -7,6 +7,7 @@ import { useVehicleStore } from "@/store/vehicle-store";
 import { useState, useTransition } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
+import { toast } from "sonner";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,9 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
                 const result = await submitFuelLog(formData);
                 if (result.success) {
                     setMessage({ type: "success", text: "Fuel log successfully added!" });
+                    if ("newBadges" in result && result.newBadges?.length) {
+                        result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    }
                     fetchVehicles(); // Refresh data for the dashboard
                     setTimeout(() => {
                         setOpen(false);

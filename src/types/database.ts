@@ -96,3 +96,10 @@ export type VehicleWithLogs = Vehicle & {
   maintenance_logs: MaintenanceLog[];
   custom_logs: CustomLog[];
 };
+
+export type UserBadge = {
+  id: string;
+  user_id: string;
+  badge_id: string;
+  earned_at: string;
+};

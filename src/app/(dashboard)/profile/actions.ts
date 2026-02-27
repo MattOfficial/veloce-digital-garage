@@ -50,3 +50,25 @@ export async function updateProfile(formData: FormData) {
 
     return { success: true };
 }
+
+export async function deleteLlmKey() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { error: "You must be logged in." };
+    }
+
+    const { error } = await supabase
+        .from("users")
+        .update({ encrypted_llm_key: null })
+        .eq("id", user.id);
+
+    if (error) {
+        console.error("Error deleting API key:", error);
+        return { error: "Failed to delete API key." };
+    }
+
+    revalidatePath("/profile");
+    return { success: true };
+}

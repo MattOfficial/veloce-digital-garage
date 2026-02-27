@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { evaluateBadges, awardAiMechanicBadge } from "./badges";
 
 export async function submitMaintenanceLog(formData: FormData) {
     const supabase = await createClient();
@@ -53,7 +54,16 @@ export async function submitMaintenanceLog(formData: FormData) {
     revalidatePath("/maintenance");
     revalidatePath(`/vehicles/${vehicle_id}`);
 
-    return { success: true };
+    let newBadges: any[] = [];
+    if (user) {
+        newBadges = await evaluateBadges(user.id);
+        if (receipt_url) {
+            const aiBadges = await awardAiMechanicBadge(user.id);
+            newBadges = [...newBadges, ...aiBadges];
+        }
+    }
+
+    return { success: true, newBadges };
 }
 
 export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
@@ -131,5 +141,5 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
     revalidatePath("/maintenance");
     revalidatePath(`/vehicles/${vehicle_id}`);
 
-    return { success: true };
+    return { success: true, newBadges: [] };
 }

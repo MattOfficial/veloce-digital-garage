@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Wrench, CalendarIcon, Plus, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -77,6 +78,10 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 setError(result.error);
             } else {
                 // Success! Refresh global state and close modal
+                toast.success(logToEdit ? "Service record updated!" : "Service record saved!");
+                if ("newBadges" in result && result.newBadges?.length) {
+                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                }
                 fetchVehicles();
                 setOpen(false);
             }

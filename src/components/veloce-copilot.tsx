@@ -174,6 +174,9 @@ export function VeloceCopilot() {
                 toast.error(result.error);
             } else {
                 toast.success("Fuel log saved to your vehicle!");
+                if (result.newBadges?.length) {
+                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 // Easiest way to clear context is to reset the chat.
@@ -199,6 +202,9 @@ export function VeloceCopilot() {
                 toast.error(result.error);
             } else {
                 toast.success("Maintenance log saved to your vehicle!");
+                if (result.newBadges?.length) {
+                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 setTimeout(() => setMessages([]), 1500);
