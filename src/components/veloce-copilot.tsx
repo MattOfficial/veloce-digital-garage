@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
 import { useUserStore } from "@/store/user-store";
+import { parseMessage } from "@/utils/nlp-engine";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
@@ -44,12 +45,54 @@ export function VeloceCopilot() {
     const handleSend = async () => {
         if (!input.trim()) return;
 
-        const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", content: input };
+        const userText = input;
+        const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", content: userText };
         setMessages(prev => [...prev, userMsg]);
         setInput("");
         setIsTyping(true);
 
         try {
+            // 1. Try Local NLP First (Zero Latency & Cost)
+            // Pass the entire conversation history instead of just the latest text
+            const nlpResult = parseMessage([...messages, userMsg], vehicles);
+
+            // If NLP found an intent but needs more info
+            if (nlpResult.intent !== 'unknown' && nlpResult.missingInfo) {
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    content: nlpResult.missingInfo || "I need more information."
+                }]);
+                setIsTyping(false);
+                return;
+            }
+
+            // If NLP successfully drafted a full payload locally
+            if (nlpResult.intent !== 'unknown' && nlpResult.payload) {
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    content: "I've prepared that log for you. Please review and confirm.",
+                    pendingAction: {
+                        type: nlpResult.intent as "log_fuel_draft" | "log_maintenance_draft",
+                        payload: nlpResult.payload
+                    }
+                }]);
+                setIsTyping(false);
+                return;
+            }
+
+            // 2. Fallback to Gemini LLM for conversational matching
+            if (!profile.hasLlmKey) {
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    content: "I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your Gemini API key in Profile Settings to unlock conversational AI."
+                }]);
+                setIsTyping(false);
+                return;
+            }
+
             // Context injection for the AI
             const garageContext = vehicles.map(v => ({
                 id: v.id,
@@ -57,7 +100,7 @@ export function VeloceCopilot() {
                 model: v.model,
                 year: v.year,
                 nickname: v.nickname,
-                odometer: v.baseline_odometer // Just an approximation
+                odometer: v.baseline_odometer
             }));
 
             const res = await fetch("/api/copilot", {
@@ -70,14 +113,12 @@ export function VeloceCopilot() {
             });
 
             if (!res.ok) throw new Error("Failed to get response");
-
             const data = await res.json();
 
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
                 content: data.content,
-                // If the backend returns a pendingAction (function call), attach it
                 pendingAction: data.pendingAction
             };
 
@@ -86,6 +127,11 @@ export function VeloceCopilot() {
 
         } catch (e) {
             console.error(e);
+            setMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: "assistant",
+                content: "An error occurred connecting to the AI. Please try again later."
+            }]);
             setIsTyping(false);
         }
     };
@@ -161,134 +207,114 @@ export function VeloceCopilot() {
                         </button>
                     </div>
 
-                    {!profile.hasLlmKey ? (
-                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                            <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-                                <Lock className="h-8 w-8 text-primary" />
+                    {/* Chat Area */}
+                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                        {messages.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 text-muted-foreground">
+                                <Bot className="h-12 w-12 opacity-20" />
+                                <div>
+                                    <p className="font-medium">How can I help?</p>
+                                    <p className="text-sm mt-1">Try saying: "I filled up the Datsun for 1500 rupees today."</p>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-bold mb-2">Copilot Locked</h3>
-                            <p className="text-muted-foreground text-sm mb-6">
-                                Bring your own Gemini API key to unlock Veloce Copilot and intelligent OCR features.
-                            </p>
-                            <Link href="/profile" onClick={() => setIsOpen(false)}>
-                                <Button className="rounded-full flex items-center gap-2">
-                                    <Settings className="h-4 w-4" />
-                                    Go to Settings
-                                </Button>
-                            </Link>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Chat Area */}
-                            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                                {messages.length === 0 && (
-                                    <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 text-muted-foreground">
-                                        <Bot className="h-12 w-12 opacity-20" />
-                                        <div>
-                                            <p className="font-medium">How can I help?</p>
-                                            <p className="text-sm mt-1">Try saying: "I filled up the Datsun for 1500 rupees today."</p>
-                                        </div>
+                        )}
+
+                        {messages.map((msg) => (
+                            <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                {msg.role === 'assistant' && (
+                                    <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-white/5">
+                                        <Bot className="h-4 w-4 text-primary" />
                                     </div>
                                 )}
 
-                                {messages.map((msg) => (
-                                    <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        {msg.role === 'assistant' && (
-                                            <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-white/5">
-                                                <Bot className="h-4 w-4 text-primary" />
-                                            </div>
-                                        )}
-
-                                        <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                            ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                                            : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
-                                            }`}>
-                                            <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                    {msg.content}
-                                                </ReactMarkdown>
-                                            </div>
-
-                                            {/* Pending Action Card inside Chat */}
-                                            {msg.pendingAction && (
-                                                <div className="mt-3 p-3 bg-black/30 border border-white/5 rounded-xl text-sm">
-                                                    <div className="flex items-center font-semibold mb-2 text-primary">
-                                                        <Link2 className="h-4 w-4 mr-2" />
-                                                        Action Ready: {msg.pendingAction.type === 'log_fuel_draft' ? 'Log Fuel' : 'Action'}
-                                                    </div>
-                                                    <ul className="space-y-1 mb-3 text-muted-foreground text-xs">
-                                                        {Object.entries(msg.pendingAction.payload || {}).map(([key, value]) => (
-                                                            <li key={key} className="capitalize">
-                                                                <span className="font-medium text-foreground/80">{key.replace('_', ' ')}:</span> {String(value)}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            className="h-7 w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                                                            onClick={() => handleConfirmAction(msg.pendingAction!)}
-                                                        >
-                                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                                            Confirm
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="h-7 w-full text-xs border-white/10 text-white"
-                                                            onClick={() => setMessages(messages.map(m => m.id === msg.id ? { ...m, pendingAction: undefined } : m))}
-                                                        >
-                                                            Dismiss
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {msg.role === 'user' && (
-                                            <div className="h-8 w-8 shrink-0 rounded-full bg-white/10 flex items-center justify-center border border-white/5">
-                                                <User className="h-4 w-4" />
-                                            </div>
-                                        )}
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                                    ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                    : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
+                                    }`}>
+                                    <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
                                     </div>
-                                ))}
 
-                                {isTyping && (
-                                    <div className="flex gap-3 justify-start">
-                                        <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                                        </div>
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
-                                            <div className="flex gap-1">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
-                                                <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
-                                                <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+                                    {/* Pending Action Card inside Chat */}
+                                    {msg.pendingAction && (
+                                        <div className="mt-3 p-3 bg-black/30 border border-white/5 rounded-xl text-sm">
+                                            <div className="flex items-center font-semibold mb-2 text-primary">
+                                                <Link2 className="h-4 w-4 mr-2" />
+                                                Action Ready: {msg.pendingAction.type === 'log_fuel_draft' ? 'Log Fuel' : 'Action'}
+                                            </div>
+                                            <ul className="space-y-1 mb-3 text-muted-foreground text-xs">
+                                                {Object.entries(msg.pendingAction.payload || {}).map(([key, value]) => (
+                                                    <li key={key} className="capitalize">
+                                                        <span className="font-medium text-foreground/80">{key.replace('_', ' ')}:</span> {String(value)}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    className="h-7 w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                    onClick={() => handleConfirmAction(msg.pendingAction!)}
+                                                >
+                                                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                    Confirm
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-7 w-full text-xs border-white/10 text-white"
+                                                    onClick={() => setMessages(messages.map(m => m.id === msg.id ? { ...m, pendingAction: undefined } : m))}
+                                                >
+                                                    Dismiss
+                                                </Button>
                                             </div>
                                         </div>
+                                    )}
+                                </div>
+
+                                {msg.role === 'user' && (
+                                    <div className="h-8 w-8 shrink-0 rounded-full bg-white/10 flex items-center justify-center border border-white/5">
+                                        <User className="h-4 w-4" />
                                     </div>
                                 )}
                             </div>
+                        ))}
 
-                            {/* Input Area */}
-                            <div className="p-4 border-t border-white/10 bg-white/5">
-                                <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center">
-                                    <Input
-                                        value={input}
-                                        onChange={(e) => setInput(e.target.value)}
-                                        placeholder="Message Copilot..."
-                                        className="pr-12 bg-white/5 border-white/10 rounded-full h-11 focus-visible:ring-1 focus-visible:ring-primary/50"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!input.trim() || isTyping}
-                                        className="absolute right-2 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground transition-colors"
-                                    >
-                                        <Send className="h-3.5 w-3.5" />
-                                    </button>
-                                </form>
+                        {isTyping && (
+                            <div className="flex gap-3 justify-start">
+                                <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                </div>
+                                <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
+                                    <div className="flex gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+                                    </div>
+                                </div>
                             </div>
-                        </>
-                    )}
+                        )}
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="p-4 border-t border-white/10 bg-white/5">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center">
+                            <Input
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Message Copilot..."
+                                className="pr-12 bg-white/5 border-white/10 rounded-full h-11 focus-visible:ring-1 focus-visible:ring-primary/50"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!input.trim() || isTyping}
+                                className="absolute right-2 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground transition-colors"
+                            >
+                                <Send className="h-3.5 w-3.5" />
+                            </button>
+                        </form>
+                    </div>
                 </div>
             )}
         </>
