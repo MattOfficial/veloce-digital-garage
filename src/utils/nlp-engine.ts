@@ -17,8 +17,8 @@ export function parseMessage(messages: { role: string, content: string }[], vehi
     let odometer: number | null = null;
     let serviceType = "General Service";
 
-    const fuelKeywords = ['fuel', 'gas', 'petrol', 'diesel', 'fill', 'refuel', 'pump', 'tank'];
-    const maintenanceKeywords = ['fix', 'repair', 'maintenance', 'oil', 'service', 'tire', 'tyre', 'brake', 'engine', 'mechanic'];
+    const fuelKeywords = ['fuel', 'gas', 'petrol', 'diesel', 'fill', 'refuel', 'pump', 'tank', 'charge', 'charging', 'recharge', 'ev', 'plug', 'kwh'];
+    const maintenanceKeywords = ['fix', 'repair', 'maintenance', 'oil', 'service', 'tire', 'tyre', 'brake', 'engine', 'mechanic', 'gearbox', 'transmission', 'battery', 'wash', 'detail', 'filter', 'fluid', 'replace', 'change', 'inspection'];
 
     for (const msg of messages) {
         if (msg.role !== 'user') continue;
@@ -88,15 +88,28 @@ export function parseMessage(messages: { role: string, content: string }[], vehi
             }
         }
 
-        if (doc.has('oil')) serviceType = 'Oil Change';
-        if (doc.has('tire') || doc.has('tyre')) serviceType = 'Tire Replacement';
-        if (doc.has('brake')) serviceType = 'Brake Service';
+        // Try to extract dynamic phrasing like "gearbox oil change" or "replaced the battery"
+        const pattern1 = doc.match('(#Noun|#Adjective)+ (change|repair|service|replacement|fix|fluid|inspection|wash|detail)').text();
+        const pattern2 = doc.match('(replace|change|fix|repair|service|install) (#Noun|#Adjective)+').text();
+
+        if (pattern1) {
+            serviceType = pattern1.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        } else if (pattern2) {
+            serviceType = pattern2.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        } else if (doc.has('gearbox') || doc.has('transmission')) serviceType = 'Transmission Service';
+        else if (doc.has('engine')) serviceType = 'Engine Repair';
+        else if (doc.has('battery')) serviceType = 'Battery Replacement';
+        else if (doc.has('brake')) serviceType = 'Brake Service';
+        else if (doc.has('tire') || doc.has('tyre')) serviceType = 'Tire Replacement';
+        else if (doc.has('oil')) serviceType = 'Oil Change';
+        else if (doc.has('wash') || doc.has('detail')) serviceType = 'Car Wash';
+        else if (doc.has('filter')) serviceType = 'Filter Replacement';
     }
 
     if (currentIntent === 'log_fuel_draft') {
         if (!matchedVehicle) return { intent: currentIntent, missingInfo: "Which vehicle did you refuel? (e.g. your Honda or Datsun)" };
         if (!cost) return { intent: currentIntent, missingInfo: `How much did the fuel cost for the ${vehicleName}?` };
-        if (!volume) return { intent: currentIntent, missingInfo: `How many liters/gallons did you put in to the ${vehicleName}?` };
+        if (!volume) return { intent: currentIntent, missingInfo: `How many liters/gallons/kWh did you put in to the ${vehicleName}?` };
         if (!odometer) return { intent: currentIntent, missingInfo: `What was the odometer reading for the ${vehicleName} during this fill up?` };
 
         return {
@@ -115,6 +128,9 @@ export function parseMessage(messages: { role: string, content: string }[], vehi
         if (!matchedVehicle) return { intent: currentIntent, missingInfo: "Which vehicle was serviced?" };
         if (!cost) return { intent: currentIntent, missingInfo: `What was the total cost of the service for your ${vehicleName}?` };
 
+        // Join the raw conversation history so the user has full context in the logs
+        const rawHistory = messages.filter(m => m.role === 'user').map(m => m.content).join(' | ');
+
         return {
             intent: currentIntent,
             payload: {
@@ -122,7 +138,7 @@ export function parseMessage(messages: { role: string, content: string }[], vehi
                 service_type: serviceType,
                 cost,
                 date: new Date().toISOString().split('T')[0],
-                notes: `Auto-parsed from natural language.`
+                notes: `Auto-parsed from: "${rawHistory}"`
             }
         };
     }
