@@ -7,6 +7,7 @@ Extended user model tied 1-to-1 with Supabase Auth (`auth.users`).
 - `distanceUnit` (text, default 'km', or 'miles')
 - `currency` (text, default 'USD')
 - `volumeUnit` (text, nullable)
+- `encrypted_llm_key` (text, nullable) // Stores the user's personal Gemini API Key AES-256-GCM cipher text for Copilot and OCR functionality.
 
 ## `vehicles`
 The core application namespace. Everything belongs to a vehicle, which belongs to a user.

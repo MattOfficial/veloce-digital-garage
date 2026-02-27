@@ -6,6 +6,16 @@ A modern, responsive web application for tracking your vehicles, logging fuel fi
 
 *   **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS, Shadcn UI, Recharts, Zustand.
 *   **Backend/Database/Auth**: Supabase (PostgreSQL, Row Level Security, Supabase Auth).
+*   **AI/NLP**: Google Gemini (`@google/genai`) and `compromise.js` for zero-latency local parsing.
+
+## 🌟 Key Features
+
+1. **Digital Garage Management**: Track an unlimited number of ICE, EV, and Motorcycle vehicles.
+2. **Predictive Analytics**: Full Total Cost of Ownership (TCO) tracking using Recharts.
+3. **Bring-Your-Own-Key AI**: Veloce Copilot uses AES-256-GCM encrypted database columns so users can safely provide their own Gemini Developer keys without exposing them.
+4. **Zero-Latency NLP Parser**: Basic logging (e.g. "Filled up the Datsun for 1500") is routed through a local browser `compromise.js` NLP engine for $0 API cost and instant processing.
+5. **Invoice OCR**: Use visual AI to extract totals, dates, and vendors directly from uploaded fuel and repair receipts.
+6. **Secured Document Vault**: Store insurance and registration papers directly in Supabase Storage with strict RLS policies.
 
 ---
 
@@ -64,10 +74,8 @@ To enable Google Sign-In and the AI Copilot, you need a Google Cloud project.
    * Paste the **Client ID** and **Client Secret** you just got from Google Cloud.
    * Click **Save**.
 
-5. **Get your Gemini API Key (For the AI Copilot)**:
-   * Go to [Google AI Studio](https://aistudio.google.com/app/apikey) (make sure you are signed in).
-   * Click **Create API key** and choose the Google Cloud Project you just made.
-   * Copy the API key generated.
+6. **Get your Gemini API Key (Optional BYOK)**:
+   * Users provide their own keys directly in the App UI. You do not need to hardcode a global key.
 
 ### Step 4: Configure Local Environment
 
@@ -75,11 +83,15 @@ To enable Google Sign-In and the AI Copilot, you need a Google Cloud project.
    ```bash
    cp .env.example .env.local
    ```
-2. Open `.env.local` in your code editor and paste the keys you gathered:
+2. Generate a secure random 32-byte hex string for encrypting user API keys:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+3. Open `.env.local` in your code editor and paste the keys:
    ```text
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   GEMINI_API_KEY=your_gemini_api_key_here
+   ENCRYPTION_MASTER_KEY=your_random_32_byte_hex_string
    ```
 
 ### Step 5: Run Database Migrations (Schema & Seed)

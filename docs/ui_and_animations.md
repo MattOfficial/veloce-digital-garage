@@ -28,7 +28,7 @@ We use a combination of synchronized `framer-motion` entries and global Next.js 
 
 ### Next.js Route Transitions
 Veloce Tracker uses **`nextjs-toploader`** integrated into `RootLayout` alongside React **`<Suspense>` boundaries**. 
-When transitioning across `/(dashboard)/*` routes, `nextjs-toploader` immediately shoots a glowing line across the top of the browser to guarantee responsive UI feedback. During the server fetch, `loading.tsx` renders a sleek, pulsing `framer-motion` skeleton that dynamically bleeds background ambient light. Do NOT attempt to build custom loading boolean states for route transitions; rely on these native Suspense fallbacks.
+When transitioning across `/(dashboard)/*` routes, `nextjs-toploader` immediately shoots a glowing line across the top of the browser to guarantee responsive UI feedback. During the server fetch, `loading.tsx` renders `<SpeedometerLoading />`—a dynamic math-calculated physics simulation of an accelerating vehicle dashboard. Do NOT attempt to build custom loading boolean states for route transitions; rely on these native Suspense fallbacks.
 
 ### The `MotionWrapper` Component
 Located statically at `src/components/motion-wrapper.tsx`. By default, this component creates a smooth `slide-up` (from `y: 20` to `0`) and `fade-in` (from `opacity: 0` to `1`) animation using the viewport (`whileInView`).
