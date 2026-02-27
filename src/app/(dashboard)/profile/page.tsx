@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck } from "lucide-react";
+import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircle2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ export default function ProfilePage() {
     const [currency, setCurrency] = useState(profile.currency || "₹");
     const [distanceUnit, setDistanceUnit] = useState<"km" | "miles">(profile.distanceUnit || "km");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl);
+    const [llmKey, setLlmKey] = useState<string>("");
 
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -77,6 +78,9 @@ export default function ProfilePage() {
         if (avatarUrl) {
             formData.append("avatar_url", avatarUrl);
         }
+        if (llmKey) {
+            formData.append("llm_key", llmKey);
+        }
 
         const result = await updateProfile(formData);
 
@@ -84,6 +88,8 @@ export default function ProfilePage() {
             setMessage({ type: 'error', text: result.error });
         } else {
             setMessage({ type: 'success', text: "Profile updated successfully!" });
+            setLlmKey(""); // Clear it from local state after saving for security
+            fetchProfile(); // Re-fetch to update hasLlmKey status
         }
         setIsSaving(false);
     };
@@ -228,6 +234,40 @@ export default function ProfilePage() {
                                 {message.text}
                             </div>
                         )}
+
+                        <div className="pt-6 mt-6 border-t border-border/50">
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                                <Lock className="h-5 w-5 text-primary" />
+                                Veloce Copilot Settings
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="space-y-2 max-w-md">
+                                    <Label htmlFor="llm_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        Google Gemini API Key
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="llm_key"
+                                            type="password"
+                                            placeholder={profile.hasLlmKey ? "••••••••••••••••••••••••••••" : "AIzaSy..."}
+                                            value={llmKey}
+                                            onChange={(e) => setLlmKey(e.target.value)}
+                                            className="h-12 rounded-xl pr-10"
+                                        />
+                                        {profile.hasLlmKey && !llmKey && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" title="Key is stored securely">
+                                                <CheckCircle2 className="h-5 w-5" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {profile.hasLlmKey
+                                            ? "Your key is currently encrypted and securely stored in our database. Enter a new key to overwrite it."
+                                            : "Bring your own key to enable AI features. It will be encrypted with AES-256 before storage."}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="pt-4 border-t border-border/50">
                             <Button type="submit" disabled={isSaving} size="lg" className="rounded-xl w-full sm:w-auto mt-2 gap-2">

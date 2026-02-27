@@ -21,6 +21,7 @@ The core application namespace. Everything belongs to a vehicle, which belongs t
 - `vehicle_type` (text: 'car', 'motorcycle', 'truck' - default 'car')
 - `powertrain` (text: 'ice', 'ev', 'hev', 'phev', 'rex' - default 'ice')
 - `battery_capacity_kwh` (numeric, nullable)
+- `nickname` (text, nullable)
 - `tyre_info` (jsonb, highly nested)
 - `created_at` (timestamptz)
 
@@ -78,6 +79,30 @@ Time-series data attaching a log entry to a custom tracker category.
 - `value` (numeric, nullable)
 - `cost` (numeric, nullable)
 - `notes` (text, nullable)
+
+## `documents`
+Stores metadata for files uploaded to the Supabase Storage Vault bucket.
+- `id` (uuid, primary key)
+- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
+- `user_id` (uuid, references `profiles.id`)
+- `title` (text)
+- `file_url` (text)
+- `file_type` (text, e.g. 'application/pdf', 'image/jpeg')
+- `file_size` (int8)
+- `category` (text, nullable - e.g. "Insurance", "Registration", "Receipt")
+- `uploaded_at` (timestamptz)
+
+## `service_reminders`
+Tracks upcoming maintenance tasks based on date or odometer thresholds.
+- `id` (uuid, primary key)
+- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
+- `user_id` (uuid, references `profiles.id`)
+- `title` (text)
+- `description` (text, nullable)
+- `due_date` (date, nullable)
+- `due_odometer` (int4, nullable)
+- `is_completed` (boolean, default false)
+- `created_at` (timestamptz)
 
 ## RLS Security Model
 In Supabase Database -> Authentication:

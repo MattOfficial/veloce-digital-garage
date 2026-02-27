@@ -9,6 +9,7 @@ interface UserProfile {
     currency: string;
     distanceUnit: DistanceUnit;
     email: string | undefined;
+    hasLlmKey: boolean;
 }
 
 interface UserState {
@@ -27,6 +28,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         currency: '₹', // Default fallback
         distanceUnit: 'km', // Default fallback
         email: undefined,
+        hasLlmKey: false,
     },
     isLoading: true,
 
@@ -38,7 +40,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         if (user) {
             const { data } = await supabase
                 .from("users")
-                .select("display_name, avatar_url, currency, distance_unit")
+                .select("display_name, avatar_url, currency, distance_unit, encrypted_llm_key")
                 .eq("id", user.id)
                 .single();
 
@@ -48,7 +50,8 @@ export const useUserStore = create<UserState>((set, get) => ({
                     avatarUrl: data?.avatar_url || null,
                     currency: data?.currency || '₹',
                     distanceUnit: (data?.distance_unit as DistanceUnit) || 'km',
-                    email: user.email
+                    email: user.email,
+                    hasLlmKey: !!data?.encrypted_llm_key
                 },
                 isLoading: false,
             });

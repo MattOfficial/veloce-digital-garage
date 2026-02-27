@@ -1,12 +1,36 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { createClient } from "@/utils/supabase/server";
+import { decrypt } from "@/utils/crypto";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
-        // Initialize the SDK inside the handler. This prevents Next.js from crashing during static
-        // build time if the GEMINI_API_KEY environment variable is not set on the build server.
-        const ai = new GoogleGenAI({});
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return Response.json({ role: "assistant", content: "You must be logged in to use Veloce Copilot." });
+        }
+
+        const { data: userData } = await supabase
+            .from("users")
+            .select("encrypted_llm_key")
+            .eq("id", user.id)
+            .single();
+
+        if (!userData?.encrypted_llm_key) {
+            return Response.json({ role: "assistant", content: "To use Veloce Copilot, please provide your Gemini API key in your Profile Settings." });
+        }
+
+        let apiKey = "";
+        try {
+            apiKey = decrypt(userData.encrypted_llm_key);
+        } catch (e) {
+            return Response.json({ role: "assistant", content: "Failed to decrypt your API key. Please re-enter it in Profile Settings." });
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
 
         const { messages, vehicles } = await req.json();
 

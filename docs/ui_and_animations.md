@@ -63,3 +63,9 @@ export default function AnalyticsDashboard() {
 
 ## Form Components (Shadcn UI)
 The project utilizes the `shadcn/ui` ecosystem (`components/ui/*`). Several core primitives (`Card`, `Dialog`, `Sidebar`) have been fundamentally overridden to force the translucent styling globally. When extending from Shadcn or `radix-ui`, do not revert back to hard-coded `bg-background` and `border-border` colors if they obscure the interactive matrix wallpaper.
+
+## AI Assistant Paradigms (`VeloceCopilot`)
+The UI implements an always-accessible global chat interface for the LLM Copilot:
+- **Floating Action Button (FAB):** Placed `fixed bottom-6 right-6` with pulsating ambient scale bounds.
+- **Chat Window:** Employs maximum backdrop blur and strict border containment (`animate-in slide-in-from-bottom-5 fade-in duration-300`).
+- **Rich Text Rendering:** The application explicitly implements `react-markdown` and `remark-gfm` nested inside `prose prose-sm dark:prose-invert`. All generative AI output MUST go through this markdown parser to preserve the structural styling intended by LLMs (bolding, lists, code fences). Do not render literal `msg.content` text fields.

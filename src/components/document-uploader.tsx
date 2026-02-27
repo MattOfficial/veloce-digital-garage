@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, File, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { UploadCloud, File, AlertCircle, Loader2, CheckCircle2, Lock } from "lucide-react";
 import { MotionWrapper } from "./motion-wrapper";
+import { useUserStore } from "@/store/user-store";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { createClient } from "@/utils/supabase/client";
@@ -16,6 +17,7 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploaderProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { profile } = useUserStore();
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
@@ -68,7 +70,8 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
             'application/pdf': ['.pdf']
         },
         maxFiles: 1,
-        maxSize: 5242880 // 5MB
+        maxSize: 5242880, // 5MB
+        disabled: !profile.hasLlmKey
     });
 
     return (
@@ -84,7 +87,19 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
                 <input {...getInputProps()} />
 
                 <div className="flex flex-col items-center justify-center space-y-4">
-                    {isUploading ? (
+                    {!profile.hasLlmKey ? (
+                        <>
+                            <div className="p-4 rounded-full bg-red-500/10 text-red-500">
+                                <Lock className="h-8 w-8" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold tracking-tight">AI Vault Locked</h3>
+                                <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                                    Please add your Gemini API key in Profile Settings to use invoice tracking.
+                                </p>
+                            </div>
+                        </>
+                    ) : isUploading ? (
                         <>
                             <div className="p-4 bg-primary/10 text-primary rounded-full animate-pulse">
                                 <Loader2 className="h-8 w-8 animate-spin" />

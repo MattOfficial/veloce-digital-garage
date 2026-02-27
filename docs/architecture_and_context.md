@@ -6,8 +6,9 @@ Veloce Tracker is a premium, dark-mode, glassmorphic Next.js (App Router) web ap
 ## Tech Stack & Tooling
 - **Framework**: Next.js 14+ (App Router) with React Suspense Boundaries
 - **Language**: TypeScript (`strict` mode)
-- **Database / Auth**: Supabase (PostgreSQL, Row Level Security)
+- **Database / Auth / Storage**: Supabase (PostgreSQL, Row Level Security, Supabase Storage for Vault/OCR)
 - **State Management**: Zustand (Client-side localized stores with local storage `persist` middleware: `useVehicleStore`, `useUserStore`)
+- **AI Integration**: Google Gemini (`@google/genai`) via `src/app/api/copilot/route.ts` function calling
 - **Styling**: Tailwind CSS V4 (utilizing `@theme` and `@custom-variant` directives in `globals.css`)
 - **Animation & UX**: Framer Motion (`framer-motion`) and `nextjs-toploader`
 - **UI Components**: custom Shadcn UI + Radix primitives + Lucide React icons
@@ -30,8 +31,9 @@ Manages the user's "Digital Garage". A complex store holding an array of `Vehicl
 - `/(dashboard)/`: Protected layout (`layout.tsx` validates session). Wraps children in `AppSidebar` and interactive dot-matrix background.
 - `/(dashboard)/loading.tsx`: A framer-motion powered Suspense boundary serving as a skeleton/loading state during route transitions.
 - `/(dashboard)/fuel`: Efficiency tracking (supports both liquid Fuel volume and EV Battery range trends).
-- `/(dashboard)/maintenance`: Maintenance schedules, `vehicle_id`-bound custom time-series trackers, and interactive tire lifecycle map (dynamically renders 2-wheel vs 4-wheel chassis arrays).
+- `/(dashboard)/maintenance`: Maintenance schedules, `vehicle_id`-bound custom time-series trackers, Service Reminders (mileage/date-based logic), and interactive tire lifecycle map.
 - `/(dashboard)/insights`: High-level TCO dashboard (predictive cadence, aggregated expense breakdowns).
+- `/(dashboard)/vault`: Document Vault module for storing receipts, insurance, and vehicle paperwork securely via Supabase Storage.
 - `/(dashboard)/profile`: User settings (localization, currency) and Garage Management (vehicle creation/powertrain tuning).
 
 ## Development Rules for Future Agents
@@ -40,3 +42,4 @@ Manages the user's "Digital Garage". A complex store holding an array of `Vehicl
 3. **Multi-Powertrain Polymorphism**: Always respect `vehicle.powertrain` ('ev', 'ice', 'phev') and `vehicle.vehicle_type` ('car', 'motorcycle') when building components. UIs must dynamically collapse non-applicable fields (e.g., don't ask for Engine Type on an EV; only render 2 tires for motorcycles).
 4. **Data Fetching**: Initial data load relies on Next.js server components passing initial payload to client components. Dynamic polling relies on Zustand.
 5. **Veloce Aesthetics**: Always maintain the dark glassmorphic design system. Do not introduce opaque white components. Leverage Suspense and TopLoaders instead of primitive blocking "loading..." text arrays.
+6. **Veloce Copilot (AI)**: The AI assistant operates via natural language function calling. Context is built dynamically by sending the user's garage state (`VehicleWithLogs` minus the huge history arrays) to the prompt. Backend logic forces function execution (e.g., `log_fuel_draft`) and replies to the FE component to await user confirmation before actual DB writes.

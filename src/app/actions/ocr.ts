@@ -1,21 +1,42 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { decrypt } from "@/utils/crypto";
 
 export async function extractDataFromInvoice(fileUrl: string) {
-    if (!process.env.OPENAI_API_KEY) {
-        throw new Error("OpenAI API Key is missing. OCR cannot be performed.");
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error("You must be logged in to perform OCR.");
+    }
+
+    const { data: userData } = await supabase
+        .from("users")
+        .select("encrypted_llm_key")
+        .eq("id", user.id)
+        .single();
+
+    if (!userData?.encrypted_llm_key) {
+        throw new Error("Missing Gemini API Key. Please add it in your Profile Settings.");
+    }
+
+    let apiKey = "";
+    try {
+        apiKey = decrypt(userData.encrypted_llm_key);
+    } catch (e) {
+        throw new Error("Failed to decrypt your API key. Please re-enter it in Profile Settings.");
     }
 
     try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                model: "gpt-4o",
+                model: "gemini-1.5-flash",
                 messages: [
                     {
                         role: "system",
