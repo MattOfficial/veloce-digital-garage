@@ -20,6 +20,7 @@ export async function submitMaintenanceLog(formData: FormData) {
     const service_type = formData.get("service_type")?.toString();
     const costStr = formData.get("cost")?.toString();
     const notes = formData.get("notes")?.toString();
+    const receipt_url = formData.get("receipt_url")?.toString();
 
     if (!vehicle_id || !date || !service_type || !costStr) {
         return { error: "Missing required fields." };
@@ -40,6 +41,7 @@ export async function submitMaintenanceLog(formData: FormData) {
             service_type,
             cost,
             notes: notes || null,
+            receipt_url: receipt_url || null,
         });
 
     if (insertError) {

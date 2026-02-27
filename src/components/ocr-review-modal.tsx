@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -40,13 +40,11 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
     };
 
     // Auto-run processing when modal opens if we have a URL but no data yet
-    import("react").then((React) => {
-        React.useEffect(() => {
-            if (isOpen && fileUrl && !ocrData && !isProcessing && !error) {
-                processDocument();
-            }
-        }, [isOpen, fileUrl]);
-    });
+    useEffect(() => {
+        if (isOpen && fileUrl && !ocrData && !isProcessing && !error) {
+            processDocument();
+        }
+    }, [isOpen, fileUrl]);
 
 
     const handleSave = async (e: React.FormEvent) => {

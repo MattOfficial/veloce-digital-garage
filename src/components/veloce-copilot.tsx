@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings, RotateCcw } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings, RotateCcw, Paperclip } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
 import { useUserStore } from "@/store/user-store";
+import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
@@ -23,6 +24,11 @@ interface ChatMessage {
     id: string;
     role: "user" | "assistant";
     content: string;
+    attachments?: {
+        url: string;
+        name: string;
+        mimeType: string;
+    }[];
     pendingAction?: {
         type: "log_fuel_draft" | "log_maintenance_draft";
         payload: any;
@@ -34,7 +40,10 @@ export function VeloceCopilot() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [pendingAttachments, setPendingAttachments] = useState<{ url: string, name: string, mimeType: string }[]>([]);
+    const [isUploadingFile, setIsUploadingFile] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const { vehicles, fetchVehicles } = useVehicleStore();
     const { profile } = useUserStore();
 
@@ -46,12 +55,21 @@ export function VeloceCopilot() {
     }, [messages, isTyping]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() && pendingAttachments.length === 0) return;
 
         const userText = input;
-        const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", content: userText };
+        const currentAttachments = [...pendingAttachments];
+
+        const userMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: "user",
+            content: userText || (currentAttachments.length > 0 ? `Uploaded ${currentAttachments.length} document(s)` : ""),
+            attachments: currentAttachments.length > 0 ? currentAttachments : undefined
+        };
+
         setMessages(prev => [...prev, userMsg]);
         setInput("");
+        setPendingAttachments([]);
         setIsTyping(true);
 
         try {
@@ -172,6 +190,9 @@ export function VeloceCopilot() {
             if (action.payload.notes) {
                 formData.append('notes', action.payload.notes);
             }
+            if (action.payload.receipt_url) {
+                formData.append('receipt_url', action.payload.receipt_url);
+            }
 
             const result = await submitMaintenanceLog(formData);
             if (result?.error) {
@@ -191,6 +212,58 @@ export function VeloceCopilot() {
         // or just clear the pending action. Let's clear the pending action and append a system message, 
         // but since the NLP uses the full array, resetting the entire history on dismiss prevents the bug.
         setMessages([]);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        if (pendingAttachments.length + files.length > 5) {
+            toast.error("You can only attach up to 5 files per message.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        setIsUploadingFile(true);
+        try {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not logged in");
+
+            const newAttachments: { url: string, name: string, mimeType: string }[] = [];
+
+            for (const file of files) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+                const filePath = `${user.id}/chat/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('vehicle-documents')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('vehicle-documents')
+                    .getPublicUrl(filePath);
+
+                newAttachments.push({
+                    url: publicUrl,
+                    name: file.name,
+                    mimeType: file.type
+                });
+            }
+
+            setPendingAttachments(prev => [...prev, ...newAttachments]);
+
+        } catch (err: any) {
+            toast.error(err.message || "Failed to upload file");
+        } finally {
+            setIsUploadingFile(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
     };
 
     return (
@@ -259,6 +332,16 @@ export function VeloceCopilot() {
                                     ? 'bg-primary text-primary-foreground rounded-tr-sm'
                                     : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
                                     }`}>
+                                    {msg.attachments && msg.attachments.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {msg.attachments.map((att, i) => (
+                                                <div key={i} className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium border ${msg.role === 'user' ? 'bg-black/20 border-black/10' : 'bg-black/20 border-white/5 text-muted-foreground'}`}>
+                                                    <Paperclip className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                                                    <span className="truncate max-w-[150px]">{att.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
                                         <DynamicChatMarkdown content={msg.content} />
                                     </div>
@@ -324,8 +407,46 @@ export function VeloceCopilot() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="p-4 border-t border-white/10 bg-white/5">
-                        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center">
+                    <div className="p-4 border-t border-white/10 bg-white/5 flex flex-col gap-2">
+                        {pendingAttachments.length > 0 && (
+                            <div className="flex flex-wrap gap-2 px-1">
+                                {pendingAttachments.map((att, i) => (
+                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 text-primary rounded-full w-fit max-w-full text-xs font-medium animate-in fade-in slide-in-from-bottom-2">
+                                        <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate max-w-[150px]">{att.name}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPendingAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                                            className="ml-1 p-0.5 hover:bg-black/20 rounded-full shrink-0"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center gap-2">
+                            {profile.hasLlmKey && (
+                                <>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*,application/pdf"
+                                        onChange={handleFileUpload}
+                                        multiple
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isUploadingFile || isTyping}
+                                        className="h-11 w-11 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 disabled:opacity-50 transition-colors"
+                                        title="Attach receipt or document"
+                                    >
+                                        {isUploadingFile ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                                    </button>
+                                </>
+                            )}
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
@@ -334,7 +455,7 @@ export function VeloceCopilot() {
                             />
                             <button
                                 type="submit"
-                                disabled={!input.trim() || isTyping}
+                                disabled={(!input.trim() && pendingAttachments.length === 0) || isTyping || isUploadingFile}
                                 className="absolute right-2 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground transition-colors"
                             >
                                 <Send className="h-3.5 w-3.5" />

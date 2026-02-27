@@ -48,13 +48,38 @@ export async function POST(req: Request) {
             2. OUT OF SCOPE REJECTION: If the user asks you to write code (e.g., Python, JavaScript), solve math problems, write essays, or act as a general-purpose AI, you MUST politely refuse. Example response: "I am specialized for the Veloce Tracker application. I can only assist you with managing your vehicles, fuel logs, and maintenance."
             3. FUEL LOGGING: If the user asks to log fuel, you MUST use the log_fuel_draft tool. However, you MUST NOT use the tool if the user hasn't provided the Cost, Volume (liters/gallons), and Odometer reading. If they are missing, ask them explicitly.
             4. VEHICLE RESOLUTION: If the user refers to a vehicle by "nickname" or "make" and it's unambiguous, map it to the correct vehicle_id. If it IS ambiguous (e.g. they say "Honda" and have two Hondas), ask them to clarify before calling the tool.
-            5. TONE: For general chat within the automotive domain, be helpful, concise, and friendly.
+            5. DOCUMENT UPLOADS: If the user attaches an invoice/receipt, analyze it thoroughly. Extract the total cost, date, and service provider. ALSO, extract ALL SPECIFIC line items (parts and labor) and append them into the 'notes' parameter as a bulleted list. Always include the receipt_url in your tool call if one was provided in the context. 
+            6. TONE: For general chat within the automotive domain, be helpful, concise, and friendly.
         `;
 
         // Map the chat history to the format Google GenAI expects
-        const contents = messages.map((m: any) => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }]
+        const contents = await Promise.all(messages.map(async (m: any) => {
+            const parts: any[] = [{ text: m.content }];
+
+            if (m.attachments && Array.isArray(m.attachments)) {
+                // Process all attachments concurrently
+                await Promise.all(m.attachments.map(async (att: any) => {
+                    if (!att.url) return;
+                    try {
+                        const fileRes = await fetch(att.url);
+                        const arrayBuffer = await fileRes.arrayBuffer();
+                        const base64Data = Buffer.from(arrayBuffer).toString('base64');
+                        parts.push({
+                            inlineData: {
+                                data: base64Data,
+                                mimeType: att.mimeType || "image/jpeg"
+                            }
+                        });
+                    } catch (err) {
+                        console.error("Failed to fetch attachment:", err);
+                    }
+                }));
+            }
+
+            return {
+                role: m.role === 'user' ? 'user' : 'model',
+                parts
+            };
         }));
 
         // Call the configured Gemini model (defaults to 1.5 Flash if not specified)
@@ -91,8 +116,9 @@ export async function POST(req: Request) {
                                     vehicle_id: { type: Type.STRING, description: "The UUID of the vehicle from the user's garage context." },
                                     service_type: { type: Type.STRING, description: "A short label for the service performed (e.g. 'Oil Change', 'New Tires')." },
                                     cost: { type: Type.NUMBER, description: "The total cost of the service." },
-                                    notes: { type: Type.STRING, description: "Any extra details the user mentioned about the repair." },
-                                    date: { type: Type.STRING, description: "The date of the service in YYYY-MM-DD format. Default to today if not specified." }
+                                    notes: { type: Type.STRING, description: "Any extra details the user mentioned about the repair. If parsing a receipt, list the exact line items here." },
+                                    date: { type: Type.STRING, description: "The date of the service in YYYY-MM-DD format. Default to today if not specified." },
+                                    receipt_url: { type: Type.STRING, description: "The Supabase Storage URL of the receipt/invoice if one was provided in the message attachment. If multiple were provided, provide the primary one here." }
                                 },
                                 required: ["vehicle_id", "service_type", "cost"]
                             }

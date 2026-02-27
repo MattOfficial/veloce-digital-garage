@@ -15,13 +15,34 @@ import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 import { MaintenanceLogActions } from "@/components/maintenance-log-actions";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { OcrReviewModal } from "@/components/ocr-review-modal";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'];
 
 export default function MaintenanceClient({ categories }: { categories: CustomLogCategory[] }) {
-    const { vehicles, selectedVehicleId } = useVehicleStore();
+    const { vehicles, selectedVehicleId, fetchVehicles } = useVehicleStore();
     const { profile } = useUserStore();
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+
+    const router = useRouter();
+
+    const [ocrModalOpen, setOcrModalOpen] = useState(false);
+    const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+    const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
+
+    const handleUploadSuccess = (url: string, path: string) => {
+        setUploadedFileUrl(url);
+        setUploadedFilePath(path);
+        setOcrModalOpen(true);
+    };
+
+    const handleOcrSuccess = async () => {
+        await fetchVehicles();
+        router.refresh();
+    };
 
     if (!selectedVehicle) {
         return (
@@ -318,6 +339,12 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                 </TabsContent>
 
                 <TabsContent value="invoices" className="space-y-6 mt-6">
+                    {/* Document Upload Widget */}
+                    <DocumentUploader
+                        vehicleId={selectedVehicle.id}
+                        onUploadSuccess={handleUploadSuccess}
+                    />
+
                     {/* Service History Table */}
                     <MotionWrapper delay={0.1}>
                         <Card className="overflow-hidden">
@@ -406,6 +433,15 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                 </TabsContent>
             </Tabs>
+
+            <OcrReviewModal
+                vehicleId={selectedVehicle.id}
+                fileUrl={uploadedFileUrl}
+                filePath={uploadedFilePath}
+                isOpen={ocrModalOpen}
+                onClose={() => setOcrModalOpen(false)}
+                onSuccess={handleOcrSuccess}
+            />
         </MotionWrapper>
     );
 }
