@@ -16,11 +16,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 
-export function LoginClient({ message }: { message?: string }) {
+export function LoginClient({ message, defaultTab = "login" }: { message?: string; defaultTab?: string }) {
     return (
         <MotionWrapper className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2 h-screen mx-auto">
             <Card className="w-full">
-                <Tabs defaultValue="login" className="w-full">
+                <Tabs defaultValue={defaultTab} className="w-full">
                     <CardHeader>
                         <CardTitle className="text-2xl font-bold text-center">
                             Digital Garage
@@ -29,7 +29,7 @@ export function LoginClient({ message }: { message?: string }) {
                             Sign in to manage your vehicles and fuel logs
                         </CardDescription>
                         <TabsList className="grid w-full grid-cols-2 mt-4">
-                            <TabsTrigger value="login">Login</TabsTrigger>
+                            <TabsTrigger value="login">Sign In</TabsTrigger>
                             <TabsTrigger value="signup">Sign Up</TabsTrigger>
                         </TabsList>
                     </CardHeader>

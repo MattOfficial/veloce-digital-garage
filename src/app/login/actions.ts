@@ -18,8 +18,8 @@ export async function login(formData: FormData) {
         redirect("/login?message=" + encodeURIComponent(error.message));
     }
 
-    revalidatePath("/", "layout");
-    redirect("/");
+    revalidatePath("/dashboard", "layout");
+    redirect("/dashboard");
 }
 
 export async function signup(formData: FormData) {
@@ -36,8 +36,8 @@ export async function signup(formData: FormData) {
         redirect("/login?message=" + encodeURIComponent(error.message));
     }
 
-    revalidatePath("/", "layout");
-    redirect("/");
+    revalidatePath("/dashboard", "layout");
+    redirect("/dashboard");
 }
 
 export async function logout() {

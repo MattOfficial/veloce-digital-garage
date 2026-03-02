@@ -145,7 +145,7 @@ export default function TelemetryHud() {
                 }}>
             </div>
 
-            <Link href="/" className="absolute top-8 left-8 z-50 text-slate-400 hover:text-white flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/10 transition-all">
+            <Link href="/dashboard" className="absolute top-8 left-8 z-50 text-slate-400 hover:text-white flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/10 transition-all">
                 <ArrowLeft className="w-4 h-4" /> Exit Telemetry
             </Link>
 

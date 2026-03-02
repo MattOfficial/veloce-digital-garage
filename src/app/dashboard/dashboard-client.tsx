@@ -53,7 +53,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                     <p className="text-muted-foreground max-w-sm mx-auto">
                         Please add a vehicle to your garage to view the dashboard and analytics.
                     </p>
-                    <Link href="/profile">
+                    <Link href="/dashboard/profile">
                         <Button className="rounded-full">Go to Profile</Button>
                     </Link>
                 </div>
@@ -385,7 +385,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                             <CardDescription>Add new records to your vehicle without leaving the dashboard.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-4">
-                            <Link href="/fuel" className="block w-full">
+                            <Link href="/dashboard/fuel" className="block w-full">
                                 <Button className="w-full justify-start h-14 rounded-xl text-md" variant="default">
                                     <div className="bg-primary-foreground/20 p-2 rounded-lg mr-3">
                                         <Droplet className="h-5 w-5" />

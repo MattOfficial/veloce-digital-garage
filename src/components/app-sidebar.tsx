@@ -23,10 +23,10 @@ import { logout } from "@/app/login/actions";
 import { useUserStore } from "@/store/user-store";
 
 const navigation = [
-    { name: "Dashboard", href: "/", icon: Car },
-    { name: "Fuel History", href: "/fuel", icon: Fuel },
-    { name: "Maintenance", href: "/maintenance", icon: Wrench },
-    { name: "Running Costs", href: "/insights", icon: BarChart2 },
+    { name: "Dashboard", href: "/dashboard", icon: Car },
+    { name: "Fuel History", href: "/dashboard/fuel", icon: Fuel },
+    { name: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
+    { name: "Running Costs", href: "/dashboard/insights", icon: BarChart2 },
 ];
 
 export function AppSidebar() {
@@ -80,7 +80,7 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter>
                 <div className="flex flex-col gap-2 p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4 border-t border-border/50">
-                    <Link href="/profile" className="flex items-center gap-3 w-full hover:bg-secondary/50 p-2 rounded-full transition-all duration-300 active:scale-95 hover:scale-[1.02] cursor-pointer mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+                    <Link href="/dashboard/profile" className="flex items-center gap-3 w-full hover:bg-secondary/50 p-2 rounded-full transition-all duration-300 active:scale-95 hover:scale-[1.02] cursor-pointer mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
                         <Avatar className="h-10 w-10 border border-border/50 shrink-0 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8">
                             <AvatarImage src={profile.avatarUrl || undefined} className="object-cover" />
                             <AvatarFallback className="bg-primary/10 text-primary font-semibold">{initial}</AvatarFallback>
