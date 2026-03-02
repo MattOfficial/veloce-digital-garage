@@ -84,7 +84,7 @@ export function LandingPage() {
                     </motion.div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent italic">
-                        Digital Garage
+                        Veloce Digital Garage
                     </h1>
 
                     <p className="text-xl md:text-2xl text-muted-foreground mb-10 leading-relaxed font-light">

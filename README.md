@@ -1,4 +1,4 @@
-# Digital Garage - Fuel & Vehicle Tracking Application
+# Veloce Digital Garage - Fuel & Vehicle Tracking Application
 
 A modern, responsive web application for tracking your vehicles, logging fuel fill-ups, calculating efficiency, and predicting maintenance needs. Built with Next.js, Shadcn UI, Recharts, and Supabase.
 
@@ -29,7 +29,7 @@ If you haven't already, clone the repository to your local machine and install t
 
 ```bash
 git clone <your-repo-url>
-cd Fuel-tracker
+cd veloce-digital-garage
 npm install
 ```
 
@@ -79,7 +79,7 @@ To enable Google Sign-In and the AI Copilot, you need a Google Cloud project.
 
 ### Step 4: Configure Local Environment
 
-1. In the root of your cloned `Fuel-tracker` repository, copy the example environment file:
+1. In the root of your cloned `veloce-digital-garage` repository, copy the example environment file:
    ```bash
    cp .env.example .env.local
    ```

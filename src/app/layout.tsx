@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Digital Garage",
+  title: "Veloce Digital Garage",
   description: "Modern Fuel & Vehicle Tracking Application",
 };
 
