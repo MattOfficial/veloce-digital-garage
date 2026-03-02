@@ -341,27 +341,29 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                                     style={themeColor ? { backgroundColor: `${themeColor}20`, color: themeColor } : undefined}>
                                                     <IconComponent className="h-4 w-4" />
                                                 </div>
-                                                <div className="flex-1 space-y-1">
+                                                <div className="flex-1 space-y-1 w-full overflow-hidden">
                                                     <div className="flex justify-between items-start">
                                                         <p className="text-sm font-medium leading-none">
                                                             {ulog.type === 'Fuel' ? 'Refueled' :
                                                                 ulog.type === 'Maintenance' ? ulog.service_type :
                                                                     cat ? cat.name : 'Custom Entry'}
                                                         </p>
-                                                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                                                            {new Date(ulog.date).toLocaleDateString()}
+                                                        <div className="text-sm font-semibold text-right shrink-0 ml-2">
+                                                            {ulog.type === 'Other' && cat && !cat.track_cost ? null :
+                                                                ulog.cost != null ? `${currencySymbol}${Number(ulog.cost).toFixed(2)}` :
+                                                                    ulog.total_cost != null ? `${currencySymbol}${Number(ulog.total_cost).toFixed(2)}` : ''}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between items-start mt-0.5">
+                                                        <p className="text-xs text-muted-foreground line-clamp-1 pr-2">
+                                                            {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
+                                                                ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
+                                                                    ulog.notes || 'Entry logged'}
+                                                        </p>
+                                                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
+                                                            {new Date(ulog.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground line-clamp-1">
-                                                        {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
-                                                            ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
-                                                                ulog.notes || 'Entry logged'}
-                                                    </p>
-                                                </div>
-                                                <div className="text-sm font-semibold text-right flex items-center justify-end">
-                                                    {ulog.type === 'Other' && cat && !cat.track_cost ? null :
-                                                        ulog.cost != null ? `${currencySymbol}${Number(ulog.cost).toFixed(2)}` :
-                                                            ulog.total_cost != null ? `${currencySymbol}${Number(ulog.total_cost).toFixed(2)}` : ''}
                                                 </div>
                                             </div>
                                         );

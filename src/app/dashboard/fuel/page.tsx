@@ -322,7 +322,7 @@ export default function FuelPage() {
                                     {tableLogs.map((log) => (
                                         <tr key={log.id} className="hover:bg-muted/30 transition-colors">
                                             <td className="px-6 py-4 font-medium">
-                                                {new Date(log.date).toLocaleDateString()}
+                                                {new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 {log.odometer.toLocaleString()} <span className="text-muted-foreground text-xs">{profile.distanceUnit}</span>

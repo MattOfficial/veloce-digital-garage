@@ -1,1 +1,1 @@
-ALTER TABLE users ADD COLUMN encrypted_llm_key text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_llm_key text;
