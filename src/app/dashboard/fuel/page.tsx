@@ -5,12 +5,15 @@ import { useUserStore } from "@/store/user-store";
 import { useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Fuel, DollarSign, Activity, Settings2 } from "lucide-react";
+import { Fuel, DollarSign, Activity, Settings2, Pencil, Trash2 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
+import { FuelEditModal } from "@/components/fuel-edit-modal";
+import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { PageHeader } from "@/components/page-header";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export type FuelEfficiencyUnit = 'km/L' | 'L/100km' | 'MPG (US)' | 'MPG (UK)';
 const METRIC_OPTIONS: FuelEfficiencyUnit[] = ['km/L', 'L/100km', 'MPG (US)', 'MPG (UK)'];
@@ -20,6 +23,8 @@ export default function FuelPage() {
     const { profile, getVolumeUnit } = useUserStore();
 
     const [selectedMetric, setSelectedMetric] = useState<FuelEfficiencyUnit | null>(null);
+    const [editingLog, setEditingLog] = useState<{ id: string; vehicle_id: string; date: string; odometer: number; fuel_volume: number; total_cost: number; estimated_range?: number | null; energy_type?: string; calcEff: number } | null>(null);
+    const [deletingLog, setDeletingLog] = useState<{ id: string; vehicle_id: string; date: string } | null>(null);
 
     const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
@@ -316,6 +321,7 @@ export default function FuelPage() {
                                         <th className="px-6 py-4 font-medium text-right">Volume</th>
                                         <th className="px-6 py-4 font-medium text-right">Cost</th>
                                         <th className="px-6 py-4 font-medium text-right">Efficiency</th>
+                                        <th className="px-6 py-4 font-medium text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -336,6 +342,26 @@ export default function FuelPage() {
                                             <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
                                                 {log.calcEff ? `${log.calcEff.toFixed(2)}` : '--'}
                                             </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                        onClick={() => setEditingLog(log)}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                                        onClick={() => setDeletingLog(log)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -343,6 +369,26 @@ export default function FuelPage() {
                         </div>
                     </Card>
                 </>
+            )}
+
+            {/* Edit Modal */}
+            {editingLog && (
+                <FuelEditModal
+                    log={editingLog}
+                    open={!!editingLog}
+                    onOpenChange={(open) => { if (!open) setEditingLog(null); }}
+                />
+            )}
+
+            {/* Delete Dialog */}
+            {deletingLog && (
+                <FuelDeleteDialog
+                    logId={deletingLog.id}
+                    vehicleId={deletingLog.vehicle_id}
+                    logDate={new Date(deletingLog.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    open={!!deletingLog}
+                    onOpenChange={(open) => { if (!open) setDeletingLog(null); }}
+                />
             )}
         </MotionWrapper>
     );
