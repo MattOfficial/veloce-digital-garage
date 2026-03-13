@@ -7,21 +7,24 @@ A modern, responsive web application for tracking your vehicles, logging fuel fi
 *   **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS, Shadcn UI, Recharts, Zustand.
 *   **Backend/Database/Auth**: Supabase (PostgreSQL, Row Level Security, Supabase Auth).
 *   **AI/NLP**: Google Gemini (`@google/genai`) and `compromise.js` for zero-latency local parsing.
+*   **Visuals**: [`vibe-particles`](https://www.npmjs.com/package/vibe-particles) - plugin-based Canvas 2D particle engine for interactive backgrounds.
 
 ## 🌟 Key Features
 
-1. **Digital Garage Management**: Track an unlimited number of ICE, EV, and Motorcycle vehicles.
+1. **Digital Garage Management**: Track an unlimited number of ICE, EV, and Motorcycle vehicles with a custom speedometer branding.
 2. **Predictive Analytics**: Full Total Cost of Ownership (TCO) tracking using Recharts.
 3. **Bring-Your-Own-Key AI**: Veloce Copilot uses AES-256-GCM encrypted database columns so users can safely provide their own Gemini Developer keys without exposing them.
 4. **Zero-Latency NLP Parser**: Basic logging (e.g. "Filled up the Datsun for 1500") is routed through a local browser `compromise.js` NLP engine for $0 API cost and instant processing.
 5. **Invoice OCR**: Use visual AI to extract totals, dates, and vendors directly from uploaded fuel and repair receipts.
 6. **Secured Document Vault**: Store insurance and registration papers directly in Supabase Storage with strict RLS policies.
+7. **Complete Data Control**: Edit or delete individual entries with a secure GitHub-style "type-to-confirm" guard for permanent deletions.
+8. **Interactive UI**: Standardized `DD/MM/YYYY` formatting and a high-performance interactive particle background.
 
 ---
 
 ## 🚀 Setup Instructions
 
-Follow these steps to get the application running locally and connected to your own Supabase project.
+For a quick, beginner-friendly guide to deploying on Vercel, check out our [Vercel Deployment Guide](docs/vercel-deployment-guide.md).
 
 ### Step 1: Clone the Repository
 
@@ -79,7 +82,7 @@ To enable Google Sign-In and the AI Copilot, you need a Google Cloud project.
 
 ### Step 4: Configure Local Environment
 
-1. In the root of your cloned `veloce-digital-garage` repository, copy the example environment file:
+1. In the root of your cloned repository, copy the example environment file:
    ```bash
    cp .env.example .env.local
    ```
@@ -132,12 +135,12 @@ npm run dev
 ## 📁 Project Structure
 
 *   `src/app`: Next.js App Router pages (Dashboard, Fuel Form, Maintenance, Insights).
-*   `src/components`: UI components (Shadcn UI, Navbar, Sidebar).
-*   `src/store`: Zustand state management (`vehicle-store.ts`).
+*   `src/components`: UI components (Shadcn UI, Navbar, Sidebar, Particle Engine).
+*   `src/store`: Zustand state management (`user-store.ts`, `vehicle-store.ts`).
 *   `src/types`: Strict TypeScript definitions mapping to the Supabase schema.
 *   `src/utils/supabase`: Supabase Client and Server connection utilities.
 *   `supabase/`: SQL scripts for schema generation and initial seed data.
 
 ## 🔑 Authentication Note
 
-Currently, the application is wired to read and write records associated with the logged-in user through Supabase RLS policies. To fully interact with the app, ensure you create a login flow or manually set the Supabase user session during development if you removed auth required checks from the root layout.
+Currently, the application is wired to read and write records associated with the logged-in user through Supabase RLS policies. To fully interact with the app, ensure you create a login flow or manually set the Supabase user session during development.
