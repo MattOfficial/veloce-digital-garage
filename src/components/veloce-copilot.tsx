@@ -20,6 +20,8 @@ import type {
 } from "@/types/ai";
 import type { BadgeDefinition } from "@/lib/badges";
 import { getErrorMessage } from "@/utils/errors";
+import { brand } from "@/content/en/brand";
+import { ui } from "@/content/en/ui";
 
 const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
     ssr: false,
@@ -65,7 +67,7 @@ export function VeloceCopilot() {
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
             role: "user",
-            content: userText || (currentAttachments.length > 0 ? `Uploaded ${currentAttachments.length} document(s)` : ""),
+            content: userText || (currentAttachments.length > 0 ? ui.copilot.messages.uploadedDocuments(currentAttachments.length) : ""),
             attachments: currentAttachments.length > 0 ? currentAttachments : undefined
         };
 
@@ -87,7 +89,7 @@ export function VeloceCopilot() {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: nlpResult.missingInfo || "I need more information."
+                    content: nlpResult.missingInfo || ui.copilot.messages.needsMoreInfo
                 }]);
                 setIsTyping(false);
                 return;
@@ -103,7 +105,7 @@ export function VeloceCopilot() {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: "I've prepared that log for you. Please review and confirm.",
+                    content: ui.copilot.messages.preparedLog,
                     pendingAction
                 }]);
                 setIsTyping(false);
@@ -115,7 +117,7 @@ export function VeloceCopilot() {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: `I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your ${profile.preferredProvider === 'gemini' ? 'Gemini' : profile.preferredProvider === 'openai' ? 'OpenAI' : 'DeepSeek'} API key in Profile Settings to unlock conversational AI.`
+                    content: ui.copilot.messages.missingKey(profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseekFull)
                 }]);
                 setIsTyping(false);
                 return;
@@ -140,7 +142,7 @@ export function VeloceCopilot() {
                 })
             });
 
-            if (!res.ok) throw new Error("Failed to get response");
+            if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
             const data = await res.json() as CopilotResponseBody;
 
             const aiMsg: ChatMessage = {
@@ -158,7 +160,7 @@ export function VeloceCopilot() {
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
-                content: getErrorMessage(error, "An error occurred connecting to the AI. Please try again later.")
+                content: getErrorMessage(error, ui.copilot.messages.failedConnection)
             }]);
             setIsTyping(false);
         }
@@ -177,7 +179,7 @@ export function VeloceCopilot() {
             if (result.error) {
                 toast.error(result.error);
             } else {
-                toast.success("Fuel log saved to your vehicle!");
+                toast.success(ui.copilot.messages.fuelSaved);
                 if (result.newBadges?.length) {
                     result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
@@ -205,7 +207,7 @@ export function VeloceCopilot() {
             if (result?.error) {
                 toast.error(result.error);
             } else {
-                toast.success("Maintenance log saved to your vehicle!");
+                toast.success(ui.copilot.messages.maintenanceSaved);
                 if (result.newBadges?.length) {
                     result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
@@ -229,7 +231,7 @@ export function VeloceCopilot() {
         if (files.length === 0) return;
 
         if (pendingAttachments.length + files.length > 5) {
-            toast.error("You can only attach up to 5 files per message.");
+            toast.error(ui.copilot.messages.fileLimit);
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
@@ -238,7 +240,7 @@ export function VeloceCopilot() {
         try {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not logged in");
+            if (!user) throw new Error(ui.copilot.messages.notLoggedIn);
 
             const newAttachments: CopilotAttachment[] = [];
 
@@ -267,7 +269,7 @@ export function VeloceCopilot() {
             setPendingAttachments(prev => [...prev, ...newAttachments]);
 
         } catch (error: unknown) {
-            toast.error(getErrorMessage(error, "Failed to upload file"));
+            toast.error(getErrorMessage(error, ui.copilot.messages.fileUploadFailed));
         } finally {
             setIsUploadingFile(false);
             if (fileInputRef.current) {
@@ -299,15 +301,15 @@ export function VeloceCopilot() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <h3 className="font-semibold text-sm">Veloce Copilot</h3>
+                                    <h3 className="font-semibold text-sm">{brand.ai.copilotName}</h3>
                                     <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/80 border border-primary/10 font-medium">
-                                        {profile.preferredProvider === 'gemini' ? 'Gemini' : profile.preferredProvider === 'openai' ? 'OpenAI' : 'Deepseek'}
+                                        {profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseek}
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-emerald-400">
                                     {(profile.preferredProvider === 'gemini' ? profile.hasLlmKey : 
                                       profile.preferredProvider === 'openai' ? profile.hasOpenAiKey : 
-                                      profile.hasDeepseekKey) ? 'Online' : 'Key Missing'}
+                                      profile.hasDeepseekKey) ? ui.copilot.header.online : ui.copilot.header.keyMissing}
                                 </p>
                             </div>
                         </div>
@@ -316,12 +318,12 @@ export function VeloceCopilot() {
                                 <button
                                     onClick={() => setMessages([])}
                                     className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors"
-                                    title="New Chat / Clear Context"
+                                    title={ui.copilot.header.newChatTitle}
                                 >
                                     <RotateCcw className="h-4 w-4" />
                                 </button>
                             )}
-                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors" title="Close">
+                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors" title={ui.copilot.titles.close}>
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -333,8 +335,8 @@ export function VeloceCopilot() {
                             <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 text-muted-foreground">
                                 <Bot className="h-12 w-12 opacity-20" />
                                 <div>
-                                    <p className="font-medium">How can I help?</p>
-                                    <p className="text-sm mt-1">Try saying: &quot;I filled up the Datsun for 1500 rupees today.&quot;</p>
+                                    <p className="font-medium">{ui.copilot.emptyState.title}</p>
+                                    <p className="text-sm mt-1">{ui.copilot.emptyState.example}</p>
                                 </div>
                             </div>
                         )}
@@ -370,7 +372,7 @@ export function VeloceCopilot() {
                                         <div className="mt-3 p-3 bg-black/30 border border-white/5 rounded-xl text-sm">
                                             <div className="flex items-center font-semibold mb-2 text-primary">
                                                 <Link2 className="h-4 w-4 mr-2" />
-                                                Action Ready: {msg.pendingAction.type === 'log_fuel_draft' ? 'Log Fuel' : 'Action'}
+                                                {ui.copilot.actions.actionReady}: {msg.pendingAction.type === 'log_fuel_draft' ? ui.copilot.actions.logFuel : ui.copilot.actions.genericAction}
                                             </div>
                                             <ul className="space-y-1 mb-3 text-muted-foreground text-xs">
                                                 {Object.entries(msg.pendingAction.payload || {}).map(([key, value]) => (
@@ -386,7 +388,7 @@ export function VeloceCopilot() {
                                                     onClick={() => handleConfirmAction(msg.pendingAction!)}
                                                 >
                                                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                                    Confirm
+                                                    {ui.copilot.actions.confirm}
                                                 </Button>
                                                 <Button
                                                     size="sm"
@@ -394,7 +396,7 @@ export function VeloceCopilot() {
                                                     className="h-7 w-full text-xs border-white/10 text-white"
                                                     onClick={() => handleDismissAction()}
                                                 >
-                                                    Dismiss
+                                                    {ui.copilot.actions.dismiss}
                                                 </Button>
                                             </div>
                                         </div>
@@ -460,7 +462,7 @@ export function VeloceCopilot() {
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isUploadingFile || isTyping}
                                         className="h-11 w-11 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 disabled:opacity-50 transition-colors"
-                                        title="Attach receipt or document"
+                                        title={ui.copilot.composer.attachTitle}
                                     >
                                         {isUploadingFile ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
                                     </button>
@@ -469,7 +471,7 @@ export function VeloceCopilot() {
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Message Copilot..."
+                                placeholder={ui.copilot.composer.inputPlaceholder}
                                 className="pr-12 bg-white/5 border-white/10 rounded-full h-11 focus-visible:ring-1 focus-visible:ring-primary/50"
                             />
                             <button

@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useVehicleStore } from "@/store/vehicle-store";
+import { ui } from "@/content/en/ui";
 
 function parseDotCode(dotCode?: string): Date | null {
     if (!dotCode || dotCode.length !== 4) return null;
@@ -34,7 +35,7 @@ const MAX_AGE_YEARS = 6;
 const MAX_MILEAGE = 50000;
 
 function calculateHealth(tire: TireItem | undefined, latestOdometer: number) {
-    if (!tire) return { status: 'missing', age: 0, mileage: 0, message: 'No data' };
+    if (!tire) return { status: 'missing', age: 0, mileage: 0, message: ui.trackers.tyre.health.noData };
 
     let manufactureDate = new Date(tire.installed_date);
     const parsedDot = parseDotCode(tire.dot_code);
@@ -45,23 +46,23 @@ function calculateHealth(tire: TireItem | undefined, latestOdometer: number) {
     const mileageDelta = latestOdometer - tire.installed_odo;
 
     let status = 'good';
-    let message = 'Healthy';
+    let message: string = ui.trackers.tyre.health.healthy;
 
     if (ageInYears >= MAX_AGE_YEARS || mileageDelta >= MAX_MILEAGE) {
         status = 'danger';
-        message = ageInYears >= MAX_AGE_YEARS ? `>${MAX_AGE_YEARS} yrs old` : `Worn Out`;
+        message = ageInYears >= MAX_AGE_YEARS ? `>${MAX_AGE_YEARS} yrs old` : ui.trackers.tyre.health.wornOut;
     } else if (ageInYears >= 5 || mileageDelta >= 40000) {
         status = 'warning';
-        message = 'Inspect Soon';
+        message = ui.trackers.tyre.health.inspectSoon;
     }
 
     if (tire.tread_depth !== undefined) {
         if (tire.tread_depth <= 2) {
             status = 'danger';
-            message = 'Low Tread';
+            message = ui.trackers.tyre.health.lowTread;
         } else if (tire.tread_depth <= 4) {
             if (status === 'good') status = 'warning';
-            message = 'Worn Tread';
+            message = ui.trackers.tyre.health.wornTread;
         }
     }
 
@@ -185,19 +186,19 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                         <div className="bg-slate-500/10 text-slate-600 p-1.5 rounded-md mr-3 shadow-sm border border-black/5">
                             <Disc className="h-5 w-5" />
                         </div>
-                        Tyres & Traction
+                        {ui.trackers.tyre.title}
                     </CardTitle>
-                    <CardDescription>Monitor asymmetric configurations and tread life.</CardDescription>
+                    <CardDescription>{ui.trackers.tyre.description}</CardDescription>
                 </div>
                 {hasAnyTires && (
                     <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                         <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 text-xs rounded-full">Update Tires</Button>
+                            <Button variant="ghost" size="sm" className="h-8 text-xs rounded-full">{ui.trackers.tyre.updateTires}</Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                             <DialogHeader>
-                                <DialogTitle>Update Tires</DialogTitle>
-                                <DialogDescription>Register new tires or update tread depth for your wheels.</DialogDescription>
+                                <DialogTitle>{ui.trackers.tyre.updateTires}</DialogTitle>
+                                <DialogDescription>{ui.trackers.tyre.updateTiresDescription}</DialogDescription>
                             </DialogHeader>
                             <TireForm
                                 onSubmit={onSubmit}
@@ -218,18 +219,18 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                 {!hasAnyTires ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                         <Disc className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                        <p className="text-sm text-muted-foreground w-3/4 mb-4">No tire information recorded. Add your tires to track their lifespan and receive alerts.</p>
+                        <p className="text-sm text-muted-foreground w-3/4 mb-4">{ui.trackers.tyre.noTireInfo}</p>
                         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="rounded-full shadow-sm text-slate-600 border-slate-200">
                                     <Plus className="h-4 w-4 mr-1.5" />
-                                    Add Tires
+                                    {ui.trackers.tyre.addTires}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                                 <DialogHeader>
-                                    <DialogTitle>Add Tires</DialogTitle>
-                                    <DialogDescription>Enter the details of the tires currently on the vehicle.</DialogDescription>
+                                    <DialogTitle>{ui.trackers.tyre.addTires}</DialogTitle>
+                                    <DialogDescription>{ui.trackers.tyre.addTiresDescription}</DialogDescription>
                                 </DialogHeader>
                                 <TireForm
                                     onSubmit={onSubmit}
@@ -286,40 +287,40 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                         <div className="flex-1 w-full max-w-md h-[280px]">
                             {selectedWheel ? (
                                 <div className="bg-muted/30 p-6 rounded-3xl border border-black/5 dark:border-white/5 dark:bg-white/5 shadow-md relative animate-in fade-in slide-in-from-right-4 duration-300 h-full flex flex-col justify-center">
-                                    <Button variant="ghost" size="sm" className="absolute top-4 right-4 h-6 text-xs px-2" onClick={() => setSelectedWheel(null)}>Close</Button>
+                                    <Button variant="ghost" size="sm" className="absolute top-4 right-4 h-6 text-xs px-2" onClick={() => setSelectedWheel(null)}>{ui.common.actions.close}</Button>
                                     <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-primary" />
-                                        {selectedWheel === 'FL' ? 'Front Left' : selectedWheel === 'FR' ? 'Front Right' : selectedWheel === 'RL' ? 'Rear Left' : selectedWheel === 'RR' ? 'Rear Right' : selectedWheel === 'F' ? 'Front Wheel' : 'Rear Wheel'} Tire
+                                        {ui.trackers.tyre.wheelTitle(selectedWheel === 'FL' ? ui.trackers.tyre.positions.FL : selectedWheel === 'FR' ? ui.trackers.tyre.positions.FR : selectedWheel === 'RL' ? ui.trackers.tyre.positions.RL : selectedWheel === 'RR' ? ui.trackers.tyre.positions.RR : selectedWheel === 'F' ? ui.trackers.tyre.positions.F : ui.trackers.tyre.positions.R)}
                                     </h4>
 
                                     {tires[selectedWheel] ? (
                                         <div className="space-y-4">
                                             <div>
-                                                <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">Brand & Model</p>
+                                                <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">{ui.trackers.tyre.brandAndModel}</p>
                                                 <p className="font-medium">{tires[selectedWheel]?.brand}</p>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">Age / DOT</p>
+                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">{ui.trackers.tyre.ageDot}</p>
                                                     <p className="font-medium text-sm">
                                                         {calculateHealth(tires[selectedWheel], latestOdometer).age.toFixed(1)} yrs
                                                         {tires[selectedWheel]?.dot_code && <span className="text-muted-foreground ml-1">({tires[selectedWheel]?.dot_code})</span>}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">Distance Driven</p>
+                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">{ui.trackers.tyre.distanceDriven}</p>
                                                     <p className="font-medium text-sm">
                                                         {calculateHealth(tires[selectedWheel], latestOdometer).mileage.toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">Tread Depth</p>
+                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">{ui.trackers.tyre.treadDepth}</p>
                                                     <p className="font-medium text-sm">
-                                                        {tires[selectedWheel]?.tread_depth ? `${tires[selectedWheel]?.tread_depth} mm` : 'Not recorded'}
+                                                        {tires[selectedWheel]?.tread_depth ? `${tires[selectedWheel]?.tread_depth} mm` : ui.trackers.tyre.notRecorded}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">Status</p>
+                                                    <p className="text-xs uppercase text-muted-foreground font-semibold mb-1">{ui.trackers.tyre.status}</p>
                                                     <p className={cn("font-bold text-sm",
                                                         calculateHealth(tires[selectedWheel], latestOdometer).status === 'good' ? 'text-green-600' :
                                                             calculateHealth(tires[selectedWheel], latestOdometer).status === 'warning' ? 'text-amber-500' : 'text-red-500'
@@ -330,14 +331,14 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-muted-foreground py-8 text-center italic">No tire logged for this position.</p>
+                                        <p className="text-sm text-muted-foreground py-8 text-center italic">{ui.trackers.tyre.noTireForPosition}</p>
                                     )}
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-muted/10 rounded-3xl border border-dashed border-black/10 dark:border-white/10 dark:bg-white/5">
                                     <Disc className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                                    <p className="font-medium text-foreground">Interactive Tire Map</p>
-                                    <p className="text-sm text-muted-foreground mt-1">Tap on any wheel on the diagram to see its specific details, age, and tread depth.</p>
+                                    <p className="font-medium text-foreground">{ui.trackers.tyre.interactiveMapTitle}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{ui.trackers.tyre.interactiveMapDescription}</p>
                                 </div>
                             )}
                         </div>
@@ -401,48 +402,48 @@ function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget
     return (
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
             <div className="space-y-2">
-                <Label>Apply To</Label>
+                <Label>{ui.trackers.tyre.applyTo}</Label>
                 <Select value={applyTarget} onValueChange={setApplyTarget}>
                     <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select wheels" />
+                        <SelectValue placeholder={ui.trackers.tyre.selectWheels} />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
                         {isMoto ? (
                             <>
-                                <SelectItem value="ALL">Both Wheels</SelectItem>
-                                <SelectItem value="F">Front Only</SelectItem>
-                                <SelectItem value="R">Rear Only</SelectItem>
+                                <SelectItem value="ALL">{ui.trackers.tyre.bothWheels}</SelectItem>
+                                <SelectItem value="F">{ui.trackers.tyre.frontOnly}</SelectItem>
+                                <SelectItem value="R">{ui.trackers.tyre.rearOnly}</SelectItem>
                             </>
                         ) : (
                             <>
-                                <SelectItem value="ALL">All 4 Wheels</SelectItem>
-                                <SelectItem value="FRONT">Front Pair Only</SelectItem>
-                                <SelectItem value="REAR">Rear Pair Only</SelectItem>
-                                <SelectItem value="FL">Front Left Only</SelectItem>
-                                <SelectItem value="FR">Front Right Only</SelectItem>
-                                <SelectItem value="RL">Rear Left Only</SelectItem>
-                                <SelectItem value="RR">Rear Right Only</SelectItem>
+                                <SelectItem value="ALL">{ui.trackers.tyre.allFourWheels}</SelectItem>
+                                <SelectItem value="FRONT">{ui.trackers.tyre.frontPairOnly}</SelectItem>
+                                <SelectItem value="REAR">{ui.trackers.tyre.rearPairOnly}</SelectItem>
+                                <SelectItem value="FL">{ui.trackers.tyre.frontLeftOnly}</SelectItem>
+                                <SelectItem value="FR">{ui.trackers.tyre.frontRightOnly}</SelectItem>
+                                <SelectItem value="RL">{ui.trackers.tyre.rearLeftOnly}</SelectItem>
+                                <SelectItem value="RR">{ui.trackers.tyre.rearRightOnly}</SelectItem>
                             </>
                         )}
                     </SelectContent>
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="brand">Brand & Model</Label>
-                <Input id="brand" name="brand" placeholder="e.g. Michelin Pilot Sport 4S" required className="rounded-xl" />
+                <Label htmlFor="brand">{ui.trackers.tyre.brandModelLabel}</Label>
+                <Input id="brand" name="brand" placeholder={ui.trackers.tyre.brandModelPlaceholder} required className="rounded-xl" />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="dot_code">DOT (Optional)</Label>
-                    <Input id="dot_code" name="dot_code" placeholder="e.g. 4725" maxLength={4} className="rounded-xl" />
+                    <Label htmlFor="dot_code">{ui.trackers.tyre.dotOptional}</Label>
+                    <Input id="dot_code" name="dot_code" placeholder={ui.trackers.tyre.dotPlaceholder} maxLength={4} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="tread_depth">Tread (mm)</Label>
-                    <Input type="number" step="0.1" id="tread_depth" name="tread_depth" placeholder="e.g. 7.5" className="rounded-xl" />
+                    <Label htmlFor="tread_depth">{ui.trackers.tyre.treadMm}</Label>
+                    <Input type="number" step="0.1" id="tread_depth" name="tread_depth" placeholder={ui.trackers.tyre.treadPlaceholder} className="rounded-xl" />
                 </div>
             </div>
             <div className="space-y-2 flex flex-col">
-                <Label>Installation Date</Label>
+                <Label>{ui.trackers.tyre.installationDate}</Label>
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -453,7 +454,7 @@ function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget
                             )}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {installDate ? format(installDate, "PPP") : <span>Pick a date</span>}
+                            {installDate ? format(installDate, "PPP") : <span>{ui.trackers.tyre.pickDate}</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -468,11 +469,11 @@ function TireForm({ onSubmit, isSaving, installDate, setInstallDate, applyTarget
                 <input type="hidden" name="installed_date" value={installDate ? installDate.toISOString() : ""} />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="installed_odo">Odometer at Install</Label>
+                <Label htmlFor="installed_odo">{ui.trackers.tyre.odometerAtInstall}</Label>
                 <Input type="number" id="installed_odo" name="installed_odo" required className="rounded-xl" defaultValue={latestOdometer} />
             </div>
             <Button type="submit" disabled={isSaving} className="w-full rounded-full h-12 mt-2 text-base font-semibold shadow-md active:scale-[0.98] transition-all">
-                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Tire Data"}
+                {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ui.trackers.tyre.saveTireData}
             </Button>
         </form>
     );

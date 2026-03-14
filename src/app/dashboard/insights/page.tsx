@@ -24,6 +24,7 @@ import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
 
 import { useUserStore } from "@/store/user-store";
+import { ui } from "@/content/en/ui";
 
 export default function InsightsPage() {
     const { vehicles, selectedVehicleId } = useVehicleStore();
@@ -151,8 +152,8 @@ export default function InsightsPage() {
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center">
-                    <h2 className="text-2xl font-semibold mb-2">No Vehicle Selected</h2>
-                    <p className="text-muted-foreground">Select a vehicle to view insights.</p>
+                    <h2 className="text-2xl font-semibold mb-2">{ui.insights.noVehicleSelectedTitle}</h2>
+                    <p className="text-muted-foreground">{ui.insights.noVehicleSelectedDescription}</p>
                 </div>
             </div>
         );
@@ -162,14 +163,14 @@ export default function InsightsPage() {
         return (
             <MotionWrapper className="max-w-6xl mx-auto space-y-6 px-4">
                 <PageHeader
-                    title="Running Costs"
-                    description={`Track every penny spent on your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                    title={ui.insights.pageTitle}
+                    description={ui.insights.pageDescriptionShort(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                     icon={BarChart2}
                     className="mb-4"
                 />
                 <div className="text-center py-20 border-none shadow-md rounded-[2rem] bg-card/50 backdrop-blur-sm">
-                    <h2 className="text-xl font-medium">Insufficient Data</h2>
-                    <p className="text-muted-foreground mt-1">Please log at least two fill-ups to establish a baseline for insights and cost projections.</p>
+                    <h2 className="text-xl font-medium">{ui.insights.insufficientDataTitle}</h2>
+                    <p className="text-muted-foreground mt-1">{ui.insights.insufficientDataDescription}</p>
                 </div>
             </MotionWrapper>
         )
@@ -181,8 +182,8 @@ export default function InsightsPage() {
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-8 pb-10 px-4">
             <PageHeader
-                title="Running Costs"
-                description={`A complete breakdown of running costs for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                title={ui.insights.pageTitle}
+                description={ui.insights.pageDescription(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                 icon={BarChart2}
                 className="mb-4"
             />
@@ -195,7 +196,7 @@ export default function InsightsPage() {
                             <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
                         </div>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-base font-medium opacity-90">Total Running Cost</CardTitle>
+                            <CardTitle className="text-base font-medium opacity-90">{ui.insights.totalRunningCost}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-4xl font-black mb-1">{formatCurrency(tcoPerDist)} <span className="text-lg opacity-70 font-medium">/ {distUnit}</span></div>
@@ -210,14 +211,14 @@ export default function InsightsPage() {
                     <Card className="relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Daily Operating Cost</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.insights.dailyOperatingCost}</CardTitle>
                             <div className="p-2 bg-emerald-500/10 rounded-full text-emerald-500">
                                 <DollarSign className="h-4 w-4" />
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-black text-foreground">{formatCurrency(runningCostPerDay)} <span className="text-base font-medium text-muted-foreground">/ day</span></div>
-                            <p className="text-xs text-muted-foreground mt-1">Average spent across all categories</p>
+                            <p className="text-xs text-muted-foreground mt-1">{ui.insights.dailyOperatingCostDescription}</p>
                         </CardContent>
                     </Card>
                 </MotionWrapper>
@@ -226,14 +227,14 @@ export default function InsightsPage() {
                     <Card className="relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Daily Distance</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.insights.averageDailyDistance}</CardTitle>
                             <div className="p-2 bg-blue-500/10 rounded-full text-blue-500">
                                 <Activity className="h-4 w-4" />
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-black text-foreground">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-muted-foreground">{distUnit}</span></div>
-                            <p className="text-xs text-muted-foreground mt-1">Typical distance covered per day</p>
+                            <p className="text-xs text-muted-foreground mt-1">{ui.insights.averageDailyDistanceDescription}</p>
                         </CardContent>
                     </Card>
                 </MotionWrapper>
@@ -245,8 +246,8 @@ export default function InsightsPage() {
                 <MotionWrapper delay={0.4} className="md:col-span-2">
                     <Card className="h-full overflow-hidden">
                         <CardHeader className="border-b border-white/5">
-                            <CardTitle>Expense Breakdown</CardTitle>
-                            <CardDescription>Monthly visualization of where your money is going</CardDescription>
+                            <CardTitle>{ui.insights.expenseBreakdownTitle}</CardTitle>
+                            <CardDescription>{ui.insights.expenseBreakdownDescription}</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
@@ -271,15 +272,15 @@ export default function InsightsPage() {
                         <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-                                Cadence Predictions
+                                {ui.insights.cadencePredictionsTitle}
                             </CardTitle>
-                            <CardDescription>Based on {totalDays} days of recorded tracking</CardDescription>
+                            <CardDescription>{ui.insights.cadencePredictionsDescription(totalDays)}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 p-6 flex flex-col justify-center space-y-8">
 
                             <div className="space-y-2">
                                 <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                    <CalendarClock className="h-4 w-4" /> Refueling Frequency
+                                    <CalendarClock className="h-4 w-4" /> {ui.insights.refuelingFrequency}
                                 </div>
                                 <div className="text-xl font-semibold">Every {Math.round(daysBetweenRefuels)} days</div>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -291,10 +292,10 @@ export default function InsightsPage() {
 
                             <div className="space-y-2">
                                 <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                    <Activity className="h-4 w-4" /> Estimated Next Refuel
+                                    <Activity className="h-4 w-4" /> {ui.insights.estimatedNextRefuel}
                                 </div>
                                 <div className="text-xl font-semibold text-primary">
-                                    {projectedEmptyDate ? projectedEmptyDate.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' }) : 'Unknown'}
+                                    {projectedEmptyDate ? projectedEmptyDate.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' }) : ui.insights.unknownDate}
                                 </div>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
                                     Based on your current driving cadence, you will likely need to refuel around this date.

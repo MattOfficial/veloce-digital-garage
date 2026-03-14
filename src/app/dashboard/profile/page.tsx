@@ -28,14 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { isProviderPreference, type ProviderPreference } from "@/types/ai";
-
-const currencies = [
-    { value: "₹", label: "Indian Rupee (₹)" },
-    { value: "$", label: "US Dollar ($)" },
-    { value: "£", label: "British Pound (£)" },
-    { value: "€", label: "Euro (€)" },
-    { value: "¥", label: "Japanese Yen (¥)" },
-];
+import { ui } from "@/content/en/ui";
 
 type ProfileDraft = {
     displayName: string;
@@ -127,7 +120,7 @@ export default function ProfilePage() {
         if (result?.error) {
             setMessage({ type: 'error', text: result.error });
         } else {
-            setMessage({ type: 'success', text: "Profile updated successfully!" });
+            setMessage({ type: 'success', text: ui.profile.saveSuccess });
             setProfileDraft(null);
             setLlmKey("");
             setOpenAiKey("");
@@ -140,25 +133,26 @@ export default function ProfilePage() {
     const handleAvatarUpload = (url: string) => {
         updateProfileDraft("avatarUrl", url);
         // We don't auto-save here, user must click Save Profile
-        setMessage({ type: 'success', text: "Image uploaded! Don't forget to save." });
+        setMessage({ type: 'success', text: ui.profile.avatarUploaded });
     };
 
     const handleClearStorage = () => {
-        if (!confirm("This will clear your local and session storage (session persistence). You might need to refresh. Continue?")) return;
+        if (!confirm(ui.profile.clearStorageConfirm)) return;
         localStorage.clear();
         sessionStorage.clear();
-        toast.success("Storage cleared successfully.");
+        toast.success(ui.profile.clearStorageSuccess);
     };
 
     const handleDeleteKey = async (provider: 'gemini' | 'openai' | 'deepseek') => {
-        if (!confirm(`Are you sure you want to delete your ${provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek'} API key?`)) return;
+        const providerLabel = provider === "gemini" ? ui.profile.providerOptions.gemini : provider === "openai" ? ui.profile.providerOptions.openai : ui.profile.providerOptions.deepseek;
+        if (!confirm(ui.profile.deleteKeyConfirm(providerLabel))) return;
 
         setIsSaving(true);
         const result = await deleteLlmKey(provider);
         if (result?.error) {
             setMessage({ type: 'error', text: result.error });
         } else {
-            setMessage({ type: 'success', text: "API key deleted successfully." });
+            setMessage({ type: 'success', text: ui.profile.keyDeleteSuccess });
             if (provider === 'gemini') setLlmKey("");
             if (provider === 'openai') setOpenAiKey("");
             if (provider === 'deepseek') setDeepseekKey("");
@@ -180,7 +174,7 @@ export default function ProfilePage() {
         if (result?.error) {
             setVehicleMessage({ type: 'error', text: result.error });
         } else {
-            setVehicleMessage({ type: 'success', text: "Vehicle added successfully!" });
+            setVehicleMessage({ type: 'success', text: ui.profile.vehicleAdded });
             if (result.newBadges?.length) {
                 result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
             }
@@ -201,7 +195,7 @@ export default function ProfilePage() {
         if (result?.error) {
             setVehicleMessage({ type: 'error', text: result.error });
         } else {
-            setVehicleMessage({ type: 'success', text: "Vehicle deleted." });
+            setVehicleMessage({ type: 'success', text: ui.profile.vehicleDeleted });
             fetchVehicles(); // Refresh
         }
         setIsDeletingId(null);
@@ -225,10 +219,10 @@ export default function ProfilePage() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
                 <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3 text-primary relative z-10">
                     <User className="h-10 w-10" />
-                    Your Profile
+                    {ui.profile.headerTitle}
                 </h1>
                 <p className="text-muted-foreground text-lg ml-1 relative z-10">
-                    Manage your personal information and view your Veloce rewards.
+                    {ui.profile.rewardsDescription}
                 </p>
             </div>
 
@@ -238,10 +232,10 @@ export default function ProfilePage() {
                 <CardHeader className="pb-6">
                     <CardTitle className="text-2xl flex items-center gap-2 text-amber-500">
                         <Trophy className="h-6 w-6" />
-                        Trophy Cabinet
+                        {ui.profile.achievementsTitle}
                     </CardTitle>
                     <CardDescription className="text-base">
-                        Your unlocked Veloce achievements. Keep logging data to unlock more!
+                        {ui.profile.achievementsDescription}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -304,9 +298,9 @@ export default function ProfilePage() {
 
             <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm">
                 <CardHeader className="pb-6">
-                    <CardTitle className="text-xl">Profile Details</CardTitle>
+                    <CardTitle className="text-xl">{ui.profile.detailsTitle}</CardTitle>
                     <CardDescription className="text-base">
-                        Update your public facing information here.
+                        {ui.profile.detailsDescription}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -316,7 +310,7 @@ export default function ProfilePage() {
                             {/* Avatar Section */}
                             <div className="shrink-0 flex flex-col gap-2 items-center">
                                 <Label className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                    Display Picture
+                                    {ui.profile.avatarLabel}
                                 </Label>
                                 <AvatarUpload
                                     currentUrl={resolvedProfile.avatarUrl}
@@ -329,29 +323,29 @@ export default function ProfilePage() {
                             <div className="flex-1 space-y-4 w-full">
                                 <div className="space-y-2">
                                     <Label htmlFor="display_name" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Display Name
+                                        {ui.profile.displayName}
                                     </Label>
                                     <Input
                                         id="display_name"
-                                        placeholder="Awesome Driver"
+                                        placeholder={ui.profile.displayNamePlaceholder}
                                         value={resolvedProfile.displayName}
                                         onChange={(e) => updateProfileDraft("displayName", e.target.value)}
                                         className="max-w-md h-12 rounded-xl"
                                     />
                                     <p className="text-sm text-muted-foreground">
-                                        This is the name that will be displayed in the application sidebar.
+                                        {ui.profile.displayNameDescription}
                                     </p>
                                 </div>
                                 <div className="space-y-2 pt-4">
                                     <Label htmlFor="currency" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Preferred Currency
+                                        {ui.profile.preferredCurrency}
                                     </Label>
                                     <Select value={resolvedProfile.currency} onValueChange={(value) => updateProfileDraft("currency", value)}>
                                         <SelectTrigger id="currency" className="max-w-md h-12 rounded-xl">
-                                            <SelectValue placeholder="Select a currency" />
+                                            <SelectValue placeholder={ui.profile.currencyPlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {currencies.map((curr) => (
+                                            {ui.profile.currencies.map((curr) => (
                                                 <SelectItem key={curr.value} value={curr.value} className="cursor-pointer">
                                                     {curr.label}
                                                 </SelectItem>
@@ -359,24 +353,24 @@ export default function ProfilePage() {
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        This currency symbol will be used across all your tracking and insights.
+                                        {ui.profile.currencyDescription}
                                     </p>
                                 </div>
                                 <div className="space-y-2 pt-4">
                                     <Label htmlFor="distance_unit" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Distance Unit
+                                        {ui.profile.distanceUnit}
                                     </Label>
                                     <Select value={resolvedProfile.distanceUnit} onValueChange={handleDistanceUnitChange}>
                                         <SelectTrigger id="distance_unit" className="max-w-md h-12 rounded-xl">
-                                            <SelectValue placeholder="Select distance unit" />
+                                            <SelectValue placeholder={ui.profile.distanceUnitPlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="km" className="cursor-pointer">Kilometers (km)</SelectItem>
-                                            <SelectItem value="miles" className="cursor-pointer">Miles</SelectItem>
+                                            <SelectItem value="km" className="cursor-pointer">{ui.profile.distanceOptions.kilometers}</SelectItem>
+                                            <SelectItem value="miles" className="cursor-pointer">{ui.profile.distanceOptions.miles}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <p className="text-sm text-muted-foreground">
-                                        Will affect speed, volumes (Liters vs Gallons) and economy rates.
+                                        {ui.profile.distanceUnitDescription}
                                     </p>
                                 </div>
                             </div>
@@ -391,21 +385,21 @@ export default function ProfilePage() {
                         <div className="pt-6 mt-6 border-t border-border/50">
                             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
                                 <Lock className="h-5 w-5 text-primary" />
-                                Veloce Copilot Settings
+                                {ui.profile.copilotSettings}
                             </h3>
                             <div className="space-y-4 max-w-md">
                                 <div className="space-y-2">
                                     <Label htmlFor="preferred_provider" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Preferred AI Provider
+                                        {ui.profile.preferredProvider}
                                     </Label>
                                     <Select value={resolvedProfile.preferredProvider} onValueChange={handlePreferredProviderChange}>
                                         <SelectTrigger id="preferred_provider" className="h-12 rounded-xl">
-                                            <SelectValue placeholder="Select provider" />
+                                            <SelectValue placeholder={ui.profile.providerPlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="gemini">Google Gemini</SelectItem>
-                                            <SelectItem value="openai">OpenAI</SelectItem>
-                                            <SelectItem value="deepseek">Deepseek (OpenAI Compatible)</SelectItem>
+                                            <SelectItem value="gemini">{ui.profile.providerOptions.gemini}</SelectItem>
+                                            <SelectItem value="openai">{ui.profile.providerOptions.openai}</SelectItem>
+                                            <SelectItem value="deepseek">{ui.profile.providerOptions.deepseek}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -413,13 +407,13 @@ export default function ProfilePage() {
                                 {/* Gemini Key */}
                                 <div className="space-y-2">
                                     <Label htmlFor="llm_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Google Gemini API Key
+                                        {ui.profile.geminiKey}
                                     </Label>
                                     <div className="relative">
                                         <Input
                                             id="llm_key"
                                             type="password"
-                                            placeholder={profile.hasLlmKey ? "••••••••••••••••••••••••••••" : "AIzaSy..."}
+                                            placeholder={profile.hasLlmKey ? ui.profile.maskedKey : ui.profile.geminiKeyPlaceholder}
                                             value={llmKey}
                                             onChange={(e) => setLlmKey(e.target.value)}
                                             className="h-12 rounded-xl pr-10"
@@ -427,7 +421,7 @@ export default function ProfilePage() {
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                             {profile.hasLlmKey && !llmKey && (
                                                 <>
-                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                    <div className="text-emerald-500" title={ui.profile.secureKeyStored}>
                                                         <CheckCircle2 className="h-5 w-5" />
                                                     </div>
                                                     <Button
@@ -436,7 +430,7 @@ export default function ProfilePage() {
                                                         size="icon"
                                                         className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                                         onClick={() => handleDeleteKey('gemini')}
-                                                        title="Delete Key"
+                                                        title={ui.profile.deleteKey}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -449,13 +443,13 @@ export default function ProfilePage() {
                                 {/* OpenAI Key */}
                                 <div className="space-y-2">
                                     <Label htmlFor="openai_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        OpenAI API Key
+                                        {ui.profile.openaiKey}
                                     </Label>
                                     <div className="relative">
                                         <Input
                                             id="openai_key"
                                             type="password"
-                                            placeholder={profile.hasOpenAiKey ? "••••••••••••••••••••••••••••" : "sk-..."}
+                                            placeholder={profile.hasOpenAiKey ? ui.profile.maskedKey : ui.profile.openaiLikeKeyPlaceholder}
                                             value={openAiKey}
                                             onChange={(e) => setOpenAiKey(e.target.value)}
                                             className="h-12 rounded-xl pr-10"
@@ -463,7 +457,7 @@ export default function ProfilePage() {
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                             {profile.hasOpenAiKey && !openAiKey && (
                                                 <>
-                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                    <div className="text-emerald-500" title={ui.profile.secureKeyStored}>
                                                         <CheckCircle2 className="h-5 w-5" />
                                                     </div>
                                                     <Button
@@ -472,7 +466,7 @@ export default function ProfilePage() {
                                                         size="icon"
                                                         className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                                         onClick={() => handleDeleteKey('openai')}
-                                                        title="Delete Key"
+                                                        title={ui.profile.deleteKey}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -485,13 +479,13 @@ export default function ProfilePage() {
                                 {/* Deepseek Key */}
                                 <div className="space-y-2">
                                     <Label htmlFor="deepseek_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                                        Deepseek API Key
+                                        {ui.profile.deepseekKey}
                                     </Label>
                                     <div className="relative">
                                         <Input
                                             id="deepseek_key"
                                             type="password"
-                                            placeholder={profile.hasDeepseekKey ? "••••••••••••••••••••••••••••" : "sk-..."}
+                                            placeholder={profile.hasDeepseekKey ? ui.profile.maskedKey : ui.profile.openaiLikeKeyPlaceholder}
                                             value={deepseekKey}
                                             onChange={(e) => setDeepseekKey(e.target.value)}
                                             className="h-12 rounded-xl pr-10"
@@ -499,7 +493,7 @@ export default function ProfilePage() {
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                             {profile.hasDeepseekKey && !deepseekKey && (
                                                 <>
-                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                    <div className="text-emerald-500" title={ui.profile.secureKeyStored}>
                                                         <CheckCircle2 className="h-5 w-5" />
                                                     </div>
                                                     <Button
@@ -508,7 +502,7 @@ export default function ProfilePage() {
                                                         size="icon"
                                                         className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                                         onClick={() => handleDeleteKey('deepseek')}
-                                                        title="Delete Key"
+                                                        title={ui.profile.deleteKey}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -519,8 +513,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 <p className="text-sm text-muted-foreground pt-2">
-                                    Bring your own keys to enable AI features. They will be encrypted with AES-256 before storage.
-                                    Veloce Copilot will use your <strong>Preferred Provider</strong> if the key is available.
+                                    {ui.profile.bringYourOwnKeys} {ui.profile.copilotProviderDescription}
                                 </p>
                             </div>
                         </div>
@@ -528,7 +521,7 @@ export default function ProfilePage() {
                         <div className="pt-4 border-t border-border/50 flex flex-wrap gap-4">
                             <Button type="submit" disabled={isSaving} size="lg" className="rounded-xl w-full sm:w-auto mt-2 gap-2">
                                 <Save className="h-4 w-4" />
-                                {isSaving ? "Saving..." : "Save Profile"}
+                                {isSaving ? ui.common.actions.saving : ui.profile.saveProfile}
                             </Button>
                             <Button 
                                 type="button" 
@@ -538,7 +531,7 @@ export default function ProfilePage() {
                                 onClick={handleClearStorage}
                             >
                                 <Trash2 className="h-4 w-4" />
-                                Clear Browser Storage
+                                {ui.profile.clearBrowserStorage}
                             </Button>
                         </div>
 
@@ -549,30 +542,30 @@ export default function ProfilePage() {
                 <CardHeader className="pb-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="text-xl">Your Garage</CardTitle>
+                            <CardTitle className="text-xl">{ui.profile.garageTitle}</CardTitle>
                             <CardDescription className="text-base">
-                                Manage the vehicles you want to track.
+                                {ui.profile.garageDescription}
                             </CardDescription>
                         </div>
                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button size="sm" className="gap-2 rounded-xl">
                                     <PlusCircle className="h-4 w-4" />
-                                    Add Vehicle
+                                    {ui.profile.addVehicle}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[500px] rounded-[2rem] border-border/50 shadow-2xl">
                                 <DialogHeader>
-                                    <DialogTitle>Add New Vehicle</DialogTitle>
+                                    <DialogTitle>{ui.profile.addVehicleTitle}</DialogTitle>
                                     <DialogDescription>
-                                        Enter the details of your vehicle to start tracking it.
+                                        {ui.profile.addVehicleDescription}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <form ref={addFormRef} onSubmit={handleAddVehicle} className="space-y-4 pt-4">
                                     <input type="hidden" name="image_url" value={newVehicleImageUrl} />
 
                                     <div className="space-y-2">
-                                        <Label>Vehicle Image</Label>
+                                        <Label>{ui.profile.vehicleImage}</Label>
                                         <ImageUploadOrLink
                                             onImageSelected={setNewVehicleImageUrl}
                                             currentUrl={newVehicleImageUrl}
@@ -580,62 +573,62 @@ export default function ProfilePage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="make">Make</Label>
-                                        <Input id="make" name="make" placeholder="e.g. Toyota" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
+                                        <Label htmlFor="make">{ui.profile.make}</Label>
+                                        <Input id="make" name="make" placeholder={ui.profile.makePlaceholder} required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="model">Model</Label>
-                                        <Input id="model" name="model" placeholder="e.g. Camry" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
+                                        <Label htmlFor="model">{ui.profile.model}</Label>
+                                        <Input id="model" name="model" placeholder={ui.profile.modelPlaceholder} required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="vehicle_type">Type</Label>
+                                            <Label htmlFor="vehicle_type">{ui.profile.vehicleType}</Label>
                                             <Select name="vehicle_type" defaultValue="car">
                                                 <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
-                                                    <SelectValue placeholder="Select type" />
+                                                    <SelectValue placeholder={ui.profile.vehicleTypePlaceholder} />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl">
-                                                    <SelectItem value="car">Car</SelectItem>
-                                                    <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                                                    <SelectItem value="truck">Truck</SelectItem>
+                                                    <SelectItem value="car">{ui.profile.vehicleTypeOptions.car}</SelectItem>
+                                                    <SelectItem value="motorcycle">{ui.profile.vehicleTypeOptions.motorcycle}</SelectItem>
+                                                    <SelectItem value="truck">{ui.profile.vehicleTypeOptions.truck}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="powertrain">Powertrain</Label>
+                                            <Label htmlFor="powertrain">{ui.profile.powertrain}</Label>
                                             <Select name="powertrain" value={selectedPowertrain} onValueChange={setSelectedPowertrain}>
                                                 <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
-                                                    <SelectValue placeholder="Select powertrain" />
+                                                    <SelectValue placeholder={ui.profile.powertrainPlaceholder} />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl">
-                                                    <SelectItem value="ice">Combustion (ICE)</SelectItem>
-                                                    <SelectItem value="ev">Electric (EV)</SelectItem>
-                                                    <SelectItem value="phev">Plug-in Hybrid (PHEV)</SelectItem>
-                                                    <SelectItem value="hev">Hybrid (HEV)</SelectItem>
-                                                    <SelectItem value="rex">Range Extender (REX)</SelectItem>
+                                                    <SelectItem value="ice">{ui.profile.powertrainOptions.ice}</SelectItem>
+                                                    <SelectItem value="ev">{ui.profile.powertrainOptions.ev}</SelectItem>
+                                                    <SelectItem value="phev">{ui.profile.powertrainOptions.phev}</SelectItem>
+                                                    <SelectItem value="hev">{ui.profile.powertrainOptions.hev}</SelectItem>
+                                                    <SelectItem value="rex">{ui.profile.powertrainOptions.rex}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="year">Year</Label>
+                                            <Label htmlFor="year">{ui.profile.year}</Label>
                                             <Input id="year" name="year" type="number" min="1900" max={new Date().getFullYear() + 1} placeholder="2020" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="baseline_odometer">Initial Distance ({resolvedProfile.distanceUnit})</Label>
+                                            <Label htmlFor="baseline_odometer">{ui.profile.baselineDistance(resolvedProfile.distanceUnit)}</Label>
                                             <Input id="baseline_odometer" name="baseline_odometer" type="number" min="0" step="any" placeholder="0" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                     </div>
                                     {(selectedPowertrain === 'ev' || selectedPowertrain === 'phev' || selectedPowertrain === 'rex') && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                            <Label htmlFor="battery_capacity_kwh">Battery Capacity (kWh) <span className="text-muted-foreground text-xs font-normal">(Optional)</span></Label>
-                                            <Input id="battery_capacity_kwh" name="battery_capacity_kwh" type="number" min="0" step="any" placeholder="e.g. 75" className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                            <Label htmlFor="battery_capacity_kwh">{ui.profile.batteryCapacity} <span className="text-muted-foreground text-xs font-normal">{ui.profile.optional}</span></Label>
+                                            <Input id="battery_capacity_kwh" name="battery_capacity_kwh" type="number" min="0" step="any" placeholder={ui.profile.batteryCapacityPlaceholder} className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                     )}
                                     <div className="pt-4 flex justify-end">
                                         <Button type="submit" disabled={isAddingVehicle} className="rounded-xl h-11 w-full font-semibold shadow-md active:scale-[0.98] transition-all">
-                                            {isAddingVehicle ? "Adding..." : "Add Vehicle"}
+                                            {isAddingVehicle ? ui.profile.addingVehicle : ui.profile.addVehicle}
                                         </Button>
                                     </div>
                                 </form>
@@ -652,13 +645,13 @@ export default function ProfilePage() {
 
                     {isVehiclesLoading ? (
                         <div className="flex justify-center p-8">
-                            <p className="text-muted-foreground animate-pulse">Loading garage...</p>
+                            <p className="text-muted-foreground animate-pulse">{ui.profile.loadingGarage}</p>
                         </div>
                     ) : vehicles.length === 0 ? (
                         <div className="text-center p-8 border border-dashed rounded-[2rem] bg-muted/20">
                             <Car className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                            <h3 className="text-lg font-medium">Your garage is empty</h3>
-                            <p className="text-muted-foreground mt-1">Add a vehicle to start tracking your fuel and maintenance.</p>
+                            <h3 className="text-lg font-medium">{ui.profile.emptyGarageTitle}</h3>
+                            <p className="text-muted-foreground mt-1">{ui.profile.emptyGarageDescription}</p>
                         </div>
                     ) : (
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -684,7 +677,7 @@ export default function ProfilePage() {
                                         ) : (
                                             <Trash2 className="h-4 w-4" />
                                         )}
-                                        <span className="sr-only">Delete</span>
+                                        <span className="sr-only">{ui.profile.deleteVehicle}</span>
                                     </Button>
 
                                     {/* Image Section (Top half of the card) */}
@@ -728,7 +721,7 @@ export default function ProfilePage() {
                                         </h4>
                                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 font-medium">
                                             <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                            Active
+                                            {ui.profile.active}
                                             <span className="mx-1 opacity-50">•</span>
                                             {vehicle.baseline_odometer.toLocaleString()} {resolvedProfile.distanceUnit}
                                         </div>

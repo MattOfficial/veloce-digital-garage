@@ -37,6 +37,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { ui } from "@/content/en/ui";
 
 interface AddMaintenanceModalProps {
     vehicleId: string;
@@ -79,7 +80,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 setError(result.error);
             } else {
                 // Success! Refresh global state and close modal
-                toast.success(logToEdit ? "Service record updated!" : "Service record saved!");
+                toast.success(logToEdit ? ui.maintenance.addMaintenance.updated : ui.maintenance.addMaintenance.saved);
                 if ("newBadges" in result && result.newBadges?.length) {
                     result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
@@ -95,7 +96,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 {trigger ? trigger : (
                     <Button size="sm" className="rounded-full shadow-sm shadow-primary/20">
                         <Plus className="mr-2 h-4 w-4" />
-                        Log Maintenance
+                        {ui.maintenance.addMaintenance.trigger}
                     </Button>
                 )}
             </DialogTrigger>
@@ -104,10 +105,10 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                     <DialogHeader>
                         <DialogTitle className="flex items-center text-xl">
                             {logToEdit ? <Edit className="w-5 h-5 mr-2 text-primary" /> : <Wrench className="w-5 h-5 mr-2 text-primary" />}
-                            {logToEdit ? "Edit Service Record" : "Log Service Record"}
+                            {logToEdit ? ui.maintenance.addMaintenance.title.edit : ui.maintenance.addMaintenance.title.create}
                         </DialogTitle>
                         <DialogDescription>
-                            {logToEdit ? "Update the details of this maintenance record." : "This record will be permanently attached to this vehicle's history."}
+                            {logToEdit ? ui.maintenance.addMaintenance.description.edit : ui.maintenance.addMaintenance.description.create}
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -115,7 +116,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4">
                     {/* Date Picker */}
                     <div className="space-y-2">
-                        <Label>Service Date</Label>
+                        <Label>{ui.maintenance.addMaintenance.labels.serviceDate}</Label>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
@@ -126,7 +127,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                    {date ? format(date, "PPP") : <span>{ui.maintenance.addMaintenance.pickDate}</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -142,27 +143,22 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
 
                     {/* Service Type Dropdown */}
                     <div className="space-y-2">
-                        <Label htmlFor="service_type">Service Performed</Label>
-                        <Select name="service_type" required defaultValue={logToEdit?.service_type || "Engine Oil Change"}>
+                        <Label htmlFor="service_type">{ui.maintenance.addMaintenance.labels.servicePerformed}</Label>
+                        <Select name="service_type" required defaultValue={logToEdit?.service_type || ui.maintenance.addMaintenance.serviceTypes[0]}>
                             <SelectTrigger className="rounded-xl">
-                                <SelectValue placeholder="Select maintenance type" />
+                                <SelectValue placeholder={ui.maintenance.addMaintenance.servicePlaceholder} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Engine Oil Change">Engine Oil Change</SelectItem>
-                                <SelectItem value="Tire Rotation / Replacement">Tire Rotation / Replacement</SelectItem>
-                                <SelectItem value="Brake Pad Replacement">Brake Pad Replacement</SelectItem>
-                                <SelectItem value="Air Filter Replacement">Air Filter Replacement</SelectItem>
-                                <SelectItem value="Battery Replacement">Battery Replacement</SelectItem>
-                                <SelectItem value="Transmission Fluid">Transmission Fluid</SelectItem>
-                                <SelectItem value="General Inspection">General Inspection</SelectItem>
-                                <SelectItem value="Other Repair">Other Repair</SelectItem>
+                                {ui.maintenance.addMaintenance.serviceTypes.map((serviceType) => (
+                                    <SelectItem key={serviceType} value={serviceType}>{serviceType}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
 
                     {/* Cost Input */}
                     <div className="space-y-2">
-                        <Label htmlFor="cost">Total Cost ({currencySymbol})</Label>
+                        <Label htmlFor="cost">{ui.maintenance.addMaintenance.labels.totalCost(currencySymbol)}</Label>
                         <div className="relative">
                             <span className="absolute left-3 top-2.5 text-muted-foreground">{currencySymbol}</span>
                             <Input
@@ -171,7 +167,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                placeholder="0.00"
+                                placeholder={ui.maintenance.addMaintenance.costPlaceholder}
                                 defaultValue={logToEdit?.cost}
                                 required
                                 className="pl-7 rounded-xl"
@@ -181,11 +177,11 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
 
                     {/* Notes Field */}
                     <div className="space-y-2">
-                        <Label htmlFor="notes">Notes & Provider (Optional)</Label>
+                        <Label htmlFor="notes">{ui.maintenance.addMaintenance.labels.notes}</Label>
                         <Textarea
                             id="notes"
                             name="notes"
-                            placeholder="e.g. Jiffy Lube, included multi-point inspection."
+                            placeholder={ui.maintenance.addMaintenance.notesPlaceholder}
                             defaultValue={logToEdit?.notes || ""}
                             className="rounded-xl resize-none"
                             rows={3}
@@ -205,14 +201,14 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                             onClick={() => setOpen(false)}
                             className="rounded-full"
                         >
-                            Cancel
+                            {ui.common.actions.cancel}
                         </Button>
                         <Button
                             type="submit"
                             disabled={isPending}
                             className="rounded-full shadow-md px-6"
                         >
-                            {isPending ? "Saving..." : "Save Record"}
+                            {isPending ? ui.common.actions.saving : ui.maintenance.addMaintenance.saveRecord}
                         </Button>
                     </div>
                 </form>

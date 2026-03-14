@@ -14,6 +14,7 @@ import {
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
 import { deleteMaintenanceLog } from "@/app/actions/maintenance";
 import { useVehicleStore } from "@/store/vehicle-store";
+import { ui } from "@/content/en/ui";
 
 interface MaintenanceLogActionsProps {
     log: MaintenanceLog;
@@ -26,7 +27,7 @@ export function MaintenanceLogActions({ log, vehicleId }: MaintenanceLogActionsP
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this maintenance record?")) return;
+        if (!confirm(ui.maintenance.maintenanceActions.confirmDelete)) return;
 
         setIsDeleting(true);
         const result = await deleteMaintenanceLog(log.id, vehicleId);
@@ -43,14 +44,14 @@ export function MaintenanceLogActions({ log, vehicleId }: MaintenanceLogActionsP
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{ui.common.navigation.openMenuSrOnly}</span>
                         <MoreHorizontal className="h-4 w-4" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-xl">
                     <DropdownMenuItem onClick={() => setIsEditModalOpen(true)} className="cursor-pointer rounded-lg">
                         <Edit className="mr-2 h-4 w-4" />
-                        <span>Edit Record</span>
+                        <span>{ui.maintenance.maintenanceActions.editRecord}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -59,7 +60,7 @@ export function MaintenanceLogActions({ log, vehicleId }: MaintenanceLogActionsP
                         className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer rounded-lg"
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        <span>{isDeleting ? "Deleting..." : "Delete Record"}</span>
+                        <span>{isDeleting ? ui.maintenance.maintenanceActions.deleting : ui.maintenance.maintenanceActions.deleteRecord}</span>
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>

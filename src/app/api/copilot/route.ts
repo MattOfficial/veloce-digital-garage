@@ -11,6 +11,7 @@ import {
     type ProviderPreference,
 } from "@/types/ai";
 import { getErrorMessage } from "@/utils/errors";
+import { brand } from "@/content/en/brand";
 
 export const dynamic = 'force-dynamic';
 
@@ -187,7 +188,7 @@ export async function POST(req: Request) {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-            return Response.json({ role: "assistant", content: "You must be logged in to use Veloce Copilot." });
+            return Response.json({ role: "assistant", content: `You must be logged in to use ${brand.ai.copilotName}.` });
         }
 
         const { data: userData } = await supabase
@@ -212,7 +213,7 @@ export async function POST(req: Request) {
 
         if (!encryptedKey) {
             const providerName = provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek';
-            return Response.json(createAssistantResponse(`To use Veloce Copilot with ${providerName}, please provide your API key in your Profile Settings.`));
+            return Response.json(createAssistantResponse(`To use ${brand.ai.copilotName} with ${providerName}, please provide your API key in your Profile Settings.`));
         }
 
         let apiKey = "";
@@ -226,7 +227,7 @@ export async function POST(req: Request) {
 
         // System instructions to guide the Orchestrator
         const systemInstruction = `
-            You are "Veloce Copilot", an AI assistant built into the Veloce Digital Garage app.
+            You are "${brand.ai.copilotName}", an AI assistant built into the ${brand.app.fullName} app.
             Your job is to help users track their vehicle expenses, fuel, and maintenance.
             You have access to tools to log data on the user's behalf.
             
@@ -235,7 +236,7 @@ export async function POST(req: Request) {
             
             STRICT GUARDRAILS & RULES:
             1. DOMAIN RESTRICTION: You are explicitly restricted to topics regarding vehicles, cars, motorcycles, automotive maintenance, fuel efficiency, and the user's garage. 
-            2. OUT OF SCOPE REJECTION: If the user asks you to write code (e.g., Python, JavaScript), solve math problems, write essays, or act as a general-purpose AI, you MUST politely refuse. Example response: "I am specialized for the Veloce Digital Garage application. I can only assist you with managing your vehicles, fuel logs, and maintenance."
+            2. OUT OF SCOPE REJECTION: If the user asks you to write code (e.g., Python, JavaScript), solve math problems, write essays, or act as a general-purpose AI, you MUST politely refuse. Example response: "I am specialized for the ${brand.app.fullName} application. I can only assist you with managing your vehicles, fuel logs, and maintenance."
             3. FUEL LOGGING: If the user asks to log fuel, you MUST use the log_fuel_draft tool. However, you MUST NOT use the tool if the user hasn't provided the Cost, Volume (liters/gallons), and Odometer reading. If they are missing, ask them explicitly.
             4. VEHICLE RESOLUTION: If the user refers to a vehicle by "nickname" or "make" and it's unambiguous, map it to the correct vehicle_id. If it IS ambiguous (e.g. they say "Honda" and have two Hondas), ask them to clarify before calling the tool.
             5. DOCUMENT UPLOADS: If the user attaches an invoice/receipt, analyze it thoroughly. Extract the total cost, date, and service provider. ALSO, extract ALL SPECIFIC line items (parts and labor) and append them into the 'notes' parameter as a bulleted list. Always include the receipt_url in your tool call if one was provided in the context. 

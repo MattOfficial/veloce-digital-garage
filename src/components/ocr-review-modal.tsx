@@ -10,6 +10,7 @@ import { extractDataFromInvoice } from "@/app/actions/ocr";
 import { CheckCircle2, Loader2, FileText } from "lucide-react";
 import type { OcrExtractedData, OcrLineItem } from "@/types/ai";
 import { getErrorMessage } from "@/utils/errors";
+import { ui } from "@/content/en/ui";
 
 interface OcrReviewModalProps {
     vehicleId: string;
@@ -56,7 +57,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
             const data = await extractDataFromInvoice(fileUrl);
             setOcrData(data);
         } catch (error: unknown) {
-            setError(getErrorMessage(error, "Failed to analyze document."));
+            setError(getErrorMessage(error, ui.maintenance.ocr.failedAnalyze));
         } finally {
             setIsProcessing(false);
         }
@@ -79,20 +80,20 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
             try {
                 const supabase = createClient();
                 const { data: { session } } = await supabase.auth.getSession();
-                if (!session) throw new Error("Not authenticated");
+                if (!session) throw new Error(ui.maintenance.ocr.notAuthenticated);
 
                 // For simplicity, we create one maintenance log for the primary provider
                 // and append line items to the notes section. In a full production app,
                 // we'd probably create multiple rows or a dedicated line_items table.
 
                 const lineItemsText = ocrData.line_items.map((lineItem) => `- ${lineItem.service}: $${lineItem.cost}`).join("\n");
-                const notes = `Auto-extracted from receipt.\n\nLine Items:\n${lineItemsText}`;
+                const notes = `${ui.maintenance.ocr.autoExtractedFromReceipt}\n\n${ui.maintenance.ocr.lineItemsTitle}\n${lineItemsText}`;
 
                 const maintenanceEntry = {
                     vehicle_id: vehicleId,
                     user_id: session.user.id,
                     date: ocrData.date || new Date().toISOString().split('T')[0],
-                    service_type: ocrData.provider ? `Service at ${ocrData.provider}` : "General Maintenance",
+                    service_type: ocrData.provider ? ui.maintenance.ocr.serviceAt(ocrData.provider) : ui.maintenance.ocr.generalMaintenance,
                     cost: Number.parseFloat(String(ocrData.total_cost)) || 0,
                     notes: notes,
                     receipt_url: filePath // Link back to the storage path
@@ -103,7 +104,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
 
                 // Also record the document in our new documents table
                 if (filePath) {
-                    const docName = filePath.split('/').pop() || 'Invoice.pdf';
+                    const docName = filePath.split('/').pop() || ui.maintenance.ocr.defaultDocumentName;
                     await supabase.from('documents').insert({
                         vehicle_id: vehicleId,
                         file_path: filePath,
@@ -114,7 +115,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                 onSuccess();
                 onClose();
             } catch (error: unknown) {
-                setError(getErrorMessage(error, "Failed to save records."));
+                setError(getErrorMessage(error, ui.maintenance.ocr.failedSave));
             }
         });
     };
@@ -125,10 +126,10 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                 <DialogHeader>
                     <DialogTitle className="flex items-center">
                         <FileText className="h-5 w-5 mr-2 text-primary" />
-                        AI Receipt Analysis
+                        {ui.maintenance.ocr.title}
                     </DialogTitle>
                     <DialogDescription>
-                        Review the extracted data before saving it to your vehicle&apos;s history.
+                        {ui.maintenance.ocr.description}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -136,8 +137,8 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
                         <Loader2 className="h-10 w-10 text-primary animate-spin" />
                         <div>
-                            <p className="font-semibold text-foreground">Reading Document...</p>
-                            <p className="text-sm text-muted-foreground mt-1">Extracting line items, dates, and costs.</p>
+                            <p className="font-semibold text-foreground">{ui.maintenance.ocr.processingTitle}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{ui.maintenance.ocr.processingDescription}</p>
                         </div>
                     </div>
                 ) : error ? (
@@ -146,13 +147,13 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                             !
                         </div>
                         <p className="font-medium text-red-500">{error}</p>
-                        <Button onClick={onClose} variant="outline" className="border-white/10">Cancel</Button>
+                        <Button onClick={onClose} variant="outline" className="border-white/10">{ui.maintenance.ocr.cancel}</Button>
                     </div>
                 ) : ocrData ? (
                     <form onSubmit={handleSave} className="space-y-6 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2 col-span-2">
-                                <Label className="text-xs text-muted-foreground uppercase">Service Provider</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">{ui.maintenance.ocr.provider}</Label>
                                 <Input
                                     defaultValue={ocrData.provider || ''}
                                     onChange={(e) => updateOcrField("provider", e.target.value)}
@@ -160,7 +161,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground uppercase">Date</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">{ui.maintenance.ocr.date}</Label>
                                 <Input
                                     type="date"
                                     defaultValue={ocrData.date || ''}
@@ -169,7 +170,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground uppercase">Total Cost</Label>
+                                <Label className="text-xs text-muted-foreground uppercase">{ui.maintenance.ocr.totalCost}</Label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
                                     <Input
@@ -185,8 +186,8 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
 
                         <div className="space-y-3 pt-4 border-t border-white/10">
                             <Label className="text-xs text-muted-foreground uppercase flex items-center justify-between">
-                                Extracted Line Items
-                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">{ocrData.line_items?.length || 0} Found</span>
+                                {ui.maintenance.ocr.extractedLineItems}
+                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">{ocrData.line_items?.length || 0} {ui.maintenance.ocr.foundSuffix}</span>
                             </Label>
 
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
@@ -209,15 +210,15 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                     </div>
                                 ))}
                                 {(!ocrData.line_items || ocrData.line_items.length === 0) && (
-                                    <p className="text-sm text-muted-foreground italic text-center py-4">No detailed line items detected.</p>
+                                    <p className="text-sm text-muted-foreground italic text-center py-4">{ui.maintenance.ocr.noLineItems}</p>
                                 )}
                             </div>
                         </div>
 
                         <DialogFooter className="pt-4 border-t border-white/10 flex sm:justify-between">
-                            <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground">Discard</Button>
+                            <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground">{ui.common.actions.discard}</Button>
                             <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
-                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Verify & Save</>}
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 mr-2" /> {ui.maintenance.ocr.verifyAndSave}</>}
                             </Button>
                         </DialogFooter>
                     </form>

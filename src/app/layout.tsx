@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { InteractiveBackground } from "@/components/interactive-background";
 import NextTopLoader from 'nextjs-toploader';
+import { brand } from "@/content/en/brand";
 
 export const metadata: Metadata = {
-  title: "Veloce Digital Garage",
-  description: "Modern Fuel & Vehicle Tracking Application",
+  title: brand.app.fullName,
+  description: brand.app.metadataDescription,
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",

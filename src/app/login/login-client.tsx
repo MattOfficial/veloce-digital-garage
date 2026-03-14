@@ -15,6 +15,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { GoogleAuthButton } from "@/components/google-auth-button";
+import { brand } from "@/content/en/brand";
+import { ui } from "@/content/en/ui";
 
 export function LoginClient({ message, defaultTab = "login" }: { message?: string; defaultTab?: string }) {
     return (
@@ -23,14 +25,14 @@ export function LoginClient({ message, defaultTab = "login" }: { message?: strin
                 <Tabs defaultValue={defaultTab} className="w-full">
                     <CardHeader>
                         <CardTitle className="text-2xl font-bold text-center">
-                            Digital Garage
+                            {brand.app.fullName}
                         </CardTitle>
                         <CardDescription className="text-center">
-                            Sign in to manage your vehicles and fuel logs
+                            {ui.auth.signInDescription}
                         </CardDescription>
                         <TabsList className="grid w-full grid-cols-2 mt-4">
-                            <TabsTrigger value="login">Sign In</TabsTrigger>
-                            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                            <TabsTrigger value="login">{ui.auth.tabs.signIn}</TabsTrigger>
+                            <TabsTrigger value="signup">{ui.auth.tabs.signUp}</TabsTrigger>
                         </TabsList>
                     </CardHeader>
 
@@ -38,38 +40,38 @@ export function LoginClient({ message, defaultTab = "login" }: { message?: strin
                         <form className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email-login">Email</Label>
+                                    <Label htmlFor="email-login">{ui.auth.fields.email}</Label>
                                     <Input
                                         name="email"
                                         id="email-login"
-                                        placeholder="you@example.com"
+                                        placeholder={ui.auth.fields.emailPlaceholder}
                                         required
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="password-login">Password</Label>
+                                    <Label htmlFor="password-login">{ui.auth.fields.password}</Label>
                                     <Input
                                         type="password"
                                         name="password"
                                         id="password-login"
-                                        placeholder="••••••••"
+                                        placeholder={ui.auth.fields.passwordPlaceholder}
                                         required
                                     />
                                 </div>
                             </CardContent>
                             <CardFooter className="flex flex-col gap-2">
                                 <Button formAction={login} className="w-full">
-                                    Sign In
+                                    {ui.auth.buttons.signIn}
                                 </Button>
                                 <div className="relative w-full py-4 text-center">
                                     <div className="absolute inset-0 flex items-center">
                                         <span className="w-full border-t border-border" />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                                        <span className="bg-card px-2 text-muted-foreground">{ui.auth.dividers.signIn}</span>
                                     </div>
                                 </div>
-                                <GoogleAuthButton text="Sign in with Google" />
+                                <GoogleAuthButton text={ui.auth.buttons.signInWithGoogle} />
                                 {message && (
                                     <p className="mt-4 p-4 bg-destructive/10 text-destructive text-center text-sm rounded-md border border-destructive/20">
                                         {message}
@@ -83,41 +85,41 @@ export function LoginClient({ message, defaultTab = "login" }: { message?: strin
                         <form className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email-signup">Email</Label>
+                                    <Label htmlFor="email-signup">{ui.auth.fields.email}</Label>
                                     <Input
                                         name="email"
                                         id="email-signup"
-                                        placeholder="you@example.com"
+                                        placeholder={ui.auth.fields.emailPlaceholder}
                                         required
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="password-signup">Password</Label>
+                                    <Label htmlFor="password-signup">{ui.auth.fields.password}</Label>
                                     <Input
                                         type="password"
                                         name="password"
                                         id="password-signup"
-                                        placeholder="••••••••"
+                                        placeholder={ui.auth.fields.passwordPlaceholder}
                                         required
                                     />
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-4 text-center">
-                                    By signing up, you agree to our Terms of Service.
+                                    {ui.auth.signUpTerms}
                                 </div>
                             </CardContent>
                             <CardFooter className="flex flex-col gap-2">
                                 <Button formAction={signup} className="w-full">
-                                    Sign Up
+                                    {ui.auth.buttons.signUp}
                                 </Button>
                                 <div className="relative w-full py-4 text-center">
                                     <div className="absolute inset-0 flex items-center">
                                         <span className="w-full border-t border-border" />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-card px-2 text-muted-foreground">Or sign up with</span>
+                                        <span className="bg-card px-2 text-muted-foreground">{ui.auth.dividers.signUp}</span>
                                     </div>
                                 </div>
-                                <GoogleAuthButton text="Sign up with Google" />
+                                <GoogleAuthButton text={ui.auth.buttons.signUpWithGoogle} />
                                 {message && (
                                     <p className="mt-4 p-4 bg-destructive/10 text-destructive text-center text-sm rounded-md border border-destructive/20">
                                         {message}

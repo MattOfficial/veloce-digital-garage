@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { brand } from "@/content/en/brand";
 
 export function SpeedometerLoading() {
     const gaugeRef = useRef<SVGCircleElement>(null);
@@ -158,7 +159,7 @@ export function SpeedometerLoading() {
                         000
                     </div>
                     <div className="text-xs sm:text-sm font-medium text-white/50 tracking-[2px] mt-1 uppercase">
-                        Veloce Digital Garage
+                        {brand.app.fullName}
                     </div>
                     <div className="mt-4 text-[10px] sm:text-xs text-white/40 flex items-center gap-1 font-mono uppercase bg-black/50 px-3 py-1 rounded-full border border-white/10">
                         RPM <span ref={rpmTextRef} className="text-white/70 tabular-nums">1000</span>

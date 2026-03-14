@@ -19,6 +19,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { OcrReviewModal } from "@/components/ocr-review-modal";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ui } from "@/content/en/ui";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'];
 
@@ -48,8 +49,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center">
-                    <h2 className="text-2xl font-semibold mb-2">No Vehicle Selected</h2>
-                    <p className="text-muted-foreground">Select a vehicle to view maintenance schedules.</p>
+                    <h2 className="text-2xl font-semibold mb-2">{ui.maintenance.noVehicleSelectedTitle}</h2>
+                    <p className="text-muted-foreground">{ui.maintenance.noVehicleSelectedDescription}</p>
                 </div>
             </div>
         );
@@ -153,8 +154,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6 pb-10">
             <PageHeader
-                title="Maintenance"
-                description={`Predictive vitals and expense tracking for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                title={ui.maintenance.pageTitle}
+                description={ui.maintenance.pageDescription(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                 icon={Wrench}
             >
                 <AddMaintenanceModal vehicleId={selectedVehicle.id} />
@@ -162,9 +163,9 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
             <Tabs defaultValue="overview" className="w-full space-y-6">
                 <TabsList className="grid w-[400px] grid-cols-3 rounded-full">
-                    <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
-                    <TabsTrigger value="invoices" className="rounded-full">Service</TabsTrigger>
-                    <TabsTrigger value="trackers" className="rounded-full">Trackers</TabsTrigger>
+                    <TabsTrigger value="overview" className="rounded-full">{ui.maintenance.tabs.overview}</TabsTrigger>
+                    <TabsTrigger value="invoices" className="rounded-full">{ui.maintenance.tabs.invoices}</TabsTrigger>
+                    <TabsTrigger value="trackers" className="rounded-full">{ui.maintenance.tabs.trackers}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-6">
@@ -174,14 +175,14 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             <Card className="relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance Cost</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.maintenance.lifetimeMaintenanceCost}</CardTitle>
                                     <DollarSign className="h-4 w-4 text-rose-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
                                         {formatCurrency(totalSpend)}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Total spent on keeping it running</p>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ui.maintenance.lifetimeMaintenanceCostDescription}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
@@ -190,14 +191,14 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             <Card className="relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance Cost per {distanceUnit.toUpperCase()}</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.maintenance.maintenanceCostPerDistance(distanceUnit)}</CardTitle>
                                     <Activity className="h-4 w-4 text-amber-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-amber-500 shadow-amber-500/20 drop-shadow-md">
                                         {costPerDistance > 0 ? formatCurrency(costPerDistance) : '--'}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Depreciation via service</p>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ui.maintenance.maintenanceCostPerDistanceDescription}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
@@ -205,14 +206,14 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                         <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
                             <Card className="border-primary/20 bg-primary/5">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-primary">Service Log Completeness</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-primary">{ui.maintenance.serviceLogCompleteness}</CardTitle>
                                     <FileText className="h-4 w-4 text-primary" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
                                         {logs.length}
                                     </div>
-                                    <p className="text-xs text-primary/70 mt-1 font-medium">Recorded invoices</p>
+                                    <p className="text-xs text-primary/70 mt-1 font-medium">{ui.maintenance.recordedInvoices}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
@@ -222,8 +223,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                     <MotionWrapper delay={0.4}>
                         <Card>
                             <CardHeader className="border-b border-white/5 bg-white/5">
-                                <CardTitle>Health Monitor</CardTitle>
-                                <CardDescription>Estimated lifespan of critical components based on your odometer ({currentOdometer.toLocaleString()}{distanceUnit}).</CardDescription>
+                                <CardTitle>{ui.maintenance.healthMonitorTitle}</CardTitle>
+                                <CardDescription>{ui.maintenance.healthMonitorDescription(currentOdometer.toLocaleString(), distanceUnit)}</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6">
                                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -244,7 +245,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                             </div>
                                             <h4 className="font-semibold text-center leading-tight mb-1">{item.name}</h4>
                                             <p className={`text-xs font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                                {item.status === "good" ? "Healthy" : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
+                                                {item.status === "good" ? ui.maintenance.healthHealthy : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
                                             </p>
                                             <p className="text-[10px] text-muted-foreground mt-1">Last: {item.lastDoneDate}</p>
                                         </div>
@@ -259,9 +260,9 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             <Card className="bg-white/5 border-dashed border-2 border-white/10">
                                 <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                                     <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                                    <h3 className="text-xl font-semibold tracking-tight">No maintenance logged</h3>
+                                    <h3 className="text-xl font-semibold tracking-tight">{ui.maintenance.noMaintenanceLoggedTitle}</h3>
                                     <p className="text-muted-foreground mt-2 max-w-sm">
-                                        Log your first service to unlock spending breakdowns and historical analytics.
+                                        {ui.maintenance.noMaintenanceLoggedDescription}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -274,7 +275,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                 <MotionWrapper delay={0.5} className="md:col-span-2">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
-                                            <CardTitle>Spend by Category</CardTitle>
+                                            <CardTitle>{ui.maintenance.spendByCategory}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="h-[250px] w-full pb-4 pt-6">
                                             <ResponsiveContainer width="100%" height="100%">
@@ -313,8 +314,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                 <MotionWrapper delay={0.6} className="md:col-span-3">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
-                                            <CardTitle>Maintenance Timeline</CardTitle>
-                                            <CardDescription>Visualize the frequency and cost of shop visits.</CardDescription>
+                                            <CardTitle>{ui.maintenance.maintenanceTimeline}</CardTitle>
+                                            <CardDescription>{ui.maintenance.maintenanceTimelineDescription}</CardDescription>
                                         </CardHeader>
                                         <CardContent className="h-[250px] w-full pt-6">
                                             <ResponsiveContainer width="100%" height="100%">
@@ -327,7 +328,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                         contentStyle={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(10px)' }}
                                                     />
-                                                    <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Total Cost" />
+                                                    <Bar dataKey="cost" fill="#8b5cf6" radius={[4, 4, 0, 0]} name={ui.maintenance.addMaintenance.labels.totalCost(currencySymbol)} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </CardContent>
@@ -349,25 +350,25 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                     <MotionWrapper delay={0.1}>
                         <Card className="overflow-hidden">
                             <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
-                                <CardTitle>Service Log</CardTitle>
-                                <CardDescription>Detailed history of all documented repairs and maintenance.</CardDescription>
+                                <CardTitle>{ui.maintenance.serviceLogTitle}</CardTitle>
+                                <CardDescription>{ui.maintenance.serviceLogDescription}</CardDescription>
                             </CardHeader>
                             <div className="overflow-x-auto">
                                 {tableLogs.length === 0 ? (
                                     <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
                                         <FileText className="h-10 w-10 mb-4 opacity-20" />
-                                        <p className="font-medium text-foreground">No service records found</p>
-                                        <p className="text-sm mt-1">When you log your first service, it will appear here.</p>
+                                        <p className="font-medium text-foreground">{ui.maintenance.noServiceRecordsTitle}</p>
+                                        <p className="text-sm mt-1">{ui.maintenance.noServiceRecordsDescription}</p>
                                     </div>
                                 ) : (
                                     <table className="w-full text-sm text-left">
                                         <thead className="text-xs text-muted-foreground uppercase bg-black/20 border-b border-white/5">
                                             <tr>
-                                                <th className="px-6 py-4 font-medium">Date</th>
-                                                <th className="px-6 py-4 font-medium">Service Performed</th>
-                                                <th className="px-6 py-4 font-medium">Additional Notes</th>
-                                                <th className="px-6 py-4 font-medium text-right">Invoice Cost</th>
-                                                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                                                <th className="px-6 py-4 font-medium">{ui.maintenance.columns.date}</th>
+                                                <th className="px-6 py-4 font-medium">{ui.maintenance.columns.servicePerformed}</th>
+                                                <th className="px-6 py-4 font-medium">{ui.maintenance.columns.additionalNotes}</th>
+                                                <th className="px-6 py-4 font-medium text-right">{ui.maintenance.columns.invoiceCost}</th>
+                                                <th className="px-6 py-4 font-medium text-right">{ui.maintenance.columns.actions}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5 bg-transparent">
@@ -409,10 +410,10 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                         <div className="flex items-center justify-between px-2">
                             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center drop-shadow-md">
                                 <Sparkles className="h-5 w-5 mr-2 text-primary" />
-                                Custom Trackers
+                                {ui.maintenance.trackersTitle}
                             </h2>
                             <p className="text-sm text-muted-foreground mr-auto ml-4">
-                                Keep track of other vital health data like washer fluid, coolants, or accessories.
+                                {ui.maintenance.trackersDescription}
                             </p>
                         </div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

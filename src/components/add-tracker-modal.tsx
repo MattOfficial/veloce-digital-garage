@@ -11,27 +11,28 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { useRouter } from "next/navigation";
+import { ui } from "@/content/en/ui";
 
 const ICONS = [
-    { name: "Sparkles", icon: Sparkles },
-    { name: "Droplets", icon: Droplets },
-    { name: "PaintBucket", icon: PaintBucket },
-    { name: "Receipt", icon: Receipt },
-    { name: "Wrench", icon: Wrench },
-    { name: "Map", icon: Map },
-    { name: "Zap", icon: Zap },
-    { name: "Battery", icon: Battery },
-    { name: "Car", icon: Car },
-    { name: "Umbrella", icon: Umbrella },
+    { name: "Sparkles", label: ui.trackers.iconLabels.Sparkles, icon: Sparkles },
+    { name: "Droplets", label: ui.trackers.iconLabels.Droplets, icon: Droplets },
+    { name: "PaintBucket", label: ui.trackers.iconLabels.PaintBucket, icon: PaintBucket },
+    { name: "Receipt", label: ui.trackers.iconLabels.Receipt, icon: Receipt },
+    { name: "Wrench", label: ui.trackers.iconLabels.Wrench, icon: Wrench },
+    { name: "Map", label: ui.trackers.iconLabels.Map, icon: Map },
+    { name: "Zap", label: ui.trackers.iconLabels.Zap, icon: Zap },
+    { name: "Battery", label: ui.trackers.iconLabels.Battery, icon: Battery },
+    { name: "Car", label: ui.trackers.iconLabels.Car, icon: Car },
+    { name: "Umbrella", label: ui.trackers.iconLabels.Umbrella, icon: Umbrella },
 ];
 
 const COLORS = [
-    { name: "Blue", value: "blue" },
-    { name: "Emerald", value: "emerald" },
-    { name: "Violet", value: "violet" },
-    { name: "Rose", value: "rose" },
-    { name: "Amber", value: "amber" },
-    { name: "Slate", value: "slate" }
+    { name: ui.trackers.colorLabels.blue, value: "blue" },
+    { name: ui.trackers.colorLabels.emerald, value: "emerald" },
+    { name: ui.trackers.colorLabels.violet, value: "violet" },
+    { name: ui.trackers.colorLabels.rose, value: "rose" },
+    { name: ui.trackers.colorLabels.amber, value: "amber" },
+    { name: ui.trackers.colorLabels.slate, value: "slate" }
 ];
 
 export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => void }) {
@@ -76,26 +77,26 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
                     <div className="bg-background rounded-full p-3 shadow-sm group-hover:scale-110 transition-transform duration-300">
                         <Plus className="h-6 w-6" />
                     </div>
-                    <span className="font-medium tracking-tight">Create Custom Tracker</span>
+                    <span className="font-medium tracking-tight">{ui.trackers.createTrackerTrigger}</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">New Custom Tracker</DialogTitle>
+                    <DialogTitle className="text-xl">{ui.trackers.createTrackerTitle}</DialogTitle>
                     <DialogDescription>
-                        Build a custom widget to track events on your vehicles.
+                        {ui.trackers.createTrackerDescription}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={onSubmit} className="space-y-6 pt-4">
                     <input type="hidden" name="vehicle_id" value={selectedVehicleId || ""} />
                     <div className="space-y-2">
-                        <Label htmlFor="name">Tracker Name</Label>
-                        <Input id="name" name="name" placeholder="e.g. Car Washes, Detailing, Tolls" className="rounded-xl" required />
+                        <Label htmlFor="name">{ui.trackers.trackerName}</Label>
+                        <Input id="name" name="name" placeholder={ui.trackers.trackerNamePlaceholder} className="rounded-xl" required />
                     </div>
 
                     <div className="space-y-3">
-                        <Label>Select Icon</Label>
+                        <Label>{ui.trackers.selectIcon}</Label>
                         <TooltipProvider>
                             <div className="flex flex-wrap gap-2">
                                 {ICONS.map((ico) => {
@@ -113,7 +114,7 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
                                                 </button>
                                             </TooltipTrigger>
                                             <TooltipContent side="bottom" className="rounded-xl px-3 py-1.5 text-xs font-semibold">
-                                                {ico.name}
+                                                {ico.label}
                                             </TooltipContent>
                                         </Tooltip>
                                     );
@@ -123,7 +124,7 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
                     </div>
 
                     <div className="space-y-3">
-                        <Label>Color Theme</Label>
+                        <Label>{ui.trackers.colorTheme}</Label>
                         <div className="flex flex-wrap gap-3">
                             {COLORS.map((c) => {
                                 const isSelected = selectedColor === c.value;
@@ -143,8 +144,8 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
 
                     <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border border-border/50">
                         <div className="space-y-0.5">
-                            <Label htmlFor="track_cost" className="text-base">Track Cost</Label>
-                            <p className="text-sm text-muted-foreground">Log monetary expenses along with this event?</p>
+                            <Label htmlFor="track_cost" className="text-base">{ui.trackers.trackCost}</Label>
+                            <p className="text-sm text-muted-foreground">{ui.trackers.trackCostDescription}</p>
                         </div>
                         <Switch id="track_cost" name="track_cost" value="true" defaultChecked />
                     </div>
@@ -157,9 +158,9 @@ export function AddTrackerModal({ onTrackerAdded }: { onTrackerAdded?: () => voi
 
                     <Button type="submit" disabled={isPending} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all">
                         {isPending ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Tracker...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> {ui.trackers.creatingTracker}</>
                         ) : (
-                            "Build Tracker"
+                            ui.trackers.buildTracker
                         )}
                     </Button>
                 </form>

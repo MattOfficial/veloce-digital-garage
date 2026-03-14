@@ -31,6 +31,7 @@ import {
 import { Plus, Loader2 } from "lucide-react";
 import { VehicleWithLogs } from "@/types/database";
 import type { BadgeDefinition } from "@/lib/badges";
+import { ui } from "@/content/en/ui";
 
 const formSchema = z.object({
     date: z.string().nonempty({ message: "Date is required" }),
@@ -53,14 +54,14 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
             <DialogTrigger asChild>
                 <Button className="rounded-full shadow-md transition-all active:scale-95 bg-primary/90 hover:bg-primary">
                     <Plus className="h-4 w-4 mr-2" />
-                    Log Fill-Up
+                    {ui.fuel.modal.trigger}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] rounded-[2rem]">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">Log {isEV ? 'Charge' : isPHEV ? 'Fill-Up / Charge' : 'Fill-Up'}</DialogTitle>
+                    <DialogTitle className="text-xl">{isEV ? ui.fuel.modal.title.charge : isPHEV ? ui.fuel.modal.title.hybrid : ui.fuel.modal.title.fillUp}</DialogTitle>
                     <DialogDescription>
-                        Enter details for your {vehicle.make} {vehicle.model}.
+                        {ui.fuel.modal.description(`${vehicle.make} ${vehicle.model}`)}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -126,7 +127,7 @@ function FuelLogForm({
             try {
                 const result = await submitFuelLog(formData);
                 if (result.success) {
-                    setMessage({ type: "success", text: "Fuel log successfully added!" });
+                    setMessage({ type: "success", text: ui.fuel.modal.messages.saved });
                     if ("newBadges" in result && result.newBadges?.length) {
                         result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                     }
@@ -135,10 +136,10 @@ function FuelLogForm({
                         onSuccess();
                     }, 1000);
                 } else {
-                    setMessage({ type: "error", text: result.error || "Failed to add log." });
+                    setMessage({ type: "error", text: result.error || ui.fuel.modal.messages.failed });
                 }
             } catch {
-                setMessage({ type: "error", text: "An unexpected error occurred." });
+                setMessage({ type: "error", text: ui.fuel.modal.messages.unexpected });
             }
         });
     }
@@ -148,8 +149,8 @@ function FuelLogForm({
             {isPHEV && (
                 <Tabs value={energyType} onValueChange={(value) => setEnergyType(value === "charge" ? "charge" : "fuel")} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 rounded-xl">
-                        <TabsTrigger value="fuel" className="rounded-lg">Fuel</TabsTrigger>
-                        <TabsTrigger value="charge" className="rounded-lg">Charge</TabsTrigger>
+                        <TabsTrigger value="fuel" className="rounded-lg">{ui.fuel.modal.tabs.fuel}</TabsTrigger>
+                        <TabsTrigger value="charge" className="rounded-lg">{ui.fuel.modal.tabs.charge}</TabsTrigger>
                     </TabsList>
                 </Tabs>
             )}
@@ -162,7 +163,7 @@ function FuelLogForm({
                             name="date"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Date</FormLabel>
+                                    <FormLabel>{ui.fuel.modal.labels.date}</FormLabel>
                                     <FormControl>
                                         <Input type="date" className="rounded-xl" {...field} />
                                     </FormControl>
@@ -176,9 +177,9 @@ function FuelLogForm({
                             name="odometer"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Odometer ({profile.distanceUnit})</FormLabel>
+                                    <FormLabel>{ui.fuel.modal.labels.odometer(profile.distanceUnit)}</FormLabel>
                                     <FormControl>
-                                        <Input type="number" step="1" className="rounded-xl" placeholder="e.g. 46250" {...field} />
+                                        <Input type="number" step="1" className="rounded-xl" placeholder={ui.fuel.modal.placeholders.odometer} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -190,9 +191,9 @@ function FuelLogForm({
                             name="fuel_volume"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>{energyType === 'charge' ? 'Energy (kWh)' : `Volume (${getVolumeUnit()})`}</FormLabel>
+                                    <FormLabel>{energyType === 'charge' ? ui.fuel.modal.labels.energy : ui.fuel.modal.labels.volume(getVolumeUnit())}</FormLabel>
                                     <FormControl>
-                                        <Input type="number" step="0.01" className="rounded-xl" placeholder={energyType === 'charge' ? "e.g. 50.5" : "e.g. 35.5"} {...field} />
+                                        <Input type="number" step="0.01" className="rounded-xl" placeholder={energyType === 'charge' ? ui.fuel.modal.placeholders.energy : ui.fuel.modal.placeholders.volume} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -204,9 +205,9 @@ function FuelLogForm({
                             name="total_cost"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Cost ({profile.currency})</FormLabel>
+                                    <FormLabel>{ui.fuel.modal.labels.cost(profile.currency)}</FormLabel>
                                     <FormControl>
-                                        <Input type="number" step="0.01" className="rounded-xl" placeholder="e.g. 50.00" {...field} />
+                                        <Input type="number" step="0.01" className="rounded-xl" placeholder={ui.fuel.modal.placeholders.cost} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -219,9 +220,9 @@ function FuelLogForm({
                                 name="estimated_range"
                                 render={({ field }) => (
                                     <FormItem className="col-span-2 sm:col-span-1">
-                                        <FormLabel>Estimated Range ({profile.distanceUnit}) <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
+                                        <FormLabel>{ui.fuel.modal.labels.estimatedRange(profile.distanceUnit)} <span className="text-muted-foreground text-xs font-normal">{ui.fuel.modal.labels.estimatedRangeOptional}</span></FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.1" className="rounded-xl" placeholder="e.g. 300" {...field} value={field.value ?? ''} />
+                                            <Input type="number" step="0.1" className="rounded-xl" placeholder={ui.fuel.modal.placeholders.range} {...field} value={field.value ?? ''} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -238,7 +239,7 @@ function FuelLogForm({
 
                     <Button type="submit" className="w-full rounded-full h-11 text-base font-semibold" disabled={isPending}>
                         {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                        {isPending ? "Saving..." : "Save Log"}
+                        {isPending ? ui.fuel.modal.submit.saving : ui.fuel.modal.submit.save}
                     </Button>
                 </form>
             </Form>

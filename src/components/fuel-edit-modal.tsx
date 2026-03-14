@@ -27,6 +27,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Pencil } from "lucide-react";
+import { ui } from "@/content/en/ui";
 
 const formSchema = z.object({
     date: z.string().nonempty({ message: "Date is required" }),
@@ -60,10 +61,10 @@ export function FuelEditModal({ log, open, onOpenChange }: FuelEditModalProps) {
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl">
                         <Pencil className="h-5 w-5 text-primary" />
-                        Edit Fill-Up Entry
+                        {ui.fuel.modal.editTitle}
                     </DialogTitle>
                     <DialogDescription>
-                        Update the details for this fill-up. Efficiency will be recalculated automatically.
+                        {ui.fuel.modal.editDescription}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -108,14 +109,14 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
             try {
                 const result = await editFuelLog(log.id, formData);
                 if (result.success) {
-                    toast.success("Fill-up updated successfully!");
+                    toast.success(ui.fuel.modal.editSaved);
                     fetchVehicles();
                     onOpenChange(false);
                 } else {
-                    setError(result.error || "Failed to update log.");
+                    setError(result.error || ui.fuel.modal.editFailed);
                 }
             } catch {
-                setError("An unexpected error occurred.");
+                setError(ui.fuel.modal.messages.unexpected);
             }
         });
     }
@@ -129,7 +130,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                         name="date"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Date</FormLabel>
+                                <FormLabel>{ui.fuel.modal.labels.date}</FormLabel>
                                 <FormControl>
                                     <Input type="date" className="rounded-xl" {...field} />
                                 </FormControl>
@@ -143,7 +144,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                         name="odometer"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Odometer ({profile.distanceUnit})</FormLabel>
+                                <FormLabel>{ui.fuel.modal.labels.odometer(profile.distanceUnit)}</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="1" className="rounded-xl" {...field} />
                                 </FormControl>
@@ -157,7 +158,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                         name="fuel_volume"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{isCharge ? 'Energy (kWh)' : `Volume (${getVolumeUnit()})`}</FormLabel>
+                                <FormLabel>{isCharge ? ui.fuel.modal.labels.energy : ui.fuel.modal.labels.volume(getVolumeUnit())}</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="0.01" className="rounded-xl" {...field} />
                                 </FormControl>
@@ -171,7 +172,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                         name="total_cost"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Cost ({profile.currency})</FormLabel>
+                                <FormLabel>{ui.fuel.modal.labels.cost(profile.currency)}</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="0.01" className="rounded-xl" {...field} />
                                 </FormControl>
@@ -186,7 +187,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                             name="estimated_range"
                             render={({ field }) => (
                                 <FormItem className="col-span-2">
-                                    <FormLabel>Est. Range ({profile.distanceUnit}) <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
+                                    <FormLabel>{ui.fuel.modal.estimatedRangeShort(profile.distanceUnit)} <span className="text-muted-foreground text-xs font-normal">{ui.fuel.modal.labels.estimatedRangeOptional}</span></FormLabel>
                                     <FormControl>
                                         <Input type="number" step="0.1" className="rounded-xl" {...field} value={field.value ?? ''} />
                                     </FormControl>
@@ -205,7 +206,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
 
                 <Button type="submit" className="w-full rounded-full h-11 text-base font-semibold" disabled={isPending}>
                     {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                    {isPending ? "Saving..." : "Save Changes"}
+                    {isPending ? ui.common.actions.saving : ui.fuel.modal.saveChanges}
                 </Button>
             </form>
         </Form>

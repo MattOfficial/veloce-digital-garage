@@ -7,6 +7,7 @@ import { MotionWrapper } from "./motion-wrapper";
 import { useUserStore } from "@/store/user-store";
 import { createClient } from "@/utils/supabase/client";
 import { getErrorMessage } from "@/utils/errors";
+import { ui } from "@/content/en/ui";
 
 interface DocumentUploaderProps {
     vehicleId: string;
@@ -29,7 +30,7 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
 
-            if (!user) throw new Error("Not authenticated");
+            if (!user) throw new Error(ui.uploads.documents.notAuthenticated);
 
             // Sanitize filename
             const fileExt = file.name.split('.').pop();
@@ -54,7 +55,7 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
 
         } catch (error: unknown) {
             console.error("Upload error:", error);
-            setError(getErrorMessage(error, "Something went wrong uploading the file."));
+            setError(getErrorMessage(error, ui.uploads.documents.uploadFailed));
         } finally {
             setIsUploading(false);
         }
@@ -92,9 +93,9 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
                                 <Lock className="h-8 w-8" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold tracking-tight">AI Vault Locked</h3>
+                                <h3 className="text-lg font-semibold tracking-tight">{ui.uploads.documents.vaultLockedTitle}</h3>
                                 <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                                    Please add your Gemini API key in Profile Settings to use invoice tracking.
+                                    {ui.uploads.documents.vaultLockedDescription}
                                 </p>
                             </div>
                         </>
@@ -104,8 +105,8 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
                                 <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold">Uploading securely...</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Please wait while we encrypt your document.</p>
+                                <h3 className="text-lg font-semibold">{ui.uploads.documents.uploadingTitle}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">{ui.uploads.documents.uploadingDescription}</p>
                             </div>
                         </>
                     ) : (
@@ -115,10 +116,10 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold tracking-tight">
-                                    {isDragActive ? "Drop to upload" : "Upload Maintenance Invoice"}
+                                    {isDragActive ? ui.uploads.documents.dropToUpload : ui.uploads.documents.uploadInvoice}
                                 </h3>
                                 <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                                    Drag and drop an image or PDF of your receipt, or click to browse. Max 5MB.
+                                    {ui.uploads.documents.uploadDescription}
                                 </p>
                             </div>
                         </>

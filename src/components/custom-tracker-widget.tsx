@@ -15,6 +15,7 @@ import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { ui } from "@/content/en/ui";
 
 const ICON_MAP: Record<string, React.ElementType> = {
     Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map, Zap, Battery, Car, Umbrella
@@ -77,7 +78,7 @@ export function CustomTrackerWidget({
     const [isDeleting, setIsDeleting] = useState(false);
 
     async function handleDeleteCategory() {
-        if (!confirm(`Are you sure you want to permanently delete the "${category.name}" tracker and all its historical logs? This cannot be undone.`)) {
+        if (!confirm(ui.trackers.deleteTrackerConfirm(category.name))) {
             return;
         }
         setIsDeleting(true);
@@ -109,7 +110,7 @@ export function CustomTrackerWidget({
                         </div>
                         {category.name}
                     </CardTitle>
-                    <CardDescription>Track timeline events for {category.name.toLowerCase()}.</CardDescription>
+                    <CardDescription>{ui.trackers.widgetDescription(category.name)}</CardDescription>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -117,31 +118,31 @@ export function CustomTrackerWidget({
                         <DialogTrigger asChild>
                             <Button variant="outline" size="sm" className="rounded-full shadow-sm" style={{ color: themeColor, borderColor: `${themeColor}50` }}>
                                 <Plus className="h-4 w-4 mr-1.5" />
-                                Log Event
+                                {ui.trackers.logEvent}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
                             <DialogHeader>
-                                <DialogTitle>Log New: {category.name}</DialogTitle>
-                                <DialogDescription>Add a new entry to this tracker&apos;s timeline.</DialogDescription>
+                                <DialogTitle>{ui.trackers.logNew(category.name)}</DialogTitle>
+                                <DialogDescription>{ui.trackers.logNewDescription}</DialogDescription>
                             </DialogHeader>
 
                             <form onSubmit={onSubmitLog} className="space-y-6 pt-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="date">Date</Label>
+                                    <Label htmlFor="date">{ui.trackers.logDate}</Label>
                                     <Input type="date" id="date" name="date" required className="rounded-xl" defaultValue={new Date().toISOString().split('T')[0]} />
                                 </div>
 
                                 {category.track_cost && (
                                     <div className="space-y-2">
-                                        <Label htmlFor="cost">Total Cost ({currencySymbol})</Label>
+                                        <Label htmlFor="cost">{ui.trackers.totalCost(currencySymbol)}</Label>
                                         <Input type="number" id="cost" name="cost" step="0.01" min="0" placeholder="0.00" className="rounded-xl" />
                                     </div>
                                 )}
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="notes">Notes & Details (Optional)</Label>
-                                    <Textarea id="notes" name="notes" placeholder="Any specific details about this event..." className="rounded-xl min-h-[100px]" />
+                                    <Label htmlFor="notes">{ui.trackers.notesDetails}</Label>
+                                    <Textarea id="notes" name="notes" placeholder={ui.trackers.notesPlaceholder} className="rounded-xl min-h-[100px]" />
                                 </div>
 
                                 {message && (
@@ -151,7 +152,7 @@ export function CustomTrackerWidget({
                                 )}
 
                                 <Button type="submit" disabled={isPending} className="w-full rounded-full h-12 text-base font-semibold shadow-md active:scale-[0.98] transition-all" style={{ backgroundColor: themeColor, color: '#fff' }}>
-                                    {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save Log"}
+                                    {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ui.trackers.saveLog}
                                 </Button>
                             </form>
                         </DialogContent>
@@ -162,7 +163,7 @@ export function CustomTrackerWidget({
                         className="rounded-full h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
                         onClick={handleDeleteCategory}
                         disabled={isDeleting}
-                        title="Delete Tracker"
+                        title={ui.trackers.deleteTracker}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
@@ -195,10 +196,10 @@ export function CustomTrackerWidget({
                         >
                             <IconComponent className="h-8 w-8" />
                         </div>
-                        <h3 className="text-base font-semibold tracking-tight text-foreground/80">No entries yet</h3>
-                        <p className="text-sm text-muted-foreground w-3/4 mb-4">You haven&apos;t created any custom trackers yet. Add one to start monitoring specific parts or services for your vehicle.</p>
+                        <h3 className="text-base font-semibold tracking-tight text-foreground/80">{ui.trackers.noEntriesYet}</h3>
+                        <p className="text-sm text-muted-foreground w-3/4 mb-4">{ui.trackers.noEntriesDescription}</p>
                         <p className="text-muted-foreground text-sm max-w-[250px] mt-1 mb-5">
-                            Start tracking events for your {category.name.toLowerCase()} here.
+                            {ui.trackers.startTrackingDescription(category.name)}
                         </p>
                     </div>
                 )}
@@ -256,7 +257,7 @@ function LogBubble({ log, category, currencySymbol, themeColor, IconComponent }:
             )}
 
             {!log.notes && expanded && (
-                <div className="text-xs italic text-muted-foreground/50 pl-11 pb-2">No additional details recorded.</div>
+                <div className="text-xs italic text-muted-foreground/50 pl-11 pb-2">{ui.trackers.noAdditionalDetails}</div>
             )}
         </div>
     );
