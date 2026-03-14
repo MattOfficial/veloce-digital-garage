@@ -44,6 +44,9 @@ export default function ProfilePage() {
     const [distanceUnit, setDistanceUnit] = useState<"km" | "miles">(profile.distanceUnit || "km");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl);
     const [llmKey, setLlmKey] = useState<string>("");
+    const [openAiKey, setOpenAiKey] = useState<string>("");
+    const [deepseekKey, setDeepseekKey] = useState<string>("");
+    const [preferredProvider, setPreferredProvider] = useState<'gemini' | 'openai' | 'deepseek'>(profile.preferredProvider || 'gemini');
 
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -78,6 +81,7 @@ export default function ProfilePage() {
             setCurrency(profile.currency || "₹");
             setDistanceUnit((profile.distanceUnit as "km" | "miles") || "km");
             setAvatarUrl(profile.avatarUrl || null);
+            setPreferredProvider(profile.preferredProvider || 'gemini');
         }
     }, [profile]);
 
@@ -96,6 +100,13 @@ export default function ProfilePage() {
         if (llmKey) {
             formData.append("llm_key", llmKey);
         }
+        if (openAiKey) {
+            formData.append("openai_key", openAiKey);
+        }
+        if (deepseekKey) {
+            formData.append("deepseek_key", deepseekKey);
+        }
+        formData.append("preferred_provider", preferredProvider);
 
         const result = await updateProfile(formData);
 
@@ -103,8 +114,10 @@ export default function ProfilePage() {
             setMessage({ type: 'error', text: result.error });
         } else {
             setMessage({ type: 'success', text: "Profile updated successfully!" });
-            setLlmKey(""); // Clear it from local state after saving for security
-            fetchProfile(); // Re-fetch to update hasLlmKey status
+            setLlmKey(""); 
+            setOpenAiKey("");
+            setDeepseekKey("");
+            fetchProfile(); 
         }
         setIsSaving(false);
     };
@@ -115,17 +128,26 @@ export default function ProfilePage() {
         setMessage({ type: 'success', text: "Image uploaded! Don't forget to save." });
     };
 
-    const handleDeleteKey = async () => {
-        if (!confirm("Are you sure you want to delete your API key? You'll lose access to AI Copilot features.")) return;
+    const handleClearStorage = () => {
+        if (!confirm("This will clear your local and session storage (session persistence). You might need to refresh. Continue?")) return;
+        localStorage.clear();
+        sessionStorage.clear();
+        toast.success("Storage cleared successfully.");
+    };
+
+    const handleDeleteKey = async (provider: 'gemini' | 'openai' | 'deepseek') => {
+        if (!confirm(`Are you sure you want to delete your ${provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek'} API key?`)) return;
 
         setIsSaving(true);
-        const result = await deleteLlmKey();
+        const result = await deleteLlmKey(provider);
         if (result?.error) {
             setMessage({ type: 'error', text: result.error });
         } else {
             setMessage({ type: 'success', text: "API key deleted successfully." });
-            setLlmKey("");
-            await fetchProfile(); // Re-fetch to update hasLlmKey status
+            if (provider === 'gemini') setLlmKey("");
+            if (provider === 'openai') setOpenAiKey("");
+            if (provider === 'deepseek') setDeepseekKey("");
+            await fetchProfile(); 
         }
         setIsSaving(false);
     };
@@ -344,8 +366,25 @@ export default function ProfilePage() {
                                 <Lock className="h-5 w-5 text-primary" />
                                 Veloce Copilot Settings
                             </h3>
-                            <div className="space-y-4">
-                                <div className="space-y-2 max-w-md">
+                            <div className="space-y-4 max-w-md">
+                                <div className="space-y-2">
+                                    <Label htmlFor="preferred_provider" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        Preferred AI Provider
+                                    </Label>
+                                    <Select value={preferredProvider} onValueChange={(val) => setPreferredProvider(val as any)}>
+                                        <SelectTrigger id="preferred_provider" className="h-12 rounded-xl">
+                                            <SelectValue placeholder="Select provider" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="gemini">Google Gemini</SelectItem>
+                                            <SelectItem value="openai">OpenAI</SelectItem>
+                                            <SelectItem value="deepseek">Deepseek (OpenAI Compatible)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Gemini Key */}
+                                <div className="space-y-2">
                                     <Label htmlFor="llm_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
                                         Google Gemini API Key
                                     </Label>
@@ -369,7 +408,7 @@ export default function ProfilePage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                                                        onClick={handleDeleteKey}
+                                                        onClick={() => handleDeleteKey('gemini')}
                                                         title="Delete Key"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -378,19 +417,101 @@ export default function ProfilePage() {
                                             )}
                                         </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        {profile.hasLlmKey
-                                            ? "Your key is currently encrypted and securely stored in our database. Enter a new key to overwrite it."
-                                            : "Bring your own key to enable AI features. It will be encrypted with AES-256 before storage."}
-                                    </p>
                                 </div>
+
+                                {/* OpenAI Key */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="openai_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        OpenAI API Key
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="openai_key"
+                                            type="password"
+                                            placeholder={profile.hasOpenAiKey ? "••••••••••••••••••••••••••••" : "sk-..."}
+                                            value={openAiKey}
+                                            onChange={(e) => setOpenAiKey(e.target.value)}
+                                            className="h-12 rounded-xl pr-10"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {profile.hasOpenAiKey && !openAiKey && (
+                                                <>
+                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                                        onClick={() => handleDeleteKey('openai')}
+                                                        title="Delete Key"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Deepseek Key */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="deepseek_key" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
+                                        Deepseek API Key
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="deepseek_key"
+                                            type="password"
+                                            placeholder={profile.hasDeepseekKey ? "••••••••••••••••••••••••••••" : "sk-..."}
+                                            value={deepseekKey}
+                                            onChange={(e) => setDeepseekKey(e.target.value)}
+                                            className="h-12 rounded-xl pr-10"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {profile.hasDeepseekKey && !deepseekKey && (
+                                                <>
+                                                    <div className="text-emerald-500" title="Key is stored securely">
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                                        onClick={() => handleDeleteKey('deepseek')}
+                                                        title="Delete Key"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p className="text-sm text-muted-foreground pt-2">
+                                    Bring your own keys to enable AI features. They will be encrypted with AES-256 before storage.
+                                    Veloce Copilot will use your <strong>Preferred Provider</strong> if the key is available.
+                                </p>
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-border/50">
+                        <div className="pt-4 border-t border-border/50 flex flex-wrap gap-4">
                             <Button type="submit" disabled={isSaving} size="lg" className="rounded-xl w-full sm:w-auto mt-2 gap-2">
                                 <Save className="h-4 w-4" />
                                 {isSaving ? "Saving..." : "Save Profile"}
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="lg" 
+                                className="rounded-xl w-full sm:w-auto mt-2 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+                                onClick={handleClearStorage}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Clear Browser Storage
                             </Button>
                         </div>
 

@@ -294,8 +294,17 @@ export function VeloceCopilot() {
                                 <Bot className="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-sm">Veloce Copilot</h3>
-                                <p className="text-[10px] text-emerald-400">Online</p>
+                                <div className="flex items-center gap-1.5">
+                                    <h3 className="font-semibold text-sm">Veloce Copilot</h3>
+                                    <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/80 border border-primary/10 font-medium">
+                                        {profile.preferredProvider === 'gemini' ? 'Gemini' : profile.preferredProvider === 'openai' ? 'OpenAI' : 'Deepseek'}
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-emerald-400">
+                                    {(profile.preferredProvider === 'gemini' ? profile.hasLlmKey : 
+                                      profile.preferredProvider === 'openai' ? profile.hasOpenAiKey : 
+                                      profile.hasDeepseekKey) ? 'Online' : 'Key Missing'}
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">

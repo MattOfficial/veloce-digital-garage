@@ -10,6 +10,9 @@ interface UserProfile {
     distanceUnit: DistanceUnit;
     email: string | undefined;
     hasLlmKey: boolean;
+    hasOpenAiKey: boolean;
+    hasDeepseekKey: boolean;
+    preferredProvider: 'gemini' | 'openai' | 'deepseek';
 }
 
 interface UserState {
@@ -29,6 +32,9 @@ export const useUserStore = create<UserState>((set, get) => ({
         distanceUnit: 'km', // Default fallback
         email: undefined,
         hasLlmKey: false,
+        hasOpenAiKey: false,
+        hasDeepseekKey: false,
+        preferredProvider: 'gemini',
     },
     isLoading: true,
 
@@ -38,11 +44,17 @@ export const useUserStore = create<UserState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from("users")
-                .select("display_name, avatar_url, currency, distance_unit, encrypted_llm_key")
+                .select("display_name, avatar_url, currency, distance_unit, encrypted_llm_key, encrypted_openai_key, encrypted_deepseek_key, preferred_llm_provider")
                 .eq("id", user.id)
                 .single();
+
+            if (error) {
+                console.error("Error fetching profile:", error);
+                set({ isLoading: false });
+                return;
+            }
 
             set({
                 profile: {
@@ -51,7 +63,10 @@ export const useUserStore = create<UserState>((set, get) => ({
                     currency: data?.currency || '₹',
                     distanceUnit: (data?.distance_unit as DistanceUnit) || 'km',
                     email: user.email,
-                    hasLlmKey: !!data?.encrypted_llm_key
+                    hasLlmKey: !!data?.encrypted_llm_key,
+                    hasOpenAiKey: !!data?.encrypted_openai_key,
+                    hasDeepseekKey: !!data?.encrypted_deepseek_key,
+                    preferredProvider: (data?.preferred_llm_provider as any) || 'gemini'
                 },
                 isLoading: false,
             });
