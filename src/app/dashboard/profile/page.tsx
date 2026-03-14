@@ -128,6 +128,13 @@ export default function ProfilePage() {
         setMessage({ type: 'success', text: "Image uploaded! Don't forget to save." });
     };
 
+    const handleClearStorage = () => {
+        if (!confirm("This will clear your local and session storage (session persistence). You might need to refresh. Continue?")) return;
+        localStorage.clear();
+        sessionStorage.clear();
+        toast.success("Storage cleared successfully.");
+    };
+
     const handleDeleteKey = async (provider: 'gemini' | 'openai' | 'deepseek') => {
         if (!confirm(`Are you sure you want to delete your ${provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek'} API key?`)) return;
 
@@ -491,10 +498,20 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-border/50">
+                        <div className="pt-4 border-t border-border/50 flex flex-wrap gap-4">
                             <Button type="submit" disabled={isSaving} size="lg" className="rounded-xl w-full sm:w-auto mt-2 gap-2">
                                 <Save className="h-4 w-4" />
                                 {isSaving ? "Saving..." : "Save Profile"}
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="lg" 
+                                className="rounded-xl w-full sm:w-auto mt-2 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+                                onClick={handleClearStorage}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Clear Browser Storage
                             </Button>
                         </div>
 

@@ -23,11 +23,11 @@ export async function updateProfile(formData: FormData) {
     }
 
     const updates: any = {};
-    if (displayName) updates.display_name = displayName;
-    if (avatarUrl) updates.avatar_url = avatarUrl;
-    if (currency) updates.currency = currency;
-    if (distanceUnit) updates.distance_unit = distanceUnit;
-    if (preferredProvider) updates.preferred_llm_provider = preferredProvider;
+    updates.display_name = displayName || null;
+    updates.avatar_url = avatarUrl || null;
+    updates.currency = currency || '₹';
+    updates.distance_unit = distanceUnit || 'km';
+    updates.preferred_llm_provider = preferredProvider || 'gemini';
 
     if (llmKey && llmKey.trim() !== '') {
         try {
@@ -66,7 +66,7 @@ export async function updateProfile(formData: FormData) {
         return { error: "Failed to update profile. Please try again." };
     }
 
-    revalidatePath("/profile");
+    revalidatePath("/dashboard/profile");
     revalidatePath("/"); // Revalidate layout where sidebar might be
 
     return { success: true };
