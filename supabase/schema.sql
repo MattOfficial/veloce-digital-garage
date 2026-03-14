@@ -26,6 +26,9 @@ CREATE TABLE public.fuel_logs (
     fuel_volume NUMERIC NOT NULL,
     total_cost NUMERIC NOT NULL,
     calculated_efficiency NUMERIC,
+    energy_type TEXT DEFAULT 'fuel',
+    fill_type TEXT NOT NULL DEFAULT 'full' CHECK (fill_type IN ('full', 'partial')),
+    estimated_range NUMERIC,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

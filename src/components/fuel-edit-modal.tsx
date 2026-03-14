@@ -19,6 +19,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Dialog,
     DialogContent,
@@ -34,6 +35,7 @@ const formSchema = z.object({
     odometer: z.coerce.number().positive({ message: "Must be a positive number" }),
     fuel_volume: z.coerce.number().positive({ message: "Must be a positive number" }),
     total_cost: z.coerce.number().min(0, { message: "Must be 0 or greater" }),
+    fill_type: z.enum(["full", "partial"]),
     estimated_range: z.coerce.number().optional(),
 });
 
@@ -46,6 +48,7 @@ type FuelLog = {
     total_cost: number;
     estimated_range?: number | null;
     energy_type?: string;
+    fill_type: "full" | "partial";
 };
 
 interface FuelEditModalProps {
@@ -89,6 +92,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
             odometer: log.odometer,
             fuel_volume: log.fuel_volume,
             total_cost: log.total_cost,
+            fill_type: log.fill_type,
             estimated_range: log.estimated_range ?? undefined,
         },
     });
@@ -101,6 +105,7 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
         formData.append("odometer", values.odometer.toString());
         formData.append("fuel_volume", values.fuel_volume.toString());
         formData.append("total_cost", values.total_cost.toString());
+        formData.append("fill_type", values.fill_type);
         if (values.estimated_range != null) {
             formData.append("estimated_range", values.estimated_range.toString());
         }
@@ -148,6 +153,33 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                                 <FormControl>
                                     <Input type="number" step="1" className="rounded-xl" {...field} />
                                 </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="fill_type"
+                        render={({ field }) => (
+                            <FormItem className="col-span-2">
+                                <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="rounded-xl">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="full">
+                                            {isCharge ? ui.fuel.modal.fillTypeOptions.fullCharge : ui.fuel.modal.fillTypeOptions.fullFuel}
+                                        </SelectItem>
+                                        <SelectItem value="partial">
+                                            {isCharge ? ui.fuel.modal.fillTypeOptions.partialCharge : ui.fuel.modal.fillTypeOptions.partialFuel}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">{ui.fuel.modal.labels.partialFillHelper}</p>
                                 <FormMessage />
                             </FormItem>
                         )}

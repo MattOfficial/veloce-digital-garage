@@ -1,70 +1,156 @@
 "use server";
 
+import { buildFuelAnalytics } from "@/utils/fuel-analytics";
+import type { FuelLog, FuelLogEnergyType, FuelLogFillType } from "@/types/database";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
 
-export async function submitFuelLog(formData: FormData) {
-    const supabase = await createClient();
+type FuelLogMutationPayload = {
+    vehicle_id: string;
+    date: string;
+    odometer: number;
+    fuel_volume: number;
+    total_cost: number;
+    energy_type: FuelLogEnergyType;
+    fill_type: FuelLogFillType;
+    estimated_range: number | null;
+};
 
-    // Extract form data
-    const vehicle_id = formData.get("vehicle_id") as string;
-    const date = formData.get("date") as string;
-    const odometer = parseFloat(formData.get("odometer") as string);
-    const fuel_volume = parseFloat(formData.get("fuel_volume") as string);
-    const total_cost = parseFloat(formData.get("total_cost") as string);
-    const energy_type = (formData.get("energy_type") as string) || "fuel";
-    const estimatedRangeStr = formData.get("estimated_range");
-    const estimated_range = estimatedRangeStr ? parseFloat(estimatedRangeStr as string) : null;
+type FuelLogMutationResult = {
+    success: boolean;
+    error?: string;
+    newBadges?: Awaited<ReturnType<typeof evaluateBadges>>;
+};
 
-    if (!vehicle_id || !date || !odometer || !fuel_volume || !total_cost) {
-        return { success: false, error: "All fields are required" };
+function parseNumericField(value: FormDataEntryValue | null): number | null {
+    if (typeof value !== "string" || value.trim() === "") {
+        return null;
     }
 
-    // Calculate efficiency.
-    // We need the previous odometer reading for this vehicle to calculate the distance.
-    const { data: previousLog } = await supabase
-        .from("fuel_logs")
-        .select("odometer")
-        .eq("vehicle_id", vehicle_id)
-        .order("odometer", { ascending: false })
-        .limit(1)
-        .single();
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+}
 
-    let calculated_efficiency = null;
+function normalizeEnergyType(value: FormDataEntryValue | null): FuelLogEnergyType {
+    return value === "charge" ? "charge" : "fuel";
+}
 
-    if (previousLog) {
-        const distanceDriven = odometer - Number(previousLog.odometer);
-        if (distanceDriven > 0 && fuel_volume > 0) {
-            // km per liter
-            calculated_efficiency = parseFloat((distanceDriven / fuel_volume).toFixed(2));
-        }
-    } else {
-        // If no previous log, try to use the baseline odometer from the vehicle
-        const { data: vehicle } = await supabase
-            .from("vehicles")
-            .select("baseline_odometer")
-            .eq("id", vehicle_id)
-            .single();
+function normalizeFillType(value: FormDataEntryValue | null): FuelLogFillType {
+    return value === "partial" ? "partial" : "full";
+}
 
-        if (vehicle) {
-            const distanceDriven = odometer - Number(vehicle.baseline_odometer);
-            if (distanceDriven > 0 && fuel_volume > 0) {
-                calculated_efficiency = parseFloat((distanceDriven / fuel_volume).toFixed(2));
-            }
-        }
+function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null {
+    const vehicle_id = formData.get("vehicle_id");
+    const date = formData.get("date");
+    const odometer = parseNumericField(formData.get("odometer"));
+    const fuel_volume = parseNumericField(formData.get("fuel_volume"));
+    const total_cost = parseNumericField(formData.get("total_cost"));
+    const estimated_range = parseNumericField(formData.get("estimated_range"));
+
+    if (
+        typeof vehicle_id !== "string" ||
+        typeof date !== "string" ||
+        odometer == null ||
+        fuel_volume == null ||
+        total_cost == null ||
+        odometer <= 0 ||
+        fuel_volume <= 0 ||
+        total_cost < 0
+    ) {
+        return null;
     }
 
-    // Insert the new log
-    const { error } = await supabase.from("fuel_logs").insert({
+    return {
         vehicle_id,
         date,
         odometer,
         fuel_volume,
         total_cost,
-        calculated_efficiency,
-        energy_type,
+        energy_type: normalizeEnergyType(formData.get("energy_type")),
+        fill_type: normalizeFillType(formData.get("fill_type")),
         estimated_range,
+    };
+}
+
+async function deriveCalculatedEfficiency(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    vehicleId: string,
+    baselineOdometer: number,
+    candidateLog: FuelLog,
+): Promise<number | null> {
+    if (candidateLog.fill_type !== "full") {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from("fuel_logs")
+        .select("*")
+        .eq("vehicle_id", vehicleId);
+
+    if (error) {
+        console.error("Error fetching fuel logs for efficiency derivation:", error);
+        return null;
+    }
+
+    const existingLogs = ((data as unknown as FuelLog[]) ?? []).filter((log) => log.id !== candidateLog.id);
+    const analytics = buildFuelAnalytics([...existingLogs, candidateLog], baselineOdometer);
+    const stream = analytics[candidateLog.energy_type];
+    const derivedLog = stream.logs.find((log) => log.id === candidateLog.id);
+
+    return derivedLog?.derived_efficiency != null
+        ? Number(derivedLog.derived_efficiency.toFixed(2))
+        : null;
+}
+
+function revalidateFuelRelatedPaths(vehicleId: string) {
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/fuel");
+    revalidatePath("/dashboard/insights");
+    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+}
+
+export async function submitFuelLog(formData: FormData): Promise<FuelLogMutationResult> {
+    const supabase = await createClient();
+    const payload = parseFuelLogPayload(formData);
+
+    if (!payload) {
+        return { success: false, error: "All required fields must be valid." };
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        return { success: false, error: "Authentication required." };
+    }
+
+    const { data: vehicle, error: vehicleError } = await supabase
+        .from("vehicles")
+        .select("id, baseline_odometer")
+        .eq("id", payload.vehicle_id)
+        .eq("user_id", user.id)
+        .single();
+
+    if (vehicleError || !vehicle) {
+        return { success: false, error: "Vehicle not found or access denied." };
+    }
+
+    const candidateLog: FuelLog = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        calculated_efficiency: null,
+        ...payload,
+    };
+
+    const calculated_efficiency = await deriveCalculatedEfficiency(
+        supabase,
+        payload.vehicle_id,
+        Number(vehicle.baseline_odometer),
+        candidateLog,
+    );
+
+    const { error } = await supabase.from("fuel_logs").insert({
+        ...payload,
+        calculated_efficiency,
     });
 
     if (error) {
@@ -72,65 +158,62 @@ export async function submitFuelLog(formData: FormData) {
         return { success: false, error: "Failed to save fuel log" };
     }
 
-    // Revalidate the dashboard and fuel pages so new data is shown
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/fuel");
+    revalidateFuelRelatedPaths(payload.vehicle_id);
 
-    const { data: { user } } = await supabase.auth.getUser();
     const newBadges = user ? await evaluateBadges(user.id) : [];
 
     return { success: true, newBadges };
 }
 
-export async function editFuelLog(logId: string, formData: FormData) {
+export async function editFuelLog(logId: string, formData: FormData): Promise<FuelLogMutationResult> {
     const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return { success: false, error: "Authentication required." };
 
-    const vehicle_id = formData.get("vehicle_id") as string;
-    const date = formData.get("date") as string;
-    const odometer = parseFloat(formData.get("odometer") as string);
-    const fuel_volume = parseFloat(formData.get("fuel_volume") as string);
-    const total_cost = parseFloat(formData.get("total_cost") as string);
-    const estimatedRangeStr = formData.get("estimated_range");
-    const estimated_range = estimatedRangeStr ? parseFloat(estimatedRangeStr as string) : null;
-
-    if (!vehicle_id || !date || !odometer || !fuel_volume || total_cost == null) {
-        return { success: false, error: "All fields are required." };
+    const payload = parseFuelLogPayload(formData);
+    if (!payload) {
+        return { success: false, error: "All required fields must be valid." };
     }
 
     // Verify the user owns this log via the vehicle
     const { data: vehicle } = await supabase
         .from("vehicles")
         .select("id, user_id, baseline_odometer")
-        .eq("id", vehicle_id)
+        .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
 
     if (!vehicle) return { success: false, error: "Vehicle not found or access denied." };
 
-    // Recalculate efficiency: find the log immediately before this one by odometer
-    const { data: prevLog } = await supabase
+    const { data: existingLog, error: existingLogError } = await supabase
         .from("fuel_logs")
-        .select("odometer")
-        .eq("vehicle_id", vehicle_id)
-        .lt("odometer", odometer)
-        .neq("id", logId)
-        .order("odometer", { ascending: false })
-        .limit(1)
+        .select("*")
+        .eq("id", logId)
         .single();
 
-    let calculated_efficiency = null;
-    const prevOdometer = prevLog ? Number(prevLog.odometer) : Number(vehicle.baseline_odometer);
-    const distanceDriven = odometer - prevOdometer;
-    if (distanceDriven > 0 && fuel_volume > 0) {
-        calculated_efficiency = parseFloat((distanceDriven / fuel_volume).toFixed(2));
+    if (existingLogError || !existingLog) {
+        return { success: false, error: "Fuel log not found." };
     }
+
+    const candidateLog: FuelLog = {
+        ...(existingLog as unknown as FuelLog),
+        ...payload,
+        id: logId,
+        created_at: existingLog.created_at ?? new Date().toISOString(),
+        calculated_efficiency: null,
+    };
+
+    const calculated_efficiency = await deriveCalculatedEfficiency(
+        supabase,
+        payload.vehicle_id,
+        Number(vehicle.baseline_odometer),
+        candidateLog,
+    );
 
     const { error } = await supabase
         .from("fuel_logs")
-        .update({ date, odometer, fuel_volume, total_cost, calculated_efficiency, estimated_range })
+        .update({ ...payload, calculated_efficiency })
         .eq("id", logId);
 
     if (error) {
@@ -138,8 +221,7 @@ export async function editFuelLog(logId: string, formData: FormData) {
         return { success: false, error: error.message };
     }
 
-    revalidatePath("/dashboard/fuel");
-    revalidatePath("/dashboard");
+    revalidateFuelRelatedPaths(payload.vehicle_id);
     return { success: true };
 }
 
@@ -166,7 +248,6 @@ export async function deleteFuelLog(logId: string, vehicleId: string) {
         return { success: false, error: error.message };
     }
 
-    revalidatePath("/dashboard/fuel");
-    revalidatePath("/dashboard");
+    revalidateFuelRelatedPaths(vehicleId);
     return { success: true };
 }

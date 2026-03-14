@@ -255,32 +255,57 @@ export const ui = {
     },
     fuel: {
         metricOptions: ["km/L", "L/100km", "MPG (US)", "MPG (UK)"],
+        chargeMetricUnits: {
+            km: "km/kWh",
+            miles: "mi/kWh",
+        },
         pageTitle: "Fuel Analysis",
         pageDescription: (vehicleLabel: string) => `Metrics & history for your ${vehicleLabel}.`,
         noVehicleSelectedTitle: "No Vehicle Selected",
         noVehicleSelectedDescription: "Select a vehicle from the top nav to analyze fuel data.",
         noFuelDataYetTitle: "No fuel data yet",
         noFuelDataYetDescription: "Log your first fill-up to unlock efficiency metrics, cost charts, and historical analysis.",
+        analyticsHelper: "Partial top-ups are saved immediately and applied to efficiency analytics once the next full top-up is recorded.",
+        analysisModeTitle: "Analysis Mode",
+        analysisMode: {
+            fuel: "Fuel Analysis",
+            charge: "Charge Analysis",
+        },
         averageEfficiency: "Average Efficiency",
         costPerDistance: (unit: string) => `Cost per ${unit.toUpperCase()}`,
         averageRunningCost: "Average running cost",
         totalLogs: "Total Logs",
-        fillUpsRecorded: "Fill-ups recorded",
+        logSessionsRecorded: (mode: "fuel" | "charge") => mode === "charge" ? "Charge sessions recorded" : "Top-ups recorded",
         efficiencyTrendTitle: "Efficiency Trend",
-        efficiencyTrendDescription: "Fuel efficiency over your recent fill-ups.",
-        costVsVolumeTitle: "Cost vs Volume",
-        costVsVolumeDescription: "Track the financial impact of each visit.",
+        efficiencyTrendDescription: (mode: "fuel" | "charge") => mode === "charge" ? "Charging efficiency over your closed charge sessions." : "Fuel efficiency over your closed top-up segments.",
+        costVsVolumeTitle: (mode: "fuel" | "charge") => mode === "charge" ? "Cost vs Energy" : "Cost vs Volume",
+        costVsVolumeDescription: (mode: "fuel" | "charge") => mode === "charge" ? "Track the financial impact of each charging session." : "Track the financial impact of each visit.",
         batteryRangeTrendTitle: "Battery Range Trend",
         batteryRangeTrendDescription: "Track your EV's estimated battery range over time.",
         fillUpHistoryTitle: "Fill-Up History",
-        fillUpHistoryDescription: "Detailed log of all recorded fuel transactions.",
+        fillUpHistoryDescription: "Detailed log of all recorded fuel and charge transactions.",
         columns: {
             date: "Date",
+            energyType: "Energy Type",
+            fillType: "Fill Type",
             odometer: "Odometer",
-            volume: "Volume",
+            volume: "Volume / Energy",
             cost: "Cost",
             efficiency: "Efficiency",
             actions: "Actions",
+        },
+        fillTypes: {
+            full: "Full",
+            partial: "Partial",
+            pending: "Pending full top-up",
+        },
+        efficiencyStates: {
+            pending: "Pending full top-up",
+            unavailable: "Not enough data",
+        },
+        energyTypes: {
+            fuel: "Fuel",
+            charge: "Charge",
         },
         modal: {
             trigger: "Log Fill-Up",
@@ -300,8 +325,16 @@ export const ui = {
                 energy: "Energy (kWh)",
                 volume: (unit: string) => `Volume (${unit})`,
                 cost: (currency: string) => `Cost (${currency})`,
+                fillType: "Top-Up Type",
                 estimatedRange: (unit: string) => `Estimated Range (${unit})`,
                 estimatedRangeOptional: "(Optional)",
+                partialFillHelper: "Partial top-ups are saved now and will be folded into analytics after the next full top-up.",
+            },
+            fillTypeOptions: {
+                fullFuel: "Full fill",
+                partialFuel: "Partial fill",
+                fullCharge: "Full charge",
+                partialCharge: "Partial charge",
             },
             placeholders: {
                 odometer: "e.g. 46250",
@@ -345,7 +378,9 @@ export const ui = {
         noVehicleSelectedTitle: "No Vehicle Selected",
         noVehicleSelectedDescription: "Select a vehicle to view insights.",
         insufficientDataTitle: "Insufficient Data",
-        insufficientDataDescription: "Please log at least two fill-ups to establish a baseline for insights and cost projections.",
+        insufficientDataDescription: (mode: "fuel" | "charge") => mode === "charge"
+            ? "Please log at least two closed charge sessions to establish a baseline for cadence insights and cost projections."
+            : "Please log at least two closed fuel top-ups to establish a baseline for cadence insights and cost projections.",
         pageTitle: "Running Costs",
         pageDescription: (vehicleLabel: string) => `A complete breakdown of running costs for your ${vehicleLabel}.`,
         pageDescriptionShort: (vehicleLabel: string) => `Track every penny spent on your ${vehicleLabel}.`,
@@ -354,12 +389,25 @@ export const ui = {
         dailyOperatingCostDescription: "Average spent across all categories",
         averageDailyDistance: "Avg. Daily Distance",
         averageDailyDistanceDescription: "Typical distance covered per day",
+        analysisModeTitle: "Cadence Mode",
+        analysisMode: {
+            fuel: "Fuel Cadence",
+            charge: "Charge Cadence",
+        },
         expenseBreakdownTitle: "Expense Breakdown",
         expenseBreakdownDescription: "Monthly visualization of where your money is going",
         cadencePredictionsTitle: "Cadence Predictions",
-        cadencePredictionsDescription: (days: number) => `Based on ${days} days of recorded tracking`,
-        refuelingFrequency: "Refueling Frequency",
-        estimatedNextRefuel: "Estimated Next Refuel",
+        cadencePredictionsDescription: (mode: "fuel" | "charge", days: number) => mode === "charge"
+            ? `Based on ${days} days of recorded charging cadence`
+            : `Based on ${days} days of recorded refueling cadence`,
+        refillFrequency: (mode: "fuel" | "charge") => mode === "charge" ? "Charging Frequency" : "Refueling Frequency",
+        estimatedNextRefill: (mode: "fuel" | "charge") => mode === "charge" ? "Estimated Next Charge" : "Estimated Next Refuel",
+        frequencySummary: (mode: "fuel" | "charge", days: number, weeks: number) => mode === "charge"
+            ? `You typically plug in roughly every ${days} days, or about every ${weeks} weeks.`
+            : `You typically visit a fuel station roughly every ${days} days, or about every ${weeks} weeks.`,
+        nextRefillSummary: (mode: "fuel" | "charge") => mode === "charge"
+            ? "Based on your current charging cadence, you will likely need another top-up around this date."
+            : "Based on your current driving cadence, you will likely need to refuel around this date.",
         unknownDate: "Unknown",
     },
     maintenance: {
