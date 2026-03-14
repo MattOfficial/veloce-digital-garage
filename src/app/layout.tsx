@@ -1,22 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { InteractiveBackground } from "@/components/interactive-background";
 import NextTopLoader from 'nextjs-toploader';
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { brand } from "@/content/en/brand";
 
 export const metadata: Metadata = {
-  title: "Veloce Digital Garage",
-  description: "Modern Fuel & Vehicle Tracking Application",
+  title: brand.app.fullName,
+  description: brand.app.metadataDescription,
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
@@ -31,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
+        className="antialiased bg-background text-foreground min-h-screen"
       >
         <NextTopLoader
           color="hsl(var(--primary))"

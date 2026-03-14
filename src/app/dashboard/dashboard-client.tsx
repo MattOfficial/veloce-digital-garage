@@ -11,8 +11,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { useUserStore } from "@/store/user-store";
 
 import { CustomLogCategory } from "@/types/database";
+import { ui } from "@/content/en/ui";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444']; // Blue, Amber, Emerald, Red
+type ExpenseCategoryName = typeof ui.dashboard.expenseCategories[keyof typeof ui.dashboard.expenseCategories];
+type ExpenseDatum = { name: ExpenseCategoryName; value: number };
 
 const ICON_MAP: Record<string, React.ElementType> = {
     Sparkles, Droplets, PaintBucket, Receipt, Wrench, Map: MapIcon, Zap, Battery, Car, Umbrella
@@ -39,7 +42,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center">
-                    <p className="text-muted-foreground animate-pulse">Loading dashboard...</p>
+                    <p className="text-muted-foreground animate-pulse">{ui.dashboard.loading}</p>
                 </div>
             </div>
         );
@@ -49,12 +52,12 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center space-y-4">
-                    <h2 className="text-2xl font-semibold mb-2">No Vehicles Found</h2>
+                    <h2 className="text-2xl font-semibold mb-2">{ui.dashboard.noVehiclesFoundTitle}</h2>
                     <p className="text-muted-foreground max-w-sm mx-auto">
-                        Please add a vehicle to your garage to view the dashboard and analytics.
+                        {ui.dashboard.noVehiclesFoundDescription}
                     </p>
                     <Link href="/dashboard/profile">
-                        <Button className="rounded-full">Go to Profile</Button>
+                        <Button className="rounded-full">{ui.dashboard.goToProfile}</Button>
                     </Link>
                 </div>
             </div>
@@ -97,11 +100,11 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
     }
 
     // 2. Prepare Data for Charts
-    const expenseData = [
-        { name: 'Fuel', value: totalFuelCost },
-        { name: 'Maintenance', value: totalMaintenanceCost }
+    const expenseData: ExpenseDatum[] = [
+        { name: ui.dashboard.expenseCategories.fuel, value: totalFuelCost },
+        { name: ui.dashboard.expenseCategories.maintenance, value: totalMaintenanceCost }
     ];
-    if (totalCustomCost > 0) expenseData.push({ name: 'Other', value: totalCustomCost });
+    if (totalCustomCost > 0) expenseData.push({ name: ui.dashboard.expenseCategories.other, value: totalCustomCost });
 
     // Aggregate cost data by month for the bar chart (last 6 months)
     const costOverTimeMap = new Map<string, { month: string, Fuel: number, Maintenance: number }>();
@@ -143,13 +146,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
             {/* Header Area with Profile Link */}
             <PageHeader
-                title="Overview"
-                description={`Tracking analytics and insights for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                title={ui.dashboard.overviewTitle}
+                description={ui.dashboard.overviewDescription(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                 icon={LayoutDashboard}
             >
-                <Link href={`/vehicles/${selectedVehicle.id}`}>
+                <Link href={`/dashboard/vehicles/${selectedVehicle.id}`}>
                     <Button variant="outline" className="rounded-full shadow-sm hover:bg-primary/5 hover:text-primary transition-colors border-primary/20">
-                        View Full Vehicle Profile
+                        {ui.dashboard.viewFullVehicleProfile}
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </Link>
@@ -160,13 +163,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.1}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Current Odometer</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.currentOdometer}</CardTitle>
                             <Activity className="h-4 w-4 text-primary opacity-70" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{latestOdometer.toLocaleString()}</div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                {distanceUnit} on the clock
+                                {ui.dashboard.odometerSuffix(distanceUnit)}
                             </p>
                         </CardContent>
                     </Card>
@@ -175,13 +178,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.2}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">30-Day Spend</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.thirtyDaySpend}</CardTitle>
                             <CalendarDays className="h-4 w-4 text-emerald-500 opacity-70" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{currencySymbol}{costLast30Days.toFixed(2)}</div>
                             <p className={`text-xs mt-1 flex items-center ${spendTrend > 0 ? 'text-destructive' : spendTrend < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                                {spendTrend > 0 ? '↑' : spendTrend < 0 ? '↓' : ''} {Math.abs(spendTrend).toFixed(1)}% vs previous 30 days
+                                {ui.dashboard.previousThirtyDaysComparison(spendTrend)}
                             </p>
                         </CardContent>
                     </Card>
@@ -190,13 +193,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.3}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Fuel</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.lifetimeFuel}</CardTitle>
                             <Droplet className="h-4 w-4 text-amber-500 opacity-70" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{currencySymbol}{totalFuelCost.toFixed(2)}</div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                All time fuel cost
+                                {ui.dashboard.allTimeFuelCost}
                             </p>
                         </CardContent>
                     </Card>
@@ -205,13 +208,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.4}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Lifetime Maintenance</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.lifetimeMaintenance}</CardTitle>
                             <Wrench className="h-4 w-4 text-blue-500 opacity-70" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{currencySymbol}{totalMaintenanceCost.toFixed(2)}</div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                All time repair cost
+                                {ui.dashboard.allTimeRepairCost}
                             </p>
                         </CardContent>
                     </Card>
@@ -225,9 +228,9 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                         <CardHeader className="border-b border-white/5">
                             <CardTitle className="flex items-center">
                                 <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-                                6-Month Expense History
+                                {ui.dashboard.expenseHistoryTitle}
                             </CardTitle>
-                            <CardDescription>Track your spending trends over half a year.</CardDescription>
+                            <CardDescription>{ui.dashboard.expenseHistoryDescription}</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6">
                             <div className="h-[300px] w-full pt-4">
@@ -255,8 +258,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.6} className="lg:col-span-3">
                     <Card className="h-full overflow-hidden">
                         <CardHeader className="border-b border-white/5">
-                            <CardTitle>Expense Distribution</CardTitle>
-                            <CardDescription>Lifetime spending breakdown by category.</CardDescription>
+                            <CardTitle>{ui.dashboard.expenseDistributionTitle}</CardTitle>
+                            <CardDescription>{ui.dashboard.expenseDistributionDescription}</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6">
                             {totalSpend > 0 ? (
@@ -286,13 +289,13 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                     </ResponsiveContainer>
                                     {/* Center Label */}
                                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -mt-4 text-center">
-                                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block mb-1">Total</span>
+                                        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block mb-1">{ui.dashboard.totalLabel}</span>
                                         <span className="text-xl font-bold">{currencySymbol}{(totalSpend / 1000).toFixed(1)}k</span>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="h-[300px] flex items-center justify-center">
-                                    <p className="text-muted-foreground text-sm">No expenses logged yet.</p>
+                                    <p className="text-muted-foreground text-sm">{ui.dashboard.noExpensesLoggedYet}</p>
                                 </div>
                             )}
                         </CardContent>
@@ -305,8 +308,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.7} className="md:col-span-2 lg:col-span-1">
                     <Card className="h-full overflow-hidden">
                         <CardHeader className="border-b border-white/5">
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>The last 5 events recorded for your vehicle.</CardDescription>
+                            <CardTitle>{ui.dashboard.recentActivityTitle}</CardTitle>
+                            <CardDescription>{ui.dashboard.recentActivityDescription}</CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
                             {allLogs.length > 0 ? (
@@ -344,9 +347,9 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                                 <div className="flex-1 space-y-1 w-full overflow-hidden">
                                                     <div className="flex justify-between items-start">
                                                         <p className="text-sm font-medium leading-none">
-                                                            {ulog.type === 'Fuel' ? 'Refueled' :
+                                                            {ulog.type === 'Fuel' ? ui.dashboard.fuelActivityLabel :
                                                                 ulog.type === 'Maintenance' ? ulog.service_type :
-                                                                    cat ? cat.name : 'Custom Entry'}
+                                                                    cat ? cat.name : ui.dashboard.customEntryLabel}
                                                         </p>
                                                         <div className="text-sm font-semibold text-right shrink-0 ml-2">
                                                             {ulog.type === 'Other' && cat && !cat.track_cost ? null :
@@ -357,8 +360,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                                     <div className="flex justify-between items-start mt-0.5">
                                                         <p className="text-xs text-muted-foreground line-clamp-1 pr-2">
                                                             {ulog.type === 'Fuel' ? `${ulog.fuel_volume || ulog.gallons || ''} units added at ${ulog.odometer} ${distanceUnit}` :
-                                                                ulog.type === 'Maintenance' ? ulog.notes || 'Maintenance logged' :
-                                                                    ulog.notes || 'Entry logged'}
+                                                                ulog.type === 'Maintenance' ? ulog.notes || ui.dashboard.maintenanceLogged :
+                                                                    ulog.notes || ui.dashboard.entryLogged}
                                                         </p>
                                                         <span className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
                                                             {new Date(ulog.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -372,7 +375,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                             ) : (
                                 <div className="p-8 text-center bg-muted/5 min-h-[250px] flex flex-col items-center justify-center">
                                     <Activity className="h-8 w-8 text-muted-foreground/50 mb-3" />
-                                    <p className="text-sm text-muted-foreground">No recent activity found. Log your first fill-up or service!</p>
+                                    <p className="text-sm text-muted-foreground">{ui.dashboard.noRecentActivity}</p>
                                 </div>
                             )}
                         </CardContent>
@@ -383,8 +386,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.8} className="md:col-span-2 lg:col-span-1">
                     <Card className="h-full overflow-hidden bg-gradient-to-br from-primary/10 to-transparent">
                         <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                            <CardDescription>Add new records to your vehicle without leaving the dashboard.</CardDescription>
+                            <CardTitle>{ui.dashboard.quickActionsTitle}</CardTitle>
+                            <CardDescription>{ui.dashboard.quickActionsDescription}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             <Link href="/dashboard/fuel" className="block w-full">
@@ -392,16 +395,16 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                     <div className="bg-primary-foreground/20 p-2 rounded-lg mr-3">
                                         <Droplet className="h-5 w-5" />
                                     </div>
-                                    Log a Fill-up
+                                    {ui.dashboard.logFillUp}
                                 </Button>
                             </Link>
                             {/* We will add a wrapper to open the maintenance modal from here later if needed, for now we will link to the maintenance tab or the vehicle view */}
-                            <Link href={`/vehicles/${selectedVehicle.id}`} className="block w-full">
+                            <Link href={`/dashboard/vehicles/${selectedVehicle.id}`} className="block w-full">
                                 <Button className="w-full justify-start h-14 rounded-xl text-md" variant="outline">
                                     <div className="bg-muted p-2 rounded-lg mr-3">
                                         <Wrench className="h-5 w-5 text-muted-foreground" />
                                     </div>
-                                    Add Maintenance Record
+                                    {ui.dashboard.addMaintenanceRecord}
                                 </Button>
                             </Link>
                         </CardContent>

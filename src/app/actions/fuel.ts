@@ -73,8 +73,8 @@ export async function submitFuelLog(formData: FormData) {
     }
 
     // Revalidate the dashboard and fuel pages so new data is shown
-    revalidatePath("/");
-    revalidatePath("/fuel");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/fuel");
 
     const { data: { user } } = await supabase.auth.getUser();
     const newBadges = user ? await evaluateBadges(user.id) : [];

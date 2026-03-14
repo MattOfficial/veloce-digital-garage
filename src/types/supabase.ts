@@ -97,6 +97,54 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          maintenance_log_id: string | null
+          size_bytes: number | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          maintenance_log_id?: string | null
+          size_bytes?: number | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          maintenance_log_id?: string | null
+          size_bytes?: number | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_maintenance_log_id_fkey"
+            columns: ["maintenance_log_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_logs: {
         Row: {
           calculated_efficiency: number | null
@@ -151,6 +199,7 @@ export type Database = {
           date: string
           id: string
           notes: string | null
+          receipt_url: string | null
           service_type: string
           user_id: string | null
           vehicle_id: string
@@ -161,6 +210,7 @@ export type Database = {
           date: string
           id?: string
           notes?: string | null
+          receipt_url?: string | null
           service_type: string
           user_id?: string | null
           vehicle_id: string
@@ -171,6 +221,7 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
+          receipt_url?: string | null
           service_type?: string
           user_id?: string | null
           vehicle_id?: string
@@ -192,6 +243,79 @@ export type Database = {
           },
         ]
       }
+      service_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_completed_date: string | null
+          last_completed_odometer: number | null
+          recurring_distance: number | null
+          recurring_months: number | null
+          service_type: string
+          updated_at: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_completed_date?: string | null
+          last_completed_odometer?: number | null
+          recurring_distance?: number | null
+          recurring_months?: number | null
+          service_type: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_completed_date?: string | null
+          last_completed_odometer?: number | null
+          recurring_distance?: number | null
+          recurring_months?: number | null
+          service_type?: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reminders_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -199,7 +323,11 @@ export type Database = {
           currency: string | null
           display_name: string | null
           distance_unit: string | null
+          encrypted_deepseek_key: string | null
+          encrypted_llm_key: string | null
+          encrypted_openai_key: string | null
           id: string
+          preferred_llm_provider: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -207,7 +335,11 @@ export type Database = {
           currency?: string | null
           display_name?: string | null
           distance_unit?: string | null
+          encrypted_deepseek_key?: string | null
+          encrypted_llm_key?: string | null
+          encrypted_openai_key?: string | null
           id: string
+          preferred_llm_provider?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -215,7 +347,11 @@ export type Database = {
           currency?: string | null
           display_name?: string | null
           distance_unit?: string | null
+          encrypted_deepseek_key?: string | null
+          encrypted_llm_key?: string | null
+          encrypted_openai_key?: string | null
           id?: string
+          preferred_llm_provider?: string | null
         }
         Relationships: []
       }

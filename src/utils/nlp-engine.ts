@@ -1,12 +1,38 @@
 import nlp from 'compromise';
+import type { VehicleWithLogs } from '@/types/database';
+import type { FuelDraftPayload, MaintenanceDraftPayload } from '@/types/ai';
 
-export interface NLPEngineResult {
-    intent: 'log_fuel_draft' | 'log_maintenance_draft' | 'unknown';
-    payload?: any;
-    missingInfo?: string;
-}
+type NlpMessage = {
+    role: string;
+    content: string;
+};
 
-export function parseMessage(messages: { role: string, content: string }[], vehicles: any[]): NLPEngineResult {
+type NlpVehicle = Pick<VehicleWithLogs, 'id' | 'make' | 'model' | 'nickname'>;
+
+type CompromiseNumberJson = {
+    number?: {
+        num?: number;
+    } | number;
+};
+
+export type NLPEngineResult =
+    | {
+        intent: 'log_fuel_draft';
+        payload?: FuelDraftPayload;
+        missingInfo?: string;
+    }
+    | {
+        intent: 'log_maintenance_draft';
+        payload?: MaintenanceDraftPayload;
+        missingInfo?: string;
+    }
+    | {
+        intent: 'unknown';
+        payload?: undefined;
+        missingInfo?: string;
+    };
+
+export function parseMessage(messages: NlpMessage[], vehicles: NlpVehicle[]): NLPEngineResult {
     let currentIntent: 'log_fuel_draft' | 'log_maintenance_draft' | 'unknown' = 'unknown';
 
     // Accumulators across the conversation piece
@@ -51,8 +77,15 @@ export function parseMessage(messages: { role: string, content: string }[], vehi
 
         // Entity Extraction (Numbers)
         // Compromise numbers without the plugin return an object with a .num property if parsed
-        const extractedNumbers = doc.numbers().json().map((n: any) => n.number?.num ?? n.number);
-        const validNumbers = extractedNumbers.filter((n: any) => typeof n === 'number' && !isNaN(n)) as number[];
+        const extractedNumbers = (doc
+            .numbers()
+            .json() as CompromiseNumberJson[])
+            .map((n) => {
+                return typeof n.number === 'object'
+                    ? n.number?.num
+                    : n.number;
+            });
+        const validNumbers = extractedNumbers.filter((n): n is number => typeof n === 'number' && !isNaN(n));
 
         if (validNumbers.length > 0) {
             // Contextual assignment based on the last message's numbers, 

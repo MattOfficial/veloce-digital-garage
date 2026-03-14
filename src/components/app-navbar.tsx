@@ -9,6 +9,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ui } from "@/content/en/ui";
 
 export function AppNavbar() {
     const { vehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
@@ -22,7 +23,7 @@ export function AppNavbar() {
 
             <div className="flex items-center gap-4">
                 <label className="text-sm font-medium hidden md:block text-muted-foreground">
-                    Current Vehicle:
+                    {ui.common.navigation.currentVehicle}
                 </label>
                 <Select
                     value={selectedVehicleId || ""}
@@ -30,7 +31,7 @@ export function AppNavbar() {
                     disabled={vehicles.length === 0}
                 >
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select a vehicle" />
+                        <SelectValue placeholder={ui.common.navigation.selectVehicle} />
                     </SelectTrigger>
                     <SelectContent>
                         {vehicles.map((v) => (

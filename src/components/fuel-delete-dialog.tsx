@@ -15,6 +15,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, TriangleAlert } from "lucide-react";
+import { ui } from "@/content/en/ui";
 
 interface FuelDeleteDialogProps {
     logId: string;
@@ -24,7 +25,7 @@ interface FuelDeleteDialogProps {
     onOpenChange: (open: boolean) => void;
 }
 
-const CONFIRM_PHRASE = "delete this entry";
+const CONFIRM_PHRASE = ui.fuel.deleteDialog.confirmPhrase;
 
 export function FuelDeleteDialog({ logId, vehicleId, logDate, open, onOpenChange }: FuelDeleteDialogProps) {
     const { fetchVehicles } = useVehicleStore();
@@ -50,14 +51,14 @@ export function FuelDeleteDialog({ logId, vehicleId, logDate, open, onOpenChange
             try {
                 const result = await deleteFuelLog(logId, vehicleId);
                 if (result.success) {
-                    toast.success("Fill-up entry permanently deleted.");
+                    toast.success(ui.fuel.deleteDialog.deleted);
                     fetchVehicles();
                     handleClose(false);
                 } else {
-                    setError(result.error || "Failed to delete entry.");
+                    setError(result.error || ui.fuel.deleteDialog.failed);
                 }
             } catch {
-                setError("An unexpected error occurred.");
+                setError(ui.fuel.deleteDialog.unexpected);
             }
         });
     }
@@ -68,30 +69,28 @@ export function FuelDeleteDialog({ logId, vehicleId, logDate, open, onOpenChange
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl text-destructive">
                         <TriangleAlert className="h-5 w-5" />
-                        Delete Fill-Up Entry
+                        {ui.fuel.deleteDialog.title}
                     </DialogTitle>
                     <DialogDescription>
-                        You are about to permanently delete the fill-up entry from{" "}
-                        <span className="font-semibold text-foreground">{logDate}</span>.
-                        This action <span className="font-semibold text-destructive">cannot be undone</span>.
+                        {ui.fuel.deleteDialog.description(logDate)}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 pt-2">
                     <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                        <p className="font-medium mb-1">⚠️ Permanent deletion warning</p>
+                        <p className="font-medium mb-1">{ui.fuel.deleteDialog.warningTitle}</p>
                         <p className="text-destructive/80">
-                            Deleting this entry will also affect the efficiency calculations for subsequent fill-ups.
+                            {ui.fuel.deleteDialog.warningBody}
                         </p>
                     </div>
 
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                            To confirm, type{" "}
+                            {ui.fuel.deleteDialog.confirmInstruction}{" "}
                             <span className="font-mono font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded">
                                 {CONFIRM_PHRASE}
                             </span>{" "}
-                            below:
+                            {ui.fuel.deleteDialog.confirmSuffix}
                         </p>
                         <Input
                             className="rounded-xl"
@@ -116,7 +115,7 @@ export function FuelDeleteDialog({ logId, vehicleId, logDate, open, onOpenChange
                             onClick={() => handleClose(false)}
                             disabled={isPending}
                         >
-                            Cancel
+                            {ui.common.actions.cancel}
                         </Button>
                         <Button
                             variant="destructive"
@@ -125,7 +124,7 @@ export function FuelDeleteDialog({ logId, vehicleId, logDate, open, onOpenChange
                             disabled={!isConfirmed || isPending}
                         >
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            {isPending ? "Deleting..." : "Delete Permanently"}
+                            {isPending ? ui.fuel.deleteDialog.deleting : ui.fuel.deleteDialog.deletePermanently}
                         </Button>
                     </div>
                 </div>

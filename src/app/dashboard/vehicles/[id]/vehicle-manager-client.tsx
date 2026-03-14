@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X } from "lucide-react";
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
+import { ui } from "@/content/en/ui";
 
 export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: VehicleWithLogs }) {
     const router = useRouter();
@@ -66,7 +67,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
         if (result.error) {
             setMessage({ type: 'error', text: result.error });
         } else if (result.vehicle) {
-            setMessage({ type: 'success', text: "Vehicle specifications updated successfully." });
+            setMessage({ type: 'success', text: ui.vehicle.updatedSpecifications });
             setVehicle({ ...vehicle, ...result.vehicle });
             // Re-fetch global vehicles so the profile page is updated too
             fetchVehicles();
@@ -85,7 +86,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={vehicle.image_url}
-                        alt="Vehicle Hero"
+                        alt={ui.vehicle.heroAlt}
                         className="absolute inset-0 w-full h-full object-cover"
                     />
                 ) : (
@@ -100,7 +101,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                 <div className="relative z-10 space-y-4">
                     <button onClick={() => router.back()} className="inline-flex items-center text-sm font-semibold text-primary-foreground bg-primary/95 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 mb-4 px-5 py-2.5 rounded-full w-fit">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
+                        {ui.vehicle.back}
                     </button>
 
                     <div>
@@ -124,35 +125,35 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                         <CardHeader className="bg-primary/5 border-b">
                             <CardTitle className="text-lg flex items-center">
                                 <Gauge className="h-5 w-5 mr-2 text-primary" />
-                                Vehicle Vitals
+                                {ui.vehicle.vitalsTitle}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0 divide-y">
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center text-muted-foreground">
                                     <Calendar className="h-4 w-4 mr-2" />
-                                    <span className="text-sm font-medium">Added</span>
+                                    <span className="text-sm font-medium">{ui.vehicle.added}</span>
                                 </div>
                                 <span className="font-semibold">{new Date(vehicle.created_at).toLocaleDateString()}</span>
                             </div>
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center text-muted-foreground">
                                     <Gauge className="h-4 w-4 mr-2" />
-                                    <span className="text-sm font-medium">Odometer</span>
+                                    <span className="text-sm font-medium">{ui.vehicle.odometer}</span>
                                 </div>
                                 <span className="font-semibold">{latestOdometer.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">{profile.distanceUnit}</span></span>
                             </div>
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center text-muted-foreground">
                                     <Droplet className="h-4 w-4 mr-2" />
-                                    <span className="text-sm font-medium">Fuel Total</span>
+                                    <span className="text-sm font-medium">{ui.vehicle.fuelTotal}</span>
                                 </div>
                                 <span className="font-semibold">{currencySymbol}{totalFuelCost.toFixed(2)}</span>
                             </div>
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center text-muted-foreground">
                                     <Wrench className="h-4 w-4 mr-2" />
-                                    <span className="text-sm font-medium">Maint. Total</span>
+                                    <span className="text-sm font-medium">{ui.vehicle.maintenanceTotal}</span>
                                 </div>
                                 <span className="font-semibold">{currencySymbol}{totalMaintenanceCost.toFixed(2)}</span>
                             </div>
@@ -165,8 +166,8 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                     <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
                         <CardHeader className="flex flex-row items-start justify-between">
                             <div>
-                                <CardTitle>Specifications & Details</CardTitle>
-                                <CardDescription>Manage your vehicle&apos;s identifying information and attributes.</CardDescription>
+                                <CardTitle>{ui.vehicle.specsTitle}</CardTitle>
+                                <CardDescription>{ui.vehicle.specsDescription}</CardDescription>
                             </div>
                             <Button
                                 variant="ghost"
@@ -184,12 +185,12 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 {isEditingSpecs ? (
                                     <>
                                         <X className="h-4 w-4 mr-1.5" />
-                                        Cancel
+                                        {ui.common.actions.cancel}
                                     </>
                                 ) : (
                                     <>
                                         <Edit3 className="h-4 w-4 mr-1.5" />
-                                        Edit
+                                        {ui.common.actions.edit}
                                     </>
                                 )}
                             </Button>
@@ -199,43 +200,43 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 <form onSubmit={handleUpdateSpecs} className="space-y-6">
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="nickname">Vehicle Nickname</Label>
-                                            <Input id="nickname" name="nickname" defaultValue={vehicle.nickname || ""} placeholder="e.g. Froggy2, The Beast" className="rounded-xl" />
+                                            <Label htmlFor="nickname">{ui.vehicle.nickname}</Label>
+                                            <Input id="nickname" name="nickname" defaultValue={vehicle.nickname || ""} placeholder={ui.vehicle.nicknamePlaceholder} className="rounded-xl" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
-                                            <Input id="vin" name="vin" defaultValue={vehicle.vin || ""} placeholder="17-character VIN" className="rounded-xl font-mono uppercase" />
+                                            <Label htmlFor="vin">{ui.vehicle.vin}</Label>
+                                            <Input id="vin" name="vin" defaultValue={vehicle.vin || ""} placeholder={ui.vehicle.vinPlaceholder} className="rounded-xl font-mono uppercase" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="license_plate">License Plate</Label>
-                                            <Input id="license_plate" name="license_plate" defaultValue={vehicle.license_plate || ""} placeholder="e.g. ABC-1234" className="rounded-xl uppercase font-mono" />
+                                            <Label htmlFor="license_plate">{ui.vehicle.licensePlate}</Label>
+                                            <Input id="license_plate" name="license_plate" defaultValue={vehicle.license_plate || ""} placeholder={ui.vehicle.licensePlatePlaceholder} className="rounded-xl uppercase font-mono" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="color">Exterior Color</Label>
-                                            <Input id="color" name="color" defaultValue={vehicle.color || ""} placeholder="e.g. Midnight Blue" className="rounded-xl" />
+                                            <Label htmlFor="color">{ui.vehicle.exteriorColor}</Label>
+                                            <Input id="color" name="color" defaultValue={vehicle.color || ""} placeholder={ui.vehicle.exteriorColorPlaceholder} className="rounded-xl" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="engine_type">Engine Type</Label>
-                                            <Input id="engine_type" name="engine_type" defaultValue={vehicle.engine_type || ""} placeholder="e.g. 2.0L Inline-4 Turbo" className="rounded-xl" />
+                                            <Label htmlFor="engine_type">{ui.vehicle.engineType}</Label>
+                                            <Input id="engine_type" name="engine_type" defaultValue={vehicle.engine_type || ""} placeholder={ui.vehicle.engineTypePlaceholder} className="rounded-xl" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="transmission">Transmission</Label>
-                                            <Input id="transmission" name="transmission" defaultValue={vehicle.transmission || ""} placeholder="e.g. 8-Speed Automatic" className="rounded-xl" />
+                                            <Label htmlFor="transmission">{ui.vehicle.transmission}</Label>
+                                            <Input id="transmission" name="transmission" defaultValue={vehicle.transmission || ""} placeholder={ui.vehicle.transmissionPlaceholder} className="rounded-xl" />
                                         </div>
                                         {/* Make/Model/Year/Odometer hidden here if they aren't edited, but let's allow basic edits */}
                                         <div className="space-y-2">
-                                            <Label htmlFor="year">Model Year</Label>
+                                            <Label htmlFor="year">{ui.vehicle.modelYear}</Label>
                                             <Input id="year" name="year" type="number" defaultValue={vehicle.year} className="rounded-xl" required />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="notes">Important Notes</Label>
+                                        <Label htmlFor="notes">{ui.vehicle.importantNotes}</Label>
                                         <Textarea
                                             id="notes"
                                             name="notes"
                                             defaultValue={vehicle.notes || ""}
-                                            placeholder="Insurance policy numbers, radio codes, tire pressure specs, or any other reminders..."
+                                            placeholder={ui.vehicle.notesPlaceholder}
                                             className="rounded-xl min-h-[120px]"
                                         />
                                     </div>
@@ -243,7 +244,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                     {/* Custom Fields Section */}
                                     <div className="space-y-4 pt-4 border-t border-border/50">
                                         <div className="flex items-center justify-between">
-                                            <Label className="text-base font-semibold">Custom Specifications</Label>
+                                            <Label className="text-base font-semibold">{ui.vehicle.customSpecifications}</Label>
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -251,14 +252,14 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                                 className="rounded-full h-8 px-3"
                                                 onClick={() => setCustomFields([...customFields, { key: "", value: "" }])}
                                             >
-                                                + Add Field
+                                                + {ui.vehicle.addField}
                                             </Button>
                                         </div>
                                         <div className="space-y-3">
                                             {customFields.map((field, index) => (
                                                 <div key={index} className="flex items-center gap-3">
                                                     <Input
-                                                        placeholder="e.g. Tire Brand"
+                                                        placeholder={ui.vehicle.customFieldKeyPlaceholder}
                                                         className="rounded-xl flex-1"
                                                         value={field.key}
                                                         onChange={(e) => {
@@ -268,7 +269,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                                         }}
                                                     />
                                                     <Input
-                                                        placeholder="e.g. Michelin"
+                                                        placeholder={ui.vehicle.customFieldValuePlaceholder}
                                                         className="rounded-xl flex-1"
                                                         value={field.value}
                                                         onChange={(e) => {
@@ -294,7 +295,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                             ))}
                                             {customFields.length === 0 && (
                                                 <p className="text-sm text-muted-foreground italic bg-muted/30 p-4 rounded-xl text-center border border-dashed border-border/50">
-                                                    No custom specifications added. Click the button above to add one.
+                                                    {ui.vehicle.noCustomSpecifications}
                                                 </p>
                                             )}
                                         </div>
@@ -313,7 +314,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                             ) : (
                                                 <Save className="h-4 w-4 mr-2" />
                                             )}
-                                            {isSaving ? "Saving Specs..." : "Save Specifications"}
+                                            {isSaving ? ui.vehicle.savingSpecifications : ui.vehicle.saveSpecifications}
                                         </Button>
                                     </div>
                                 </form>
@@ -321,31 +322,31 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 <div className="space-y-6 animate-in fade-in duration-300">
                                     <div className="grid gap-5 sm:grid-cols-2">
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">Vehicle Nickname</p>
-                                            <p className="font-medium text-foreground tracking-wide">{vehicle.nickname || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.nickname}</p>
+                                            <p className="font-medium text-foreground tracking-wide">{vehicle.nickname || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">VIN (Vehicle Identification Number)</p>
-                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.vin || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.vin}</p>
+                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.vin || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">License Plate</p>
-                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.license_plate || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.licensePlate}</p>
+                                            <p className="font-medium text-foreground uppercase tracking-wide">{vehicle.license_plate || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">Exterior Color</p>
-                                            <p className="font-medium text-foreground">{vehicle.color || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.exteriorColor}</p>
+                                            <p className="font-medium text-foreground">{vehicle.color || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">Engine Type</p>
-                                            <p className="font-medium text-foreground">{vehicle.engine_type || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.engineType}</p>
+                                            <p className="font-medium text-foreground">{vehicle.engine_type || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">Transmission</p>
-                                            <p className="font-medium text-foreground">{vehicle.transmission || "—"}</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.transmission}</p>
+                                            <p className="font-medium text-foreground">{vehicle.transmission || ui.vehicle.emptyValue}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium text-muted-foreground">Model Year</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.modelYear}</p>
                                             <p className="font-medium text-foreground">{vehicle.year}</p>
                                         </div>
                                         {/* Render Custom Fields in Read-Only Mode */}
@@ -358,7 +359,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                     </div>
                                     {vehicle.notes && (
                                         <div className="space-y-2 pt-4 border-t border-border/50">
-                                            <p className="text-sm font-medium text-muted-foreground">Important Notes</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.importantNotes}</p>
                                             <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-xl border border-border/30">
                                                 {vehicle.notes}
                                             </p>
@@ -379,9 +380,9 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                         <div className="space-y-1">
                             <CardTitle className="text-xl flex items-center">
                                 <History className="h-5 w-5 mr-2 text-primary" />
-                                Service History
+                                {ui.vehicle.serviceHistoryTitle}
                             </CardTitle>
-                            <CardDescription>A complete log of maintenance performed on this vehicle.</CardDescription>
+                            <CardDescription>{ui.vehicle.serviceHistoryDescription}</CardDescription>
                         </div>
                         <AddMaintenanceModal vehicleId={vehicle.id} />
                     </CardHeader>
@@ -391,10 +392,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 <Table>
                                     <TableHeader className="bg-muted/10">
                                         <TableRow className="border-b/50 hover:bg-transparent">
-                                            <TableHead className="w-[120px] font-semibold text-muted-foreground pl-6">Date</TableHead>
-                                            <TableHead className="font-semibold text-muted-foreground">Service Type</TableHead>
-                                            <TableHead className="font-semibold text-muted-foreground w-1/3">Notes</TableHead>
-                                            <TableHead className="text-right font-semibold text-muted-foreground pr-6">Cost</TableHead>
+                                            <TableHead className="w-[120px] font-semibold text-muted-foreground pl-6">{ui.vehicle.columns.date}</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground">{ui.vehicle.columns.serviceType}</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground w-1/3">{ui.vehicle.columns.notes}</TableHead>
+                                            <TableHead className="text-right font-semibold text-muted-foreground pr-6">{ui.vehicle.columns.cost}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -412,7 +413,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground/80 italic text-sm">
-                                                    {log.notes || "—"}
+                                                    {log.notes || ui.vehicle.emptyValue}
                                                 </TableCell>
                                                 <TableCell className="text-right font-semibold pr-6 text-foreground/90">
                                                     {currencySymbol}{log.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -427,9 +428,9 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                 <div className="bg-primary/10 p-4 rounded-full mb-4 shadow-sm border border-primary/10">
                                     <Wrench className="h-8 w-8 text-primary/70" />
                                 </div>
-                                <h3 className="text-lg font-semibold tracking-tight text-foreground/90">No Service History</h3>
+                                <h3 className="text-lg font-semibold tracking-tight text-foreground/90">{ui.vehicle.serviceHistoryEmptyTitle}</h3>
                                 <p className="text-muted-foreground text-sm max-w-sm mt-1 mb-6">
-                                    This vehicle doesn&apos;t have any maintenance records yet. Keep track of oil changes, tire rotations, and repairs to monitor its health.
+                                    {ui.vehicle.serviceHistoryEmptyDescription}
                                 </p>
                                 <AddMaintenanceModal vehicleId={vehicle.id} />
                             </div>

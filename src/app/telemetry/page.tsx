@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { ui } from "@/content/en/ui";
 
 export default function TelemetryHud() {
     const [state, setState] = useState({
@@ -18,26 +19,14 @@ export default function TelemetryHud() {
 
     const [speedHistory, setSpeedHistory] = useState<number[]>(Array(30).fill(5));
     const [rpmHistory, setRpmHistory] = useState<number[]>(Array(30).fill(5));
-    const [logs, setLogs] = useState<string[]>([
-        "> INITIATING HANDSHAKE... OK",
-        "> ECU CALIBRATION... DONE",
-        "> AERO SENSORS... ACTIVE",
-        "> TRACTION CTRL... T1"
-    ]);
+    const [logs, setLogs] = useState<string[]>(() => [...ui.telemetry.initialLogs]);
 
     const maxSpeed = 320;
     const maxRpm = 9000;
     const idleRpm = 800;
 
     useEffect(() => {
-        const simMessages = [
-            "ADJUSTING BRAKE BIAS: R40 / F60",
-            "AERO PROFILES: SPORT MODE",
-            "BATTERY REGEN: ACTIVE",
-            "TYRE TEMP: OPTIMAL",
-            "DOWNFORCE: +120kg",
-            "SUSPENSION: STIFF"
-        ];
+        const simMessages = ui.telemetry.rotatingMessages;
 
         const logInterval = setInterval(() => {
             setLogs(prev => {
@@ -71,7 +60,7 @@ export default function TelemetryHud() {
                 if (newRpm < idleRpm) newRpm = idleRpm;
 
                 const acceleration = diff;
-                let newGY = -(acceleration * 0.05);
+                const newGY = -(acceleration * 0.05);
                 let newGX = prev.gForce.x;
                 if (newSpeed > 50) {
                     newGX += (Math.random() * 0.4 - 0.2);
@@ -146,7 +135,7 @@ export default function TelemetryHud() {
             </div>
 
             <Link href="/dashboard" className="absolute top-8 left-8 z-50 text-slate-400 hover:text-white flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/10 transition-all">
-                <ArrowLeft className="w-4 h-4" /> Exit Telemetry
+                <ArrowLeft className="w-4 h-4" /> {ui.telemetry.exit}
             </Link>
 
             <div className="w-[1400px] h-[800px] grid grid-cols-[300px_1fr_300px] grid-rows-[auto_1fr] gap-6 p-8 relative z-10">
@@ -158,11 +147,11 @@ export default function TelemetryHud() {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                         </svg>
-                        VELOCE TELEMETRY
+                        {ui.telemetry.title}
                     </div>
                     <div className="flex items-center gap-2 text-sm font-semibold text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                         <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse"></div>
-                        LIVE SYSTEM LINK
+                        {ui.telemetry.liveLink}
                     </div>
                 </div>
 
@@ -171,10 +160,10 @@ export default function TelemetryHud() {
                     <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"></div>
 
                     <div>
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Current Speed</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.currentSpeed}</div>
                         <div className="text-5xl font-light tabular-nums flex items-baseline gap-2">
                             {Math.floor(state.speed).toString().padStart(3, '0')}
-                            <span className="text-base text-sky-400 font-semibold">km/h</span>
+                            <span className="text-base text-sky-400 font-semibold">{ui.telemetry.labels.speedUnit}</span>
                         </div>
                         <div className="h-[60px] w-full flex items-end gap-[2px] mt-3">
                             {speedHistory.map((val, i) => (
@@ -184,10 +173,10 @@ export default function TelemetryHud() {
                     </div>
 
                     <div>
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Engine RPM</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.engineRpm}</div>
                         <div className={`text-5xl font-light tabular-nums flex items-baseline gap-2 ${colorRpm}`}>
                             {Math.floor(state.rpm).toString().padStart(4, '0')}
-                            <span className="text-base font-semibold">RPM</span>
+                            <span className="text-base font-semibold">{ui.telemetry.labels.rpmUnit}</span>
                         </div>
                         <div className="h-[60px] w-full flex items-end gap-[2px] mt-3">
                             {rpmHistory.map((val, i) => (
@@ -197,7 +186,7 @@ export default function TelemetryHud() {
                     </div>
 
                     <div>
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Gear</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.gear}</div>
                         <div className="text-7xl font-bold text-sky-400 drop-shadow-[0_0_20px_rgba(56,189,248,0.5)]">
                             {state.speed < 2 ? 'N' : state.gear}
                         </div>
@@ -229,7 +218,7 @@ export default function TelemetryHud() {
                         `}} />
                     </div>
 
-                    <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-6">Dynamic G-Force Vector</div>
+                    <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-6">{ui.telemetry.labels.gForceVector}</div>
                     <div className="w-[200px] h-[200px] rounded-full border-2 border-dashed border-white/10 relative flex items-center justify-center" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}>
                         <div className="absolute w-full h-[1px] bg-white/10"></div>
                         <div className="absolute w-[1px] h-full bg-white/10"></div>
@@ -239,10 +228,10 @@ export default function TelemetryHud() {
                             style={{ transform: `translate(${gX}px, ${gY}px)` }}
                         ></div>
 
-                        <div className="absolute -top-[20px] text-[10px] text-slate-400 tracking-[2px]">+1G ACCEL</div>
-                        <div className="absolute -bottom-[20px] text-[10px] text-slate-400 tracking-[2px]">-1G BRAKE</div>
-                        <div className="absolute -left-[30px] text-[10px] text-slate-400 tracking-[2px]">+1G LEFT</div>
-                        <div className="absolute -right-[30px] text-[10px] text-slate-400 tracking-[2px]">-1G RIGHT</div>
+                        <div className="absolute -top-[20px] text-[10px] text-slate-400 tracking-[2px]">{ui.telemetry.labels.accelG}</div>
+                        <div className="absolute -bottom-[20px] text-[10px] text-slate-400 tracking-[2px]">{ui.telemetry.labels.brakeG}</div>
+                        <div className="absolute -left-[30px] text-[10px] text-slate-400 tracking-[2px]">{ui.telemetry.labels.leftG}</div>
+                        <div className="absolute -right-[30px] text-[10px] text-slate-400 tracking-[2px]">{ui.telemetry.labels.rightG}</div>
                     </div>
                 </div>
 
@@ -251,9 +240,9 @@ export default function TelemetryHud() {
                     <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"></div>
 
                     <div className="mb-8">
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Core Temp</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.coreTemp}</div>
                         <div className="text-5xl font-light tabular-nums mb-3 flex items-baseline gap-2">
-                            {state.temp.toFixed(1)} <span className="text-base text-sky-400 font-semibold">°C</span>
+                            {state.temp.toFixed(1)} <span className="text-base text-sky-400 font-semibold">{ui.telemetry.labels.tempUnit}</span>
                         </div>
                         <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                             <div className={`h-full transition-all duration-200 ${tempColor}`} style={{ width: `${tempPerc}%` }}></div>
@@ -261,14 +250,14 @@ export default function TelemetryHud() {
                     </div>
 
                     <div className="mb-14">
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Oil Pressure</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.oilPressure}</div>
                         <div className="text-5xl font-light tabular-nums flex items-baseline gap-2">
-                            4.2 <span className="text-base text-sky-400 font-semibold">BAR</span>
+                            4.2 <span className="text-base text-sky-400 font-semibold">{ui.telemetry.labels.oilPressureUnit}</span>
                         </div>
                     </div>
 
                     <div className="mt-auto">
-                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">Diagnostics</div>
+                        <div className="text-xs uppercase tracking-[2px] text-slate-400 mb-2">{ui.telemetry.labels.diagnostics}</div>
                         <div className="font-mono text-xs text-emerald-400/80 leading-relaxed h-[100px] flex flex-col justify-end">
                             {logs.map((log, i) => (
                                 <div key={i}>{log}</div>

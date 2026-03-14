@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { createClient } from '@/utils/supabase/client';
+import type { ProviderPreference } from '@/types/ai';
 
 export type DistanceUnit = 'km' | 'miles';
-
-interface UserProfile {
+type UserProfile = {
     displayName: string | null;
     avatarUrl: string | null;
     currency: string;
@@ -12,8 +12,8 @@ interface UserProfile {
     hasLlmKey: boolean;
     hasOpenAiKey: boolean;
     hasDeepseekKey: boolean;
-    preferredProvider: 'gemini' | 'openai' | 'deepseek';
-}
+    preferredProvider: ProviderPreference;
+};
 
 interface UserState {
     profile: UserProfile;
@@ -66,7 +66,7 @@ export const useUserStore = create<UserState>((set, get) => ({
                     hasLlmKey: !!data?.encrypted_llm_key,
                     hasOpenAiKey: !!data?.encrypted_openai_key,
                     hasDeepseekKey: !!data?.encrypted_deepseek_key,
-                    preferredProvider: (data?.preferred_llm_provider as any) || 'gemini'
+                    preferredProvider: ((data?.preferred_llm_provider as ProviderPreference | null) || 'gemini')
                 },
                 isLoading: false,
             });

@@ -14,9 +14,10 @@ import { PageHeader } from "@/components/page-header";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ui } from "@/content/en/ui";
 
 export type FuelEfficiencyUnit = 'km/L' | 'L/100km' | 'MPG (US)' | 'MPG (UK)';
-const METRIC_OPTIONS: FuelEfficiencyUnit[] = ['km/L', 'L/100km', 'MPG (US)', 'MPG (UK)'];
+const METRIC_OPTIONS: readonly FuelEfficiencyUnit[] = ui.fuel.metricOptions;
 
 export default function FuelPage() {
     const { selectedVehicleId, vehicles } = useVehicleStore();
@@ -32,8 +33,8 @@ export default function FuelPage() {
         return (
             <div className="flex items-center justify-center h-[50vh]">
                 <div className="text-center">
-                    <h2 className="text-2xl font-semibold mb-2">No Vehicle Selected</h2>
-                    <p className="text-muted-foreground">Select a vehicle from the top nav to analyze fuel data.</p>
+                    <h2 className="text-2xl font-semibold mb-2">{ui.fuel.noVehicleSelectedTitle}</h2>
+                    <p className="text-muted-foreground">{ui.fuel.noVehicleSelectedDescription}</p>
                 </div>
             </div>
         );
@@ -121,8 +122,8 @@ export default function FuelPage() {
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6">
             <PageHeader
-                title="Fuel Analysis"
-                description={`Metrics & history for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
+                title={ui.fuel.pageTitle}
+                description={ui.fuel.pageDescription(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                 icon={Fuel}
             >
                 <FuelLogModal vehicle={selectedVehicle} />
@@ -133,9 +134,9 @@ export default function FuelPage() {
                     <Card className="bg-white/5 border-dashed border-2 border-white/10">
                         <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                             <Fuel className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                            <h3 className="text-xl font-semibold tracking-tight">No fuel data yet</h3>
+                            <h3 className="text-xl font-semibold tracking-tight">{ui.fuel.noFuelDataYetTitle}</h3>
                             <p className="text-muted-foreground mt-2 max-w-sm">
-                                Log your first fill-up to unlock efficiency metrics, cost charts, and historical analysis.
+                                {ui.fuel.noFuelDataYetDescription}
                             </p>
                         </CardContent>
                     </Card>
@@ -147,7 +148,7 @@ export default function FuelPage() {
                         <MotionWrapper delay={0.1}>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">Average Efficiency</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.fuel.averageEfficiency}</CardTitle>
                                     <div className="flex items-center gap-2">
                                         <Activity className="h-4 w-4 text-emerald-500" />
                                         <DropdownMenu>
@@ -180,14 +181,14 @@ export default function FuelPage() {
                         <MotionWrapper delay={0.2}>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">Cost per {profile.distanceUnit.toUpperCase()}</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.fuel.costPerDistance(profile.distanceUnit)}</CardTitle>
                                     <DollarSign className="h-4 w-4 text-rose-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
                                         {avgCostPerDistance > 0 ? formatCurrency(avgCostPerDistance) : '--'}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Average running cost</p>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ui.fuel.averageRunningCost}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
@@ -195,14 +196,14 @@ export default function FuelPage() {
                         <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Logs</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.fuel.totalLogs}</CardTitle>
                                     <Fuel className="h-4 w-4 text-blue-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-blue-500 shadow-blue-500/20 drop-shadow-md">
                                         {logs.length}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1 font-medium">Fill-ups recorded</p>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ui.fuel.fillUpsRecorded}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
@@ -214,8 +215,8 @@ export default function FuelPage() {
                             <MotionWrapper delay={0.4}>
                                 <Card className="h-full overflow-hidden">
                                     <CardHeader className="border-b border-white/5">
-                                        <CardTitle>Efficiency Trend</CardTitle>
-                                        <CardDescription>Fuel efficiency over your recent fill-ups.</CardDescription>
+                                        <CardTitle>{ui.fuel.efficiencyTrendTitle}</CardTitle>
+                                        <CardDescription>{ui.fuel.efficiencyTrendDescription}</CardDescription>
                                     </CardHeader>
                                     <CardContent className="h-[250px] w-full pt-6">
                                         <ResponsiveContainer width="100%" height="100%">
@@ -244,8 +245,8 @@ export default function FuelPage() {
                             <MotionWrapper delay={0.5}>
                                 <Card className="h-full overflow-hidden">
                                     <CardHeader className="border-b border-white/5">
-                                        <CardTitle>Cost vs Volume</CardTitle>
-                                        <CardDescription>Track the financial impact of each visit.</CardDescription>
+                                        <CardTitle>{ui.fuel.costVsVolumeTitle}</CardTitle>
+                                        <CardDescription>{ui.fuel.costVsVolumeDescription}</CardDescription>
                                     </CardHeader>
                                     <CardContent className="h-[250px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
@@ -276,11 +277,11 @@ export default function FuelPage() {
 
                     {hasRangeData && (
                         <MotionWrapper delay={0.6}>
-                            <Card className="overflow-hidden">
-                                <CardHeader className="border-b border-white/5">
-                                    <CardTitle>Battery Range Trend</CardTitle>
-                                    <CardDescription>Track your EV's estimated battery range over time.</CardDescription>
-                                </CardHeader>
+                                <Card className="overflow-hidden">
+                                    <CardHeader className="border-b border-white/5">
+                                        <CardTitle>{ui.fuel.batteryRangeTrendTitle}</CardTitle>
+                                        <CardDescription>{ui.fuel.batteryRangeTrendDescription}</CardDescription>
+                                    </CardHeader>
                                 <CardContent className="h-[250px] w-full pt-6">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={chartData.filter(d => d.range !== null)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -297,7 +298,7 @@ export default function FuelPage() {
                                                 strokeWidth={3}
                                                 dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2, stroke: "#030712" }}
                                                 activeDot={{ r: 6 }}
-                                                name={`Range (${profile.distanceUnit})`}
+                                                name={ui.fuel.modal.labels.estimatedRange(profile.distanceUnit)}
                                             />
                                         </LineChart>
                                     </ResponsiveContainer>
@@ -309,19 +310,19 @@ export default function FuelPage() {
                     {/* Data Table */}
                     <Card className="rounded-[2rem] shadow-sm overflow-hidden border">
                         <CardHeader className="bg-muted/20 border-b pb-4">
-                            <CardTitle>Fill-Up History</CardTitle>
-                            <CardDescription>Detailed log of all recorded fuel transactions.</CardDescription>
+                            <CardTitle>{ui.fuel.fillUpHistoryTitle}</CardTitle>
+                            <CardDescription>{ui.fuel.fillUpHistoryDescription}</CardDescription>
                         </CardHeader>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-xs text-muted-foreground uppercase bg-muted/10 border-b">
                                     <tr>
-                                        <th className="px-6 py-4 font-medium">Date</th>
-                                        <th className="px-6 py-4 font-medium text-right">Odometer</th>
-                                        <th className="px-6 py-4 font-medium text-right">Volume</th>
-                                        <th className="px-6 py-4 font-medium text-right">Cost</th>
-                                        <th className="px-6 py-4 font-medium text-right">Efficiency</th>
-                                        <th className="px-6 py-4 font-medium text-right">Actions</th>
+                                        <th className="px-6 py-4 font-medium">{ui.fuel.columns.date}</th>
+                                        <th className="px-6 py-4 font-medium text-right">{ui.fuel.columns.odometer}</th>
+                                        <th className="px-6 py-4 font-medium text-right">{ui.fuel.columns.volume}</th>
+                                        <th className="px-6 py-4 font-medium text-right">{ui.fuel.columns.cost}</th>
+                                        <th className="px-6 py-4 font-medium text-right">{ui.fuel.columns.efficiency}</th>
+                                        <th className="px-6 py-4 font-medium text-right">{ui.fuel.columns.actions}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">

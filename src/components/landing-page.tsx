@@ -4,42 +4,43 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { ArrowRight, Car, Fuel, Wrench, Activity, ShieldCheck, BarChart3 } from "lucide-react";
-import { InteractiveBackground } from "./interactive-background";
+import { brand } from "@/content/en/brand";
+import { ui } from "@/content/en/ui";
 
 const features = [
     {
-        title: "Digital Vehicle Garage",
-        description: "Store all your vehicles in one central cloud garage. Quickly switch between vehicles to view their dedicated statistics.",
+        title: ui.landing.features[0].title,
+        description: ui.landing.features[0].description,
         icon: Car,
         delay: 0.1,
     },
     {
-        title: "Fuel Logs & Efficiency",
-        description: "Log every fill-up and track your true MPG. Visualize your fuel efficiency trends over time with dynamic charts.",
+        title: ui.landing.features[1].title,
+        description: ui.landing.features[1].description,
         icon: Fuel,
         delay: 0.2,
     },
     {
-        title: "Maintenance Tracker",
-        description: "Never miss a service. Keep a detailed history of oil changes, tire rotations, and custom maintenance events.",
+        title: ui.landing.features[2].title,
+        description: ui.landing.features[2].description,
         icon: Wrench,
         delay: 0.3,
     },
     {
-        title: "Real-time Telemetry",
-        description: "Experience your vehicle data like never before with our experimental high-performance HUD.",
+        title: ui.landing.features[3].title,
+        description: ui.landing.features[3].description,
         icon: Activity,
         delay: 0.4,
     },
     {
-        title: "Cost Analytics",
-        description: "Understand your vehicle running costs. Calculate total spend per mile to make informed decisions.",
+        title: ui.landing.features[4].title,
+        description: ui.landing.features[4].description,
         icon: BarChart3,
         delay: 0.5,
     },
     {
-        title: "Secure & Cloud-Synced",
-        description: "Built on Supabase for enterprise-grade security. Access your garage securely from any device, anytime.",
+        title: ui.landing.features[5].title,
+        description: ui.landing.features[5].description,
         icon: ShieldCheck,
         delay: 0.6,
     },
@@ -80,27 +81,27 @@ export function LandingPage() {
                         className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium backdrop-blur-sm"
                     >
                         <Car className="w-4 h-4" />
-                        <span>The Ultimate Vehicle Management Platform</span>
+                        <span>{ui.landing.eyebrow}</span>
                     </motion.div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent italic">
-                        Veloce Digital Garage
+                        {brand.app.fullName}
                     </h1>
 
                     <p className="text-xl md:text-2xl text-muted-foreground mb-10 leading-relaxed font-light">
-                        Track fuel, log maintenance, and monitor your vehicle statistics with unparalleled elegance.
+                        {ui.landing.description}
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <Link href="/login?tab=signup" className="w-full sm:w-auto">
                             <Button size="lg" className="w-full rounded-full text-md h-14 px-8 group font-semibold shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300">
-                                Get Started
+                                {ui.landing.primaryCta}
                                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </Link>
                         <Link href="/login" className="w-full sm:w-auto">
                             <Button size="lg" variant="outline" className="w-full rounded-full text-md h-14 px-8 border-white/10 bg-white/5 hover:bg-white/10 backdrop-blur-md">
-                                Sign In
+                                {ui.landing.secondaryCta}
                             </Button>
                         </Link>
                     </div>
@@ -114,7 +115,7 @@ export function LandingPage() {
                     viewport={{ once: true, margin: "-100px" }}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-8"
                 >
-                    {features.map((feature, idx) => (
+                    {features.map((feature) => (
                         <motion.div
                             key={feature.title}
                             variants={itemVariants}
@@ -141,9 +142,9 @@ export function LandingPage() {
             >
                 <div className="flex items-center justify-center gap-2 mb-2">
                     <Car className="w-4 h-4" />
-                    <span className="font-semibold italic">Digital Garage</span>
+                    <span className="font-semibold italic">{brand.app.compactName}</span>
                 </div>
-                <p>&copy; {new Date().getFullYear()} Modern Fuel & Vehicle Tracking.</p>
+                <p>&copy; {new Date().getFullYear()} {ui.landing.footerTagline}</p>
             </motion.footer>
         </div>
     );

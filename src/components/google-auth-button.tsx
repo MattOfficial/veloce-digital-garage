@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { ui } from "@/content/en/ui";
 
 export function GoogleAuthButton({
-    text = "Continue with Google",
+    text = ui.auth.buttons.continueWithGoogle,
 }: {
     text?: string;
 }) {

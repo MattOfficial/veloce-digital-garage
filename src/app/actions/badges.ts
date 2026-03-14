@@ -29,21 +29,6 @@ export async function evaluateBadges(userId?: string): Promise<BadgeDefinition[]
         const earnedBadgeIds = new Set((currentBadgesResult || []).map(b => b.badge_id));
 
         // 2. Fetch Aggregates
-        // Vehicles
-        const { count: vehicleCount } = await supabase
-            .from('vehicles')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', targetUserId);
-
-        // Fuel Logs
-        const { count: fuelCount } = await supabase
-            .from('fuel_logs')
-            .select('id', { count: 'exact', head: true })
-            // Fuel logs belong to vehicles, but Supabase doesn't easily do cross-table counts without RPCs.
-            // Wait, we need to join on vehicles.
-            // Let's just fetch all vehicle IDs first.
-            ;
-
         const { data: userVehicles } = await supabase
             .from('vehicles')
             .select('id')

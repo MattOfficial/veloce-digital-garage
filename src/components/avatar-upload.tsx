@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ui } from "@/content/en/ui";
 
 interface AvatarUploadProps {
     currentUrl?: string | null;
@@ -24,7 +25,7 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
 
             // Optional: check file type
             if (!file.type.startsWith("image/")) {
-                setUploadError("Please upload an image file.");
+                setUploadError(ui.uploads.avatar.invalidFile);
                 return;
             }
 
@@ -33,7 +34,7 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
             // Get current user to ensure we upload under their ID or handle properly
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                setUploadError("You must be logged in to upload an avatar.");
+                setUploadError(ui.uploads.avatar.requiresAuth);
                 setIsUploading(false);
                 return;
             }
@@ -59,7 +60,7 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
             onUploadSuccess(data.publicUrl);
         } catch (error: unknown) {
             console.error("Error uploading avatar:", error instanceof Error ? error.message : error);
-            setUploadError("Failed to upload avatar.");
+            setUploadError(ui.uploads.avatar.failed);
         } finally {
             setIsUploading(false);
         }
@@ -68,7 +69,7 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
     return (
         <div className="flex flex-col items-center gap-4">
             <Avatar className="h-24 w-24">
-                <AvatarImage src={currentUrl || undefined} alt="Profile Picture" className="object-cover" />
+                <AvatarImage src={currentUrl || undefined} alt={ui.uploads.avatar.alt} className="object-cover" />
                 <AvatarFallback className="text-2xl">{fallbackText}</AvatarFallback>
             </Avatar>
 
@@ -88,12 +89,12 @@ export function AvatarUpload({ currentUrl, onUploadSuccess, fallbackText = "U" }
                     {isUploading ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            <span>Uploading...</span>
+                            <span>{ui.uploads.avatar.uploading}</span>
                         </>
                     ) : (
                         <>
                             <UploadCloud className="h-4 w-4 text-muted-foreground" />
-                            <span>Change Picture</span>
+                            <span>{ui.uploads.avatar.changePicture}</span>
                         </>
                     )}
                 </label>

@@ -5,6 +5,7 @@ import { UploadCloud, Link as LinkIcon, Image as ImageIcon, Loader2 } from "luci
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { ui } from "@/content/en/ui";
 
 interface ImageUploadOrLinkProps {
     onImageSelected: (url: string) => void;
@@ -25,7 +26,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
         if (!file) return;
 
         if (!file.type.startsWith("image/")) {
-            alert("Please upload an image file.");
+            alert(ui.uploads.imagePicker.invalidFile);
             return;
         }
 
@@ -33,7 +34,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
+            if (!user) throw new Error(ui.uploads.documents.notAuthenticated);
 
             const fileExt = file.name.split('.').pop();
             const filePath = `${user.id}/${Date.now()}.${fileExt}`;
@@ -52,7 +53,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
             onImageSelected(data.publicUrl);
         } catch (error: unknown) {
             console.error("Upload failed", error);
-            alert("Upload failed. " + (error instanceof Error ? error.message : "Unknown error"));
+            alert(ui.uploads.imagePicker.uploadFailed(error instanceof Error ? error.message : "Unknown error"));
         } finally {
             setIsUploading(false);
         }
@@ -77,7 +78,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
                     disabled={isUploading}
                 >
                     <UploadCloud className="h-4 w-4 mr-2" />
-                    Upload
+                    {ui.uploads.imagePicker.modes.upload}
                 </Button>
                 <Button
                     type="button"
@@ -87,7 +88,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
                     disabled={isUploading}
                 >
                     <LinkIcon className="h-4 w-4 mr-2" />
-                    Web URL
+                    {ui.uploads.imagePicker.modes.link}
                 </Button>
             </div>
 
@@ -95,7 +96,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
                 {previewUrl ? (
                     <div className="absolute inset-0 w-full h-full">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={previewUrl} alt="Vehicle preview" className="w-full h-full object-cover" />
+                        <img src={previewUrl} alt={ui.uploads.imagePicker.previewAlt} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <Button
                                 type="button"
@@ -109,7 +110,7 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
                                     if (fileInputRef.current) fileInputRef.current.value = "";
                                 }}
                             >
-                                Clear Image
+                                {ui.uploads.imagePicker.clearImage}
                             </Button>
                         </div>
                     </div>
@@ -121,8 +122,8 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
                                     {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <ImageIcon className="h-6 w-6" />}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium">Click to upload a picture</p>
-                                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG or WEBP (max. 5MB)</p>
+                                    <p className="text-sm font-medium">{ui.uploads.imagePicker.clickToUpload}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{ui.uploads.imagePicker.supportedFormats}</p>
                                 </div>
                                 <input
                                     type="file"
@@ -137,17 +138,17 @@ export function ImageUploadOrLink({ onImageSelected, currentUrl }: ImageUploadOr
 
                         {mode === "link" && (
                             <div className="w-full max-w-sm px-4">
-                                <p className="text-sm font-medium mb-2 text-left">Paste image URL</p>
+                                <p className="text-sm font-medium mb-2 text-left">{ui.uploads.imagePicker.pasteImageUrl}</p>
                                 <div className="flex gap-2">
                                     <Input
-                                        placeholder="https://example.com/car.jpg"
+                                        placeholder={ui.uploads.imagePicker.imageUrlPlaceholder}
                                         value={linkInput}
                                         onChange={(e) => setLinkInput(e.target.value)}
                                         className="rounded-xl"
                                         onKeyDown={(e) => e.key === 'Enter' && handleLinkSubmit(e)}
                                     />
                                     <Button type="button" onClick={handleLinkSubmit} className="rounded-xl shrink-0">
-                                        Preview
+                                        {ui.uploads.imagePicker.preview}
                                     </Button>
                                 </div>
                             </div>

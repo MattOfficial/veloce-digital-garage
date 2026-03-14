@@ -27,7 +27,7 @@ export async function createServiceReminder(formData: FormData) {
         throw new Error("Failed to create reminder");
     }
 
-    revalidatePath("/maintenance");
+    revalidatePath("/dashboard/maintenance");
     return { success: true };
 }
 
@@ -40,6 +40,6 @@ export async function deleteServiceReminder(id: string) {
         throw new Error("Failed to delete reminder");
     }
 
-    revalidatePath("/maintenance");
+    revalidatePath("/dashboard/maintenance");
     return { success: true };
 }

@@ -1,38 +1,36 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings, RotateCcw, Paperclip } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Loader2, Link2, CheckCircle2, RotateCcw, Paperclip } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useVehicleStore } from "@/store/vehicle-store";
-import { MotionWrapper } from "./motion-wrapper";
-import { Card } from "./ui/card";
 import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
 import { useUserStore } from "@/store/user-store";
 import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import type {
+    CopilotAttachment,
+    CopilotRequestMessage,
+    CopilotResponseBody,
+    CopilotVehicleContext,
+    PendingAction,
+} from "@/types/ai";
+import type { BadgeDefinition } from "@/lib/badges";
+import { getErrorMessage } from "@/utils/errors";
+import { brand } from "@/content/en/brand";
+import { ui } from "@/content/en/ui";
 
 const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
     ssr: false,
     loading: () => <div className="animate-pulse bg-white/10 h-4 w-3/4 rounded"></div>
 });
 
-interface ChatMessage {
+interface ChatMessage extends CopilotRequestMessage {
     id: string;
-    role: "user" | "assistant";
-    content: string;
-    attachments?: {
-        url: string;
-        name: string;
-        mimeType: string;
-    }[];
-    pendingAction?: {
-        type: "log_fuel_draft" | "log_maintenance_draft";
-        payload: any;
-    };
+    pendingAction?: PendingAction;
 }
 
 export function VeloceCopilot() {
@@ -40,12 +38,18 @@ export function VeloceCopilot() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
-    const [pendingAttachments, setPendingAttachments] = useState<{ url: string, name: string, mimeType: string }[]>([]);
+    const [pendingAttachments, setPendingAttachments] = useState<CopilotAttachment[]>([]);
     const [isUploadingFile, setIsUploadingFile] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { vehicles, fetchVehicles } = useVehicleStore();
     const { profile } = useUserStore();
+    const hasPreferredProviderKey =
+        profile.preferredProvider === "gemini"
+            ? profile.hasLlmKey
+            : profile.preferredProvider === "openai"
+                ? profile.hasOpenAiKey
+                : profile.hasDeepseekKey;
 
     // Scroll to bottom on new message
     useEffect(() => {
@@ -63,7 +67,7 @@ export function VeloceCopilot() {
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
             role: "user",
-            content: userText || (currentAttachments.length > 0 ? `Uploaded ${currentAttachments.length} document(s)` : ""),
+            content: userText || (currentAttachments.length > 0 ? ui.copilot.messages.uploadedDocuments(currentAttachments.length) : ""),
             attachments: currentAttachments.length > 0 ? currentAttachments : undefined
         };
 
@@ -85,7 +89,7 @@ export function VeloceCopilot() {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: nlpResult.missingInfo || "I need more information."
+                    content: nlpResult.missingInfo || ui.copilot.messages.needsMoreInfo
                 }]);
                 setIsTyping(false);
                 return;
@@ -93,32 +97,34 @@ export function VeloceCopilot() {
 
             // If NLP successfully drafted a full payload locally
             if (nlpResult.intent !== 'unknown' && nlpResult.payload) {
+                const pendingAction: PendingAction =
+                    nlpResult.intent === "log_fuel_draft"
+                        ? { type: "log_fuel_draft", payload: nlpResult.payload }
+                        : { type: "log_maintenance_draft", payload: nlpResult.payload };
+
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: "I've prepared that log for you. Please review and confirm.",
-                    pendingAction: {
-                        type: nlpResult.intent as "log_fuel_draft" | "log_maintenance_draft",
-                        payload: nlpResult.payload
-                    }
+                    content: ui.copilot.messages.preparedLog,
+                    pendingAction
                 }]);
                 setIsTyping(false);
                 return;
             }
 
             // 2. Fallback to Gemini LLM for conversational matching
-            if (!profile.hasLlmKey) {
+            if (!hasPreferredProviderKey) {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: "I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your Gemini API key in Profile Settings to unlock conversational AI."
+                    content: ui.copilot.messages.missingKey(profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseekFull)
                 }]);
                 setIsTyping(false);
                 return;
             }
 
             // Context injection for the AI
-            const garageContext = vehicles.map(v => ({
+            const garageContext: CopilotVehicleContext[] = vehicles.map(v => ({
                 id: v.id,
                 make: v.make,
                 model: v.model,
@@ -136,8 +142,8 @@ export function VeloceCopilot() {
                 })
             });
 
-            if (!res.ok) throw new Error("Failed to get response");
-            const data = await res.json();
+            if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
+            const data = await res.json() as CopilotResponseBody;
 
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -149,12 +155,12 @@ export function VeloceCopilot() {
             setMessages(prev => [...prev, aiMsg]);
             setIsTyping(false);
 
-        } catch (e) {
-            console.error(e);
+        } catch (error: unknown) {
+            console.error(error);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
-                content: "An error occurred connecting to the AI. Please try again later."
+                content: getErrorMessage(error, ui.copilot.messages.failedConnection)
             }]);
             setIsTyping(false);
         }
@@ -165,31 +171,31 @@ export function VeloceCopilot() {
             const formData = new FormData();
             formData.append('vehicle_id', action.payload.vehicle_id);
             formData.append('date', action.payload.date || new Date().toISOString().split('T')[0]);
-            formData.append('odometer', action.payload.odometer);
-            formData.append('fuel_volume', action.payload.volume);
-            formData.append('total_cost', action.payload.cost);
+            formData.append('odometer', String(action.payload.odometer));
+            formData.append('fuel_volume', String(action.payload.volume));
+            formData.append('total_cost', String(action.payload.cost));
 
             const result = await submitFuelLog(formData);
             if (result.error) {
                 toast.error(result.error);
             } else {
-                toast.success("Fuel log saved to your vehicle!");
+                toast.success(ui.copilot.messages.fuelSaved);
                 if (result.newBadges?.length) {
-                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 // Easiest way to clear context is to reset the chat.
                 // We'll reset it to empty so the NLP engine starts fresh for the next command.
                 setTimeout(() => setMessages([]), 1500);
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
+                setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
             }
         } else if (action.type === 'log_maintenance_draft') {
             const formData = new FormData();
             formData.append('vehicle_id', action.payload.vehicle_id);
             formData.append('date', action.payload.date || new Date().toISOString().split('T')[0]);
             formData.append('service_type', action.payload.service_type);
-            formData.append('cost', action.payload.cost);
+            formData.append('cost', String(action.payload.cost));
             if (action.payload.notes) {
                 formData.append('notes', action.payload.notes);
             }
@@ -201,19 +207,19 @@ export function VeloceCopilot() {
             if (result?.error) {
                 toast.error(result.error);
             } else {
-                toast.success("Maintenance log saved to your vehicle!");
+                toast.success(ui.copilot.messages.maintenanceSaved);
                 if (result.newBadges?.length) {
-                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 setTimeout(() => setMessages([]), 1500);
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
+                setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
             }
         }
     };
 
-    const handleDismissAction = (messageId: string) => {
+    const handleDismissAction = () => {
         // We can just clear the chat context entirely to start fresh, 
         // or just clear the pending action. Let's clear the pending action and append a system message, 
         // but since the NLP uses the full array, resetting the entire history on dismiss prevents the bug.
@@ -225,7 +231,7 @@ export function VeloceCopilot() {
         if (files.length === 0) return;
 
         if (pendingAttachments.length + files.length > 5) {
-            toast.error("You can only attach up to 5 files per message.");
+            toast.error(ui.copilot.messages.fileLimit);
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
@@ -234,9 +240,9 @@ export function VeloceCopilot() {
         try {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not logged in");
+            if (!user) throw new Error(ui.copilot.messages.notLoggedIn);
 
-            const newAttachments: { url: string, name: string, mimeType: string }[] = [];
+            const newAttachments: CopilotAttachment[] = [];
 
             for (const file of files) {
                 const fileExt = file.name.split('.').pop();
@@ -262,8 +268,8 @@ export function VeloceCopilot() {
 
             setPendingAttachments(prev => [...prev, ...newAttachments]);
 
-        } catch (err: any) {
-            toast.error(err.message || "Failed to upload file");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, ui.copilot.messages.fileUploadFailed));
         } finally {
             setIsUploadingFile(false);
             if (fileInputRef.current) {
@@ -295,15 +301,15 @@ export function VeloceCopilot() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <h3 className="font-semibold text-sm">Veloce Copilot</h3>
+                                    <h3 className="font-semibold text-sm">{brand.ai.copilotName}</h3>
                                     <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/80 border border-primary/10 font-medium">
-                                        {profile.preferredProvider === 'gemini' ? 'Gemini' : profile.preferredProvider === 'openai' ? 'OpenAI' : 'Deepseek'}
+                                        {profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseek}
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-emerald-400">
                                     {(profile.preferredProvider === 'gemini' ? profile.hasLlmKey : 
                                       profile.preferredProvider === 'openai' ? profile.hasOpenAiKey : 
-                                      profile.hasDeepseekKey) ? 'Online' : 'Key Missing'}
+                                      profile.hasDeepseekKey) ? ui.copilot.header.online : ui.copilot.header.keyMissing}
                                 </p>
                             </div>
                         </div>
@@ -312,12 +318,12 @@ export function VeloceCopilot() {
                                 <button
                                     onClick={() => setMessages([])}
                                     className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors"
-                                    title="New Chat / Clear Context"
+                                    title={ui.copilot.header.newChatTitle}
                                 >
                                     <RotateCcw className="h-4 w-4" />
                                 </button>
                             )}
-                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors" title="Close">
+                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors" title={ui.copilot.titles.close}>
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -329,8 +335,8 @@ export function VeloceCopilot() {
                             <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 text-muted-foreground">
                                 <Bot className="h-12 w-12 opacity-20" />
                                 <div>
-                                    <p className="font-medium">How can I help?</p>
-                                    <p className="text-sm mt-1">Try saying: "I filled up the Datsun for 1500 rupees today."</p>
+                                    <p className="font-medium">{ui.copilot.emptyState.title}</p>
+                                    <p className="text-sm mt-1">{ui.copilot.emptyState.example}</p>
                                 </div>
                             </div>
                         )}
@@ -366,7 +372,7 @@ export function VeloceCopilot() {
                                         <div className="mt-3 p-3 bg-black/30 border border-white/5 rounded-xl text-sm">
                                             <div className="flex items-center font-semibold mb-2 text-primary">
                                                 <Link2 className="h-4 w-4 mr-2" />
-                                                Action Ready: {msg.pendingAction.type === 'log_fuel_draft' ? 'Log Fuel' : 'Action'}
+                                                {ui.copilot.actions.actionReady}: {msg.pendingAction.type === 'log_fuel_draft' ? ui.copilot.actions.logFuel : ui.copilot.actions.genericAction}
                                             </div>
                                             <ul className="space-y-1 mb-3 text-muted-foreground text-xs">
                                                 {Object.entries(msg.pendingAction.payload || {}).map(([key, value]) => (
@@ -382,15 +388,15 @@ export function VeloceCopilot() {
                                                     onClick={() => handleConfirmAction(msg.pendingAction!)}
                                                 >
                                                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                                    Confirm
+                                                    {ui.copilot.actions.confirm}
                                                 </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
                                                     className="h-7 w-full text-xs border-white/10 text-white"
-                                                    onClick={() => handleDismissAction(msg.id)}
+                                                    onClick={() => handleDismissAction()}
                                                 >
-                                                    Dismiss
+                                                    {ui.copilot.actions.dismiss}
                                                 </Button>
                                             </div>
                                         </div>
@@ -456,7 +462,7 @@ export function VeloceCopilot() {
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isUploadingFile || isTyping}
                                         className="h-11 w-11 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 disabled:opacity-50 transition-colors"
-                                        title="Attach receipt or document"
+                                        title={ui.copilot.composer.attachTitle}
                                     >
                                         {isUploadingFile ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
                                     </button>
@@ -465,7 +471,7 @@ export function VeloceCopilot() {
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Message Copilot..."
+                                placeholder={ui.copilot.composer.inputPlaceholder}
                                 className="pr-12 bg-white/5 border-white/10 rounded-full h-11 focus-visible:ring-1 focus-visible:ring-primary/50"
                             />
                             <button

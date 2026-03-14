@@ -2,6 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { decrypt } from "@/utils/crypto";
+import type { OcrExtractedData } from "@/types/ai";
+import { getErrorMessage } from "@/utils/errors";
 
 export async function extractDataFromInvoice(fileUrl: string) {
     const supabase = await createClient();
@@ -24,11 +26,13 @@ export async function extractDataFromInvoice(fileUrl: string) {
     let apiKey = "";
     try {
         apiKey = decrypt(userData.encrypted_llm_key);
-    } catch (e) {
+    } catch {
         throw new Error("Failed to decrypt your API key. Please re-enter it in Profile Settings.");
     }
 
     try {
+        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
             headers: {
@@ -36,7 +40,7 @@ export async function extractDataFromInvoice(fileUrl: string) {
                 Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                model: "gemini-1.5-flash",
+                model: modelName,
                 messages: [
                     {
                         role: "system",
@@ -73,8 +77,18 @@ export async function extractDataFromInvoice(fileUrl: string) {
             throw new Error(`OpenAI API Error: ${errorData.error?.message || response.statusText}`);
         }
 
-        const data = await response.json();
-        const rawContent = data.choices[0].message.content.trim();
+        const data = await response.json() as {
+            choices?: Array<{
+                message?: {
+                    content?: string;
+                };
+            }>;
+        };
+        const rawContent = data.choices?.[0]?.message?.content?.trim();
+
+        if (!rawContent) {
+            throw new Error("The OCR provider returned an empty response.");
+        }
 
         // Safety: Strip markdown if the LLM ignored strict instructions
         let jsonStr = rawContent;
@@ -85,9 +99,9 @@ export async function extractDataFromInvoice(fileUrl: string) {
             }
         }
 
-        return JSON.parse(jsonStr);
-    } catch (e: any) {
-        console.error("OCR Extraction Failed:", e);
-        throw new Error(e.message || "Failed to process the invoice.");
+        return JSON.parse(jsonStr) as OcrExtractedData;
+    } catch (error: unknown) {
+        console.error("OCR Extraction Failed:", error);
+        throw new Error(getErrorMessage(error, "Failed to process the invoice."));
     }
 }
