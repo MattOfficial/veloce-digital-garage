@@ -31,7 +31,7 @@ For a quick, beginner-friendly guide to deploying on Vercel, check out our [Verc
 If you haven't already, clone the repository to your local machine and install the dependencies:
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/MattOfficial/veloce-digital-garage.git
 cd veloce-digital-garage
 npm install
 ```

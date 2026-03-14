@@ -10,6 +10,9 @@ export async function updateProfile(formData: FormData) {
     const currency = formData.get("currency") as string;
     const distanceUnit = formData.get("distance_unit") as string;
     const llmKey = formData.get("llm_key") as string;
+    const openAiKey = formData.get("openai_key") as string;
+    const deepseekKey = formData.get("deepseek_key") as string;
+    const preferredProvider = formData.get("preferred_provider") as string;
 
     const supabase = await createClient();
 
@@ -19,19 +22,37 @@ export async function updateProfile(formData: FormData) {
         return { error: "You must be logged in to update your profile." };
     }
 
-    const updates: any = {
-        display_name: displayName || null,
-        avatar_url: avatarUrl || null,
-        currency: currency || '₹',
-        distance_unit: distanceUnit || 'km',
-    };
+    const updates: any = {};
+    if (displayName) updates.display_name = displayName;
+    if (avatarUrl) updates.avatar_url = avatarUrl;
+    if (currency) updates.currency = currency;
+    if (distanceUnit) updates.distance_unit = distanceUnit;
+    if (preferredProvider) updates.preferred_llm_provider = preferredProvider;
 
     if (llmKey && llmKey.trim() !== '') {
         try {
             updates.encrypted_llm_key = encrypt(llmKey.trim());
         } catch (e: any) {
             console.error("Encryption error:", e);
-            return { error: "Failed to encrypt API key." };
+            return { error: "Failed to encrypt Google Gemini API key." };
+        }
+    }
+
+    if (openAiKey && openAiKey.trim() !== '') {
+        try {
+            updates.encrypted_openai_key = encrypt(openAiKey.trim());
+        } catch (e: any) {
+            console.error("Encryption error:", e);
+            return { error: "Failed to encrypt OpenAI API key." };
+        }
+    }
+
+    if (deepseekKey && deepseekKey.trim() !== '') {
+        try {
+            updates.encrypted_deepseek_key = encrypt(deepseekKey.trim());
+        } catch (e: any) {
+            console.error("Encryption error:", e);
+            return { error: "Failed to encrypt Deepseek API key." };
         }
     }
 
@@ -51,7 +72,7 @@ export async function updateProfile(formData: FormData) {
     return { success: true };
 }
 
-export async function deleteLlmKey() {
+export async function deleteLlmKey(provider: 'gemini' | 'openai' | 'deepseek' = 'gemini') {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -59,9 +80,15 @@ export async function deleteLlmKey() {
         return { error: "You must be logged in." };
     }
 
+    const columnMap = {
+        gemini: 'encrypted_llm_key',
+        openai: 'encrypted_openai_key',
+        deepseek: 'encrypted_deepseek_key'
+    };
+
     const { error } = await supabase
         .from("users")
-        .update({ encrypted_llm_key: null })
+        .update({ [columnMap[provider]]: null })
         .eq("id", user.id);
 
     if (error) {
