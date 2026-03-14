@@ -637,7 +637,7 @@ export default function ProfilePage() {
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {vehicles.map((vehicle) => (
                                 <Link
-                                    href={`/vehicles/${vehicle.id}`}
+                                    href={`/dashboard/vehicles/${vehicle.id}`}
                                     key={vehicle.id}
                                     className="relative flex flex-col rounded-[2rem] bg-gradient-to-b from-border/50 to-background border shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
                                 >

@@ -28,7 +28,7 @@ export default async function VehiclePage({
         .single();
 
     if (vehicleError || !vehicle) {
-        redirect("/profile"); // Redirect back to garage if not found or unauthorized
+        redirect("/dashboard/profile"); // Redirect back to the garage if not found or unauthorized
     }
 
     return <VehicleManagerClient vehicle={vehicle} />;

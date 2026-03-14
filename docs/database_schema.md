@@ -1,113 +1,207 @@
-# Supabase Database Schema
+# Database Schema Summary
 
-## `profiles`
-Extended user model tied 1-to-1 with Supabase Auth (`auth.users`).
-- `id` (uuid, primary key, references `auth.users.id`)
-- `first_name`, `last_name` (text, nullable)
-- `distanceUnit` (text, default 'km', or 'miles')
-- `currency` (text, default 'USD')
-- `volumeUnit` (text, nullable)
-- `encrypted_llm_key` (text, nullable) // Stores the user's personal Gemini API Key AES-256-GCM cipher text for Copilot and OCR functionality.
+This summary reflects the current branch based on `supabase/migrations` and the app code that reads and writes those tables.
 
-## `vehicles`
-The core application namespace. Everything belongs to a vehicle, which belongs to a user.
-- `id` (uuid, default `uuid_generate_v4()`, primary key)
-- `user_id` (uuid, references `profiles.id`)
-- `make`, `model` (text)
-- `year` (int4)
-- `plate_number` (text)
-- `vin` (text, nullable)
-- `baseline_odometer` (int4, default 0)
-- `fuel_capacity` (numeric) // Deprecated for EVs, kept for legacy ICE
-- `vehicle_type` (text: 'car', 'motorcycle', 'truck' - default 'car')
-- `powertrain` (text: 'ice', 'ev', 'hev', 'phev', 'rex' - default 'ice')
-- `battery_capacity_kwh` (numeric, nullable)
-- `nickname` (text, nullable)
-- `tyre_info` (jsonb, highly nested)
-- `created_at` (timestamptz)
+## Source Of Truth
 
-### `tyre_info` JSONB Structure
-```json
-// For Cars/Trucks:
-{
-  "front_left": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
-  "front_right": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
-  "rear_left": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number },
-  "rear_right": { "brand": "string", "installed_date": "YYYY-MM-DD", "installed_odo": number, "dot_code": "4-digit string", "tread_depth": number }
-}
-// For Motorcycles, only front_left (mapped to Front) and rear_left (mapped to Rear) are utilized.
-```
+Use the migration files in `supabase/migrations` as the authoritative schema history.
 
-## `fuel_logs`
-Time-series data for fuel fill-ups AND electrical charging sessions (polymorphic based on vehicle powertrain).
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `date` (timestamptz)
-- `odometer` (int4)
-- `fuel_volume` (numeric) // Used for liquid fuels (Liters/Gallons) AND Electrical Energy (kWh) depending on powertrain.
-- `total_cost` (numeric)
-- `full_tank` (boolean)
-- `energy_type` (text: 'liquid_fuel' or 'electric_charge')
-- `estimated_range` (numeric, nullable) // Used to track battery degradation over time
-- `notes` (text, nullable)
+`supabase/schema.sql` is an early bootstrap snapshot and does not include all later changes.
 
-## `maintenance_logs`
-Event logs for specific maintenance repairs.
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `user_id` (uuid, references `profiles.id`)
-- `date` (timestamptz)
-- `service_type` (text - e.g. "Oil Change", "Brake Pad Replacement")
-- `cost` (numeric)
-- `provider` (text, nullable)
-- `notes` (text, nullable)
-- `receipt_url` (text, nullable - pointer to Supabase Storage bucket)
+## Core Tables
 
-## `custom_log_categories`
-User-defined metric categories scoped entirely to a specific vehicle instance.
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `name` (text - e.g. "Washer Fluid", "Coolant")
-- `unit` (text, nullable)
-- `icon` (text, nullable - string representation of Lucide icon name)
+### `users`
 
-## `custom_logs`
-Time-series data attaching a log entry to a custom tracker category.
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `category_id` (uuid, references `custom_log_categories.id`, ON DELETE CASCADE)
-- `date` (timestamptz)
-- `value` (numeric, nullable)
-- `cost` (numeric, nullable)
-- `notes` (text, nullable)
+App-level profile data keyed 1:1 to `auth.users`.
 
-## `documents`
-Stores metadata for files uploaded to the Supabase Storage Vault bucket.
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `user_id` (uuid, references `profiles.id`)
-- `title` (text)
-- `file_url` (text)
-- `file_type` (text, e.g. 'application/pdf', 'image/jpeg')
-- `file_size` (int8)
-- `category` (text, nullable - e.g. "Insurance", "Registration", "Receipt")
-- `uploaded_at` (timestamptz)
+Columns used by the app:
 
-## `service_reminders`
-Tracks upcoming maintenance tasks based on date or odometer thresholds.
-- `id` (uuid, primary key)
-- `vehicle_id` (uuid, references `vehicles.id`, ON DELETE CASCADE)
-- `user_id` (uuid, references `profiles.id`)
-- `title` (text)
-- `description` (text, nullable)
-- `due_date` (date, nullable)
-- `due_odometer` (int4, nullable)
-- `is_completed` (boolean, default false)
-- `created_at` (timestamptz)
+- `id`
+- `created_at`
+- `display_name`
+- `avatar_url`
+- `currency`
+- `distance_unit`
+- `encrypted_llm_key`
+- `encrypted_openai_key`
+- `encrypted_deepseek_key`
+- `preferred_llm_provider`
 
-## RLS Security Model
-In Supabase Database -> Authentication:
-All tables enforce strictly authenticated Row Level Security (`RLS`).
-- `profiles`: Users can only read (`SELECT`) and write (`UPDATE`) rows where `auth.uid() = id`.
-- `vehicles`: Users can only interact with rows where `auth.uid() = user_id`.
-- `fuel_logs`, `maintenance_logs`, `custom_logs`, `custom_log_categories`: These tables strictly enforce safety via complex relational joins ensuring `vehicles.id = table.vehicle_id` AND `vehicles.user_id = auth.uid()`.
+Notes:
+
+- The app reads and writes `users`, not `profiles`
+- Encrypted provider keys are stored here after AES-256-GCM encryption
+
+### `vehicles`
+
+Garage records owned by a user.
+
+Columns used by the app:
+
+- `id`
+- `user_id`
+- `make`
+- `model`
+- `year`
+- `baseline_odometer`
+- `image_url`
+- `vin`
+- `license_plate`
+- `color`
+- `nickname`
+- `engine_type`
+- `transmission`
+- `notes`
+- `custom_fields`
+- `tyre_info`
+- `vehicle_type`
+- `powertrain`
+- `battery_capacity_kwh`
+- `created_at`
+
+### `fuel_logs`
+
+Fuel and charge events associated with a vehicle.
+
+Columns used by the app:
+
+- `id`
+- `vehicle_id`
+- `date`
+- `odometer`
+- `fuel_volume`
+- `total_cost`
+- `calculated_efficiency`
+- `energy_type`
+- `estimated_range`
+- `created_at`
+
+Notes:
+
+- `fuel_volume` also represents charge energy for EV-related entries
+- `energy_type` currently uses values such as `fuel` and `charge`
+
+### `maintenance_logs`
+
+Maintenance events associated with a vehicle.
+
+Columns used by the app:
+
+- `id`
+- `vehicle_id`
+- `user_id`
+- `date`
+- `service_type`
+- `cost`
+- `notes`
+- `receipt_url`
+- `created_at`
+
+Important:
+
+- There is currently no `provider` column in the migrated schema
+- Provider/shop names are folded into `service_type` and `notes`
+
+### `custom_log_categories`
+
+Vehicle-scoped custom tracker definitions.
+
+Columns used by the app:
+
+- `id`
+- `vehicle_id`
+- `name`
+- `icon`
+- `color_theme`
+- `track_cost`
+- `created_at`
+
+### `custom_logs`
+
+Entries for custom tracker categories.
+
+Columns used by the app:
+
+- `id`
+- `vehicle_id`
+- `category_id`
+- `date`
+- `cost`
+- `notes`
+- `created_at`
+
+## Supporting Tables
+
+### `documents`
+
+Metadata for uploaded files in the `vehicle-documents` storage bucket.
+
+Columns:
+
+- `id`
+- `vehicle_id`
+- `file_path`
+- `file_name`
+- `content_type`
+- `size_bytes`
+- `maintenance_log_id`
+- `created_at`
+
+Notes:
+
+- The app writes `vehicle_id`, `file_path`, and `file_name` today
+- This is the backing store for receipt uploads, but there is no standalone vault UI route yet
+
+### `service_reminders`
+
+Reminder rules tied to a vehicle.
+
+Columns:
+
+- `id`
+- `vehicle_id`
+- `service_type`
+- `recurring_months`
+- `recurring_distance`
+- `last_completed_date`
+- `last_completed_odometer`
+- `created_at`
+- `updated_at`
+
+Notes:
+
+- The schema and actions exist
+- The current main maintenance page does not render reminder management yet
+
+### `user_badges`
+
+Earned achievements for a user.
+
+Columns:
+
+- `id`
+- `user_id`
+- `badge_id`
+- `earned_at`
+
+## Storage Buckets
+
+The current branch expects these buckets and policies:
+
+- `avatars`
+- `vehicles`
+- `vehicle-documents`
+
+## RLS Model
+
+The schema consistently applies ownership through `auth.uid()`, either directly on `users` or indirectly through `vehicles.user_id`.
+
+Examples:
+
+- `users` rows are self-owned by `id`
+- `vehicles` rows are owned by `user_id`
+- `fuel_logs`, `maintenance_logs`, `documents`, `service_reminders`, and `custom_logs` are protected through their parent `vehicle_id`
+
+## Type Sync Note
+
+If schema changes land, regenerate or update `src/types/supabase.ts` in the same change so the codebase does not drift from the migrations.

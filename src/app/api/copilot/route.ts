@@ -160,7 +160,9 @@ export async function POST(req: Request) {
         // OpenAI / Deepseek Support (OpenAI Compatible)
         else {
             const baseUrl = provider === 'deepseek' ? 'https://api.deepseek.com/v1' : 'https://api.openai.com/v1';
-            const model = provider === 'deepseek' ? 'deepseek-chat' : (process.env.OPENAI_MODEL || 'gpt-4o-mini');
+            const model = provider === 'deepseek'
+                ? (process.env.DEEPSEEK_MODEL || 'deepseek-chat')
+                : (process.env.OPENAI_MODEL || 'gpt-4o-mini');
 
             // Format messages for OpenAI
             const openaiMessages = [

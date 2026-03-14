@@ -179,8 +179,8 @@ export async function updateVehicle(id: string, formData: FormData) {
         return { error: error.message };
     }
 
-    revalidatePath(`/(dashboard)/vehicles/${id}`, "page");
-    revalidatePath("/(dashboard)/vehicles", "layout");
+    revalidatePath(`/dashboard/vehicles/${id}`);
+    revalidatePath("/dashboard/profile");
 
     return { success: true, vehicle: data };
 }

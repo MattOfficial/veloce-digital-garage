@@ -71,7 +71,6 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                     date: ocrData.date || new Date().toISOString().split('T')[0],
                     service_type: ocrData.provider ? `Service at ${ocrData.provider}` : "General Maintenance",
                     cost: parseFloat(ocrData.total_cost) || 0,
-                    provider: ocrData.provider || null,
                     notes: notes,
                     receipt_url: filePath // Link back to the storage path
                 };

@@ -51,8 +51,8 @@ export async function submitMaintenanceLog(formData: FormData) {
     }
 
     // Revalidate paths that might show this data
-    revalidatePath("/maintenance");
-    revalidatePath(`/vehicles/${vehicle_id}`);
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath(`/dashboard/vehicles/${vehicle_id}`);
 
     let newBadges: any[] = [];
     if (user) {
@@ -89,8 +89,8 @@ export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
         return { error: error.message };
     }
 
-    revalidatePath("/maintenance");
-    revalidatePath(`/vehicles/${vehicleId}`);
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
 
     return { success: true };
 }
@@ -138,8 +138,8 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
         return { error: updateError.message };
     }
 
-    revalidatePath("/maintenance");
-    revalidatePath(`/vehicles/${vehicle_id}`);
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath(`/dashboard/vehicles/${vehicle_id}`);
 
     return { success: true, newBadges: [] };
 }

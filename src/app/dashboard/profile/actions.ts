@@ -96,6 +96,6 @@ export async function deleteLlmKey(provider: 'gemini' | 'openai' | 'deepseek' = 
         return { error: "Failed to delete API key." };
     }
 
-    revalidatePath("/profile");
+    revalidatePath("/dashboard/profile");
     return { success: true };
 }

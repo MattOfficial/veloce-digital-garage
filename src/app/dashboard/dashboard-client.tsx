@@ -147,7 +147,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 description={`Tracking analytics and insights for your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}.`}
                 icon={LayoutDashboard}
             >
-                <Link href={`/vehicles/${selectedVehicle.id}`}>
+                <Link href={`/dashboard/vehicles/${selectedVehicle.id}`}>
                     <Button variant="outline" className="rounded-full shadow-sm hover:bg-primary/5 hover:text-primary transition-colors border-primary/20">
                         View Full Vehicle Profile
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -396,7 +396,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                 </Button>
                             </Link>
                             {/* We will add a wrapper to open the maintenance modal from here later if needed, for now we will link to the maintenance tab or the vehicle view */}
-                            <Link href={`/vehicles/${selectedVehicle.id}`} className="block w-full">
+                            <Link href={`/dashboard/vehicles/${selectedVehicle.id}`} className="block w-full">
                                 <Button className="w-full justify-start h-14 rounded-xl text-md" variant="outline">
                                     <div className="bg-muted p-2 rounded-lg mr-3">
                                         <Wrench className="h-5 w-5 text-muted-foreground" />

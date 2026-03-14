@@ -29,6 +29,8 @@ export async function extractDataFromInvoice(fileUrl: string) {
     }
 
     try {
+        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
             headers: {
@@ -36,7 +38,7 @@ export async function extractDataFromInvoice(fileUrl: string) {
                 Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                model: "gemini-1.5-flash",
+                model: modelName,
                 messages: [
                     {
                         role: "system",

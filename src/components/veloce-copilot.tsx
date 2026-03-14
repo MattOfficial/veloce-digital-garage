@@ -46,6 +46,12 @@ export function VeloceCopilot() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { vehicles, fetchVehicles } = useVehicleStore();
     const { profile } = useUserStore();
+    const hasPreferredProviderKey =
+        profile.preferredProvider === "gemini"
+            ? profile.hasLlmKey
+            : profile.preferredProvider === "openai"
+                ? profile.hasOpenAiKey
+                : profile.hasDeepseekKey;
 
     // Scroll to bottom on new message
     useEffect(() => {
@@ -107,11 +113,11 @@ export function VeloceCopilot() {
             }
 
             // 2. Fallback to Gemini LLM for conversational matching
-            if (!profile.hasLlmKey) {
+            if (!hasPreferredProviderKey) {
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: "I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your Gemini API key in Profile Settings to unlock conversational AI."
+                    content: `I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your ${profile.preferredProvider === 'gemini' ? 'Gemini' : profile.preferredProvider === 'openai' ? 'OpenAI' : 'DeepSeek'} API key in Profile Settings to unlock conversational AI.`
                 }]);
                 setIsTyping(false);
                 return;

@@ -22,16 +22,18 @@ Before Vercel can host your app, your code needs to live on a cloud platform lik
 
 Environment variables are secret keys that allow your app to talk to your database securely without exposing the passwords in the code. Your app needs these to function on the live internet.
 
-Find the **Environment Variables** dropdown on the "Configure Project" screen. You will need to add these four keys one by one (enter the Key name, then the Value, and click Add):
+Find the **Environment Variables** dropdown on the "Configure Project" screen. Add the required keys first, then the optional model overrides if you want to pin model names explicitly:
 
 | Key Name | Where to find the Value |
 | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Go to your Supabase Project Dashboard > Project Settings (gear icon) > API. Copy the **Project URL**. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | In the exact same Supabase settings page, copy the long key labeled `anon` `public`. |
 | `ENCRYPTION_MASTER_KEY` | Use the exact same 32-byte secret code you generated when setting up the app locally in your `.env.local` file. |
-| `GEMINI_MODEL` | Type in exactly: `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Optional. Leave unset to use the app default, or set your preferred Gemini model override. |
+| `OPENAI_MODEL` | Optional. Leave unset to use the app default, or set your preferred OpenAI model override. |
+| `DEEPSEEK_MODEL` | Optional. Leave unset to use the app default, or set your preferred DeepSeek model override. |
 
-*Note: You DO NOT need to add `GEMINI_API_KEY` here, because the application allows individual users to securely bring their own key by saving it in their Profile settings!*
+*Note: You do not add user LLM API keys in Vercel. Users bring their own keys inside the app, and those keys are encrypted before storage. `ENCRYPTION_MASTER_KEY` is the only server-side secret required for that flow.*
 
 Once all variables are added, click the big **Deploy** button! Vercel will now build your app. This usually takes 1 to 3 minutes.
 
