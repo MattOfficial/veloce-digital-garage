@@ -29,6 +29,14 @@ export type PendingAction =
     | { type: "log_fuel_draft"; payload: FuelDraftPayload }
     | { type: "log_maintenance_draft"; payload: MaintenanceDraftPayload };
 
+export type CopilotResponseSource =
+    | "local-nlp"
+    | "edge-local"
+    | "server"
+    | "server-gemini"
+    | "server-openai"
+    | "server-deepseek";
+
 export interface CopilotAttachment {
     url: string;
     name: string;
@@ -54,6 +62,7 @@ export interface CopilotResponseBody {
     role: "assistant";
     content: string;
     pendingAction?: PendingAction;
+    source?: CopilotResponseSource;
 }
 
 export interface OcrLineItem {

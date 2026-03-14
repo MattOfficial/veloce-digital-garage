@@ -6,6 +6,7 @@ import {
     type CopilotAttachment,
     type CopilotRequestMessage,
     type CopilotResponseBody,
+    type CopilotResponseSource,
     type CopilotVehicleContext,
     type PendingAction,
     type ProviderPreference,
@@ -174,11 +175,16 @@ function parsePendingAction(type: unknown, payload: unknown): PendingAction | nu
     return null;
 }
 
-function createAssistantResponse(content: string, pendingAction?: PendingAction): CopilotResponseBody {
+function createAssistantResponse(
+    content: string,
+    pendingAction?: PendingAction,
+    source: CopilotResponseSource = "server",
+): CopilotResponseBody {
     return {
         role: "assistant",
         content,
         pendingAction,
+        source,
     };
 }
 
@@ -188,7 +194,11 @@ export async function POST(req: Request) {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-            return Response.json({ role: "assistant", content: `You must be logged in to use ${brand.ai.copilotName}.` });
+            return Response.json({
+                role: "assistant",
+                content: `You must be logged in to use ${brand.ai.copilotName}.`,
+                source: "server",
+            } satisfies CopilotResponseBody);
         }
 
         const { data: userData } = await supabase
@@ -213,14 +223,14 @@ export async function POST(req: Request) {
 
         if (!encryptedKey) {
             const providerName = provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek';
-            return Response.json(createAssistantResponse(`To use ${brand.ai.copilotName} with ${providerName}, please provide your API key in your Profile Settings.`));
+            return Response.json(createAssistantResponse(`To use ${brand.ai.copilotName} with ${providerName}, please provide your API key in your Profile Settings.`, undefined, "server"));
         }
 
         let apiKey = "";
         try {
             apiKey = decrypt(encryptedKey);
         } catch {
-            return Response.json(createAssistantResponse("Failed to decrypt your API key. Please re-enter it in Profile Settings."));
+            return Response.json(createAssistantResponse("Failed to decrypt your API key. Please re-enter it in Profile Settings.", undefined, "server"));
         }
 
         const { messages, vehicles } = parseRequestBody(await req.json());
@@ -326,16 +336,16 @@ export async function POST(req: Request) {
                 const pendingAction = parsePendingAction(functionCall.name, functionCall.args);
                 if (pendingAction) {
                     return Response.json(
-                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction)
+                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction, "server-gemini")
                     );
                 }
 
                 return Response.json(
-                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.")
+                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, "server-gemini")
                 );
             }
 
-            return Response.json(createAssistantResponse(response.text || "I wasn't able to generate a response."));
+            return Response.json(createAssistantResponse(response.text || "I wasn't able to generate a response.", undefined, "server-gemini"));
         } 
         
         // OpenAI / Deepseek Support (OpenAI Compatible)
@@ -426,17 +436,25 @@ export async function POST(req: Request) {
                 );
 
                 if (pendingAction) {
+                    const responseSource: CopilotResponseSource = provider === "deepseek" ? "server-deepseek" : "server-openai";
                     return Response.json(
-                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction)
+                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction, responseSource)
                     );
                 }
 
+                const responseSource: CopilotResponseSource = provider === "deepseek" ? "server-deepseek" : "server-openai";
                 return Response.json(
-                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.")
+                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, responseSource)
                 );
             }
 
-            return Response.json(createAssistantResponse(message?.content || "I wasn't able to generate a response."));
+            return Response.json(
+                createAssistantResponse(
+                    message?.content || "I wasn't able to generate a response.",
+                    undefined,
+                    provider === "deepseek" ? "server-deepseek" : "server-openai",
+                )
+            );
         }
 
     } catch (error: unknown) {

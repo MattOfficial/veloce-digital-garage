@@ -15,6 +15,46 @@ type CompromiseNumberJson = {
     } | number;
 };
 
+const questionStarterPattern = /^(how|what|why|when|where|which|who|can|could|should|would|will|is|are|do|does|did)\b/i;
+const explicitLogCommandPattern = /\b(log|record|add|save|track)\b/i;
+
+const fuelActionPhrases = [
+    "filled up",
+    "fill up",
+    "refueled",
+    "refuelled",
+    "got gas",
+    "got petrol",
+    "got diesel",
+    "tanked up",
+    "charged up",
+    "plugged in",
+    "charging session",
+    "put in",
+];
+
+const maintenanceActionPhrases = [
+    "oil change",
+    "got serviced",
+    "service done",
+    "replaced",
+    "fixed",
+    "repaired",
+    "installed",
+    "rotated",
+    "detailed",
+    "washed",
+];
+
+function hasQuestionSignal(content: string): boolean {
+    const trimmed = content.trim();
+    return trimmed.includes("?") || questionStarterPattern.test(trimmed);
+}
+
+function includesPhrase(content: string, phrases: string[]): boolean {
+    return phrases.some((phrase) => content.includes(phrase));
+}
+
 export type NLPEngineResult =
     | {
         intent: 'log_fuel_draft';
@@ -49,8 +89,11 @@ export function parseMessage(messages: NlpMessage[], vehicles: NlpVehicle[]): NL
     for (const msg of messages) {
         if (msg.role !== 'user') continue;
 
+        const normalizedContent = msg.content.toLowerCase();
         const doc = nlp(msg.content);
         const words = doc.terms().out('array').map((w: string) => w.toLowerCase());
+        const isQuestionLike = hasQuestionSignal(msg.content);
+        const hasExplicitLogCommand = explicitLogCommandPattern.test(msg.content);
 
         let msgIsFuel = false;
         let msgIsMaintenance = false;
@@ -60,8 +103,20 @@ export function parseMessage(messages: NlpMessage[], vehicles: NlpVehicle[]): NL
             if (maintenanceKeywords.some(k => word.includes(k))) msgIsMaintenance = true;
         }
 
-        if (msgIsFuel && currentIntent === 'unknown') currentIntent = 'log_fuel_draft';
-        if (msgIsMaintenance && currentIntent === 'unknown') currentIntent = 'log_maintenance_draft';
+        const msgLooksLikeFuelLog = msgIsFuel && (
+            hasExplicitLogCommand ||
+            includesPhrase(normalizedContent, fuelActionPhrases) ||
+            (!isQuestionLike && /\b(i|we)\b/.test(normalizedContent))
+        );
+
+        const msgLooksLikeMaintenanceLog = msgIsMaintenance && (
+            hasExplicitLogCommand ||
+            includesPhrase(normalizedContent, maintenanceActionPhrases) ||
+            (!isQuestionLike && /\b(i|we)\b/.test(normalizedContent))
+        );
+
+        if (msgLooksLikeFuelLog && currentIntent === 'unknown') currentIntent = 'log_fuel_draft';
+        if (msgLooksLikeMaintenanceLog && currentIntent === 'unknown') currentIntent = 'log_maintenance_draft';
 
         // Vehicle resolution (most recent mentions override older ones)
         for (const v of vehicles) {

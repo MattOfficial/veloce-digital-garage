@@ -152,6 +152,8 @@ export const ui = {
             online: "Online",
             keyMissing: "Key Missing",
             newChatTitle: "New Chat / Clear Context",
+            experimentalReady: "Edge local experimental ready",
+            experimentalNotReady: "Edge local model detected but not ready yet",
         },
         emptyState: {
             title: "How can I help?",
@@ -173,6 +175,15 @@ export const ui = {
             openai: "OpenAI",
             deepseek: "Deepseek",
             deepseekFull: "DeepSeek",
+            edgeExperimental: "Edge Local Exp",
+        },
+        sources: {
+            localNlp: "Local NLP",
+            edgeLocal: "Edge Local",
+            server: "Server",
+            serverGemini: "Server Gemini",
+            serverOpenAi: "Server OpenAI",
+            serverDeepSeek: "Server DeepSeek",
         },
         titles: {
             close: "Close",
