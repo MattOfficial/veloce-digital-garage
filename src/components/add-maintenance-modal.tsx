@@ -10,6 +10,7 @@ import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { submitMaintenanceLog, editMaintenanceLog } from "@/app/actions/maintenance";
 import { MaintenanceLog } from "@/types/database";
+import type { BadgeDefinition } from "@/lib/badges";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -80,7 +81,7 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 // Success! Refresh global state and close modal
                 toast.success(logToEdit ? "Service record updated!" : "Service record saved!");
                 if ("newBadges" in result && result.newBadges?.length) {
-                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
                 fetchVehicles();
                 setOpen(false);

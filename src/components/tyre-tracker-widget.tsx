@@ -80,17 +80,16 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
 
     const tyreInfo = vehicle.tyre_info;
 
-    // Backward compatibility migration
-    const legacyTire: TireItem | undefined = (tyreInfo && tyreInfo.brand && tyreInfo.installed_date && tyreInfo.installed_odo) ? {
-        brand: tyreInfo.brand,
-        installed_date: tyreInfo.installed_date,
-        installed_odo: tyreInfo.installed_odo,
-        dot_code: tyreInfo.dot_code
-    } : undefined;
-
     const isMoto = vehicle.vehicle_type === 'motorcycle';
 
     const tires = useMemo(() => {
+        const legacyTire: TireItem | undefined = (tyreInfo && tyreInfo.brand && tyreInfo.installed_date && tyreInfo.installed_odo) ? {
+            brand: tyreInfo.brand,
+            installed_date: tyreInfo.installed_date,
+            installed_odo: tyreInfo.installed_odo,
+            dot_code: tyreInfo.dot_code
+        } : undefined;
+
         let mappedTires: Partial<Record<WheelPos, TireItem | undefined>> = {};
         if (isMoto) {
             // For motorcycles, front_left = Front, rear_left = Rear (repurposing DB fields)
@@ -107,7 +106,7 @@ export function TyreTrackerWidget({ vehicle, latestOdometer }: { vehicle: Vehicl
             };
         }
         return mappedTires;
-    }, [tyreInfo, isMoto, legacyTire]);
+    }, [tyreInfo, isMoto]);
 
     const hasAnyTires = Object.values(tires).some(t => t !== undefined);
 

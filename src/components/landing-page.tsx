@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { ArrowRight, Car, Fuel, Wrench, Activity, ShieldCheck, BarChart3 } from "lucide-react";
-import { InteractiveBackground } from "./interactive-background";
 
 const features = [
     {
@@ -114,7 +113,7 @@ export function LandingPage() {
                     viewport={{ once: true, margin: "-100px" }}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-8"
                 >
-                    {features.map((feature, idx) => (
+                    {features.map((feature) => (
                         <motion.div
                             key={feature.title}
                             variants={itemVariants}

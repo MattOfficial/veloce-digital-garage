@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { extractDataFromInvoice } from "@/app/actions/ocr";
-import { CheckCircle2, Loader2, FileText, Plus, Trash } from "lucide-react";
+import { CheckCircle2, Loader2, FileText } from "lucide-react";
+import type { OcrExtractedData, OcrLineItem } from "@/types/ai";
+import { getErrorMessage } from "@/utils/errors";
 
 interface OcrReviewModalProps {
     vehicleId: string;
@@ -21,30 +23,51 @@ interface OcrReviewModalProps {
 export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, onSuccess }: OcrReviewModalProps) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPending, startTransition] = useTransition();
-    const [ocrData, setOcrData] = useState<any>(null);
+    const [ocrData, setOcrData] = useState<OcrExtractedData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const updateOcrField = <K extends keyof OcrExtractedData>(field: K, value: OcrExtractedData[K]) => {
+        setOcrData((currentData) => currentData ? { ...currentData, [field]: value } : currentData);
+    };
+
+    const updateLineItem = (index: number, field: keyof OcrLineItem, value: OcrLineItem["service"] | OcrLineItem["cost"]) => {
+        setOcrData((currentData) => {
+            if (!currentData) {
+                return currentData;
+            }
+
+            const nextLineItems = currentData.line_items.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, [field]: value } : item
+            );
+
+            return {
+                ...currentData,
+                line_items: nextLineItems,
+            };
+        });
+    };
+
     // Initial Trigger when modal opens with a new file URL
-    const processDocument = async () => {
+    const processDocument = useCallback(async () => {
         if (!fileUrl) return;
         setIsProcessing(true);
         setError(null);
         try {
             const data = await extractDataFromInvoice(fileUrl);
             setOcrData(data);
-        } catch (err: any) {
-            setError(err.message || "Failed to analyze document.");
+        } catch (error: unknown) {
+            setError(getErrorMessage(error, "Failed to analyze document."));
         } finally {
             setIsProcessing(false);
         }
-    };
+    }, [fileUrl]);
 
     // Auto-run processing when modal opens if we have a URL but no data yet
     useEffect(() => {
         if (isOpen && fileUrl && !ocrData && !isProcessing && !error) {
-            processDocument();
+            void processDocument();
         }
-    }, [isOpen, fileUrl]);
+    }, [error, fileUrl, isOpen, isProcessing, ocrData, processDocument]);
 
 
     const handleSave = async (e: React.FormEvent) => {
@@ -62,7 +85,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                 // and append line items to the notes section. In a full production app,
                 // we'd probably create multiple rows or a dedicated line_items table.
 
-                const lineItemsText = ocrData.line_items?.map((i: any) => `- ${i.service}: $${i.cost}`).join("\n") || "";
+                const lineItemsText = ocrData.line_items.map((lineItem) => `- ${lineItem.service}: $${lineItem.cost}`).join("\n");
                 const notes = `Auto-extracted from receipt.\n\nLine Items:\n${lineItemsText}`;
 
                 const maintenanceEntry = {
@@ -70,7 +93,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                     user_id: session.user.id,
                     date: ocrData.date || new Date().toISOString().split('T')[0],
                     service_type: ocrData.provider ? `Service at ${ocrData.provider}` : "General Maintenance",
-                    cost: parseFloat(ocrData.total_cost) || 0,
+                    cost: Number.parseFloat(String(ocrData.total_cost)) || 0,
                     notes: notes,
                     receipt_url: filePath // Link back to the storage path
                 };
@@ -90,8 +113,8 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
 
                 onSuccess();
                 onClose();
-            } catch (err: any) {
-                setError(err.message || "Failed to save records.");
+            } catch (error: unknown) {
+                setError(getErrorMessage(error, "Failed to save records."));
             }
         });
     };
@@ -105,7 +128,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                         AI Receipt Analysis
                     </DialogTitle>
                     <DialogDescription>
-                        Review the extracted data before saving it to your vehicle's history.
+                        Review the extracted data before saving it to your vehicle&apos;s history.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -132,7 +155,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                 <Label className="text-xs text-muted-foreground uppercase">Service Provider</Label>
                                 <Input
                                     defaultValue={ocrData.provider || ''}
-                                    onChange={(e) => setOcrData({ ...ocrData, provider: e.target.value })}
+                                    onChange={(e) => updateOcrField("provider", e.target.value)}
                                     className="bg-white/5 border-white/10"
                                 />
                             </div>
@@ -141,7 +164,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                 <Input
                                     type="date"
                                     defaultValue={ocrData.date || ''}
-                                    onChange={(e) => setOcrData({ ...ocrData, date: e.target.value })}
+                                    onChange={(e) => updateOcrField("date", e.target.value)}
                                     className="bg-white/5 border-white/10 [color-scheme:dark]"
                                 />
                             </div>
@@ -153,7 +176,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                         type="number"
                                         step="0.01"
                                         defaultValue={ocrData.total_cost || ''}
-                                        onChange={(e) => setOcrData({ ...ocrData, total_cost: e.target.value })}
+                                        onChange={(e) => updateOcrField("total_cost", e.target.value)}
                                         className="pl-8 bg-white/5 border-white/10 font-bold text-emerald-500"
                                     />
                                 </div>
@@ -167,15 +190,11 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                             </Label>
 
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                {ocrData.line_items?.map((item: any, idx: number) => (
+                                {ocrData.line_items.map((item, idx) => (
                                     <div key={idx} className="flex gap-2 items-center bg-black/20 p-2 rounded-lg border border-white/5">
                                         <Input
                                             value={item.service}
-                                            onChange={(e) => {
-                                                const newItems = [...ocrData.line_items];
-                                                newItems[idx].service = e.target.value;
-                                                setOcrData({ ...ocrData, line_items: newItems });
-                                            }}
+                                            onChange={(e) => updateLineItem(idx, "service", e.target.value)}
                                             className="h-8 text-sm bg-transparent border-none shadow-none focus-visible:ring-1"
                                         />
                                         <div className="relative w-24 shrink-0">
@@ -183,11 +202,7 @@ export function OcrReviewModal({ vehicleId, fileUrl, filePath, isOpen, onClose, 
                                             <Input
                                                 type="number"
                                                 value={item.cost}
-                                                onChange={(e) => {
-                                                    const newItems = [...ocrData.line_items];
-                                                    newItems[idx].cost = e.target.value;
-                                                    setOcrData({ ...ocrData, line_items: newItems });
-                                                }}
+                                                onChange={(e) => updateLineItem(idx, "cost", e.target.value)}
                                                 className="h-8 pl-6 text-sm bg-transparent border-white/10 text-right"
                                             />
                                         </div>

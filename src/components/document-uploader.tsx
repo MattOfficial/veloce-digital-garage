@@ -2,12 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, File, AlertCircle, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { UploadCloud, AlertCircle, Loader2, Lock } from "lucide-react";
 import { MotionWrapper } from "./motion-wrapper";
 import { useUserStore } from "@/store/user-store";
-import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { getErrorMessage } from "@/utils/errors";
 
 interface DocumentUploaderProps {
     vehicleId: string;
@@ -38,7 +37,7 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
             // Path: /userId/vehicleId/uniqueFilename
             const filePath = `${user.id}/${vehicleId}/${fileName}`;
 
-            const { data, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('vehicle-documents')
                 .upload(filePath, file, {
                     cacheControl: '3600',
@@ -53,9 +52,9 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
 
             onUploadSuccess(publicUrl, filePath);
 
-        } catch (err: any) {
-            console.error("Upload error:", err);
-            setError(err.message || "Something went wrong uploading the file.");
+        } catch (error: unknown) {
+            console.error("Upload error:", error);
+            setError(getErrorMessage(error, "Something went wrong uploading the file."));
         } finally {
             setIsUploading(false);
         }

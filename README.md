@@ -96,8 +96,8 @@ Pre-commit:
 Pre-push:
 
 - Hook: `.husky/pre-push`
-- Command: `npm run build`
-- Runs the production Next build and blocks pushes if it fails
+- Commands: `npm run lint` then `npm run build`
+- Runs ESLint first and then the production Next build, blocking pushes if either check fails
 
 Placeholders in `.env.example` and docs are allowed by the secret scan.
 

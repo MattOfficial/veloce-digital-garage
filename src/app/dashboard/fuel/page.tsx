@@ -276,11 +276,11 @@ export default function FuelPage() {
 
                     {hasRangeData && (
                         <MotionWrapper delay={0.6}>
-                            <Card className="overflow-hidden">
-                                <CardHeader className="border-b border-white/5">
-                                    <CardTitle>Battery Range Trend</CardTitle>
-                                    <CardDescription>Track your EV's estimated battery range over time.</CardDescription>
-                                </CardHeader>
+                                <Card className="overflow-hidden">
+                                    <CardHeader className="border-b border-white/5">
+                                        <CardTitle>Battery Range Trend</CardTitle>
+                                        <CardDescription>Track your EV&apos;s estimated battery range over time.</CardDescription>
+                                    </CardHeader>
                                 <CardContent className="h-[250px] w-full pt-6">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={chartData.filter(d => d.range !== null)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

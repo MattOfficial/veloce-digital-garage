@@ -3,6 +3,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { encrypt } from "@/utils/crypto";
+import type { ProviderPreference } from "@/types/ai";
+import type { TablesUpdate } from "@/types/supabase";
 
 export async function updateProfile(formData: FormData) {
     const displayName = formData.get("display_name") as string;
@@ -12,7 +14,7 @@ export async function updateProfile(formData: FormData) {
     const llmKey = formData.get("llm_key") as string;
     const openAiKey = formData.get("openai_key") as string;
     const deepseekKey = formData.get("deepseek_key") as string;
-    const preferredProvider = formData.get("preferred_provider") as string;
+    const preferredProvider = formData.get("preferred_provider") as ProviderPreference | null;
 
     const supabase = await createClient();
 
@@ -22,7 +24,7 @@ export async function updateProfile(formData: FormData) {
         return { error: "You must be logged in to update your profile." };
     }
 
-    const updates: any = {};
+    const updates: TablesUpdate<"users"> = {};
     updates.display_name = displayName || null;
     updates.avatar_url = avatarUrl || null;
     updates.currency = currency || '₹';
@@ -32,8 +34,8 @@ export async function updateProfile(formData: FormData) {
     if (llmKey && llmKey.trim() !== '') {
         try {
             updates.encrypted_llm_key = encrypt(llmKey.trim());
-        } catch (e: any) {
-            console.error("Encryption error:", e);
+        } catch (error: unknown) {
+            console.error("Encryption error:", error);
             return { error: "Failed to encrypt Google Gemini API key." };
         }
     }
@@ -41,8 +43,8 @@ export async function updateProfile(formData: FormData) {
     if (openAiKey && openAiKey.trim() !== '') {
         try {
             updates.encrypted_openai_key = encrypt(openAiKey.trim());
-        } catch (e: any) {
-            console.error("Encryption error:", e);
+        } catch (error: unknown) {
+            console.error("Encryption error:", error);
             return { error: "Failed to encrypt OpenAI API key." };
         }
     }
@@ -50,8 +52,8 @@ export async function updateProfile(formData: FormData) {
     if (deepseekKey && deepseekKey.trim() !== '') {
         try {
             updates.encrypted_deepseek_key = encrypt(deepseekKey.trim());
-        } catch (e: any) {
-            console.error("Encryption error:", e);
+        } catch (error: unknown) {
+            console.error("Encryption error:", error);
             return { error: "Failed to encrypt Deepseek API key." };
         }
     }

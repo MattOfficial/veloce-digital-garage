@@ -1,38 +1,34 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Link2, PlusCircle, CheckCircle2, Lock, Settings, RotateCcw, Paperclip } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Loader2, Link2, CheckCircle2, RotateCcw, Paperclip } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useVehicleStore } from "@/store/vehicle-store";
-import { MotionWrapper } from "./motion-wrapper";
-import { Card } from "./ui/card";
 import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { submitMaintenanceLog } from "@/app/actions/maintenance";
 import { useUserStore } from "@/store/user-store";
 import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import type {
+    CopilotAttachment,
+    CopilotRequestMessage,
+    CopilotResponseBody,
+    CopilotVehicleContext,
+    PendingAction,
+} from "@/types/ai";
+import type { BadgeDefinition } from "@/lib/badges";
+import { getErrorMessage } from "@/utils/errors";
 
 const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
     ssr: false,
     loading: () => <div className="animate-pulse bg-white/10 h-4 w-3/4 rounded"></div>
 });
 
-interface ChatMessage {
+interface ChatMessage extends CopilotRequestMessage {
     id: string;
-    role: "user" | "assistant";
-    content: string;
-    attachments?: {
-        url: string;
-        name: string;
-        mimeType: string;
-    }[];
-    pendingAction?: {
-        type: "log_fuel_draft" | "log_maintenance_draft";
-        payload: any;
-    };
+    pendingAction?: PendingAction;
 }
 
 export function VeloceCopilot() {
@@ -40,7 +36,7 @@ export function VeloceCopilot() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
-    const [pendingAttachments, setPendingAttachments] = useState<{ url: string, name: string, mimeType: string }[]>([]);
+    const [pendingAttachments, setPendingAttachments] = useState<CopilotAttachment[]>([]);
     const [isUploadingFile, setIsUploadingFile] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,14 +95,16 @@ export function VeloceCopilot() {
 
             // If NLP successfully drafted a full payload locally
             if (nlpResult.intent !== 'unknown' && nlpResult.payload) {
+                const pendingAction: PendingAction =
+                    nlpResult.intent === "log_fuel_draft"
+                        ? { type: "log_fuel_draft", payload: nlpResult.payload }
+                        : { type: "log_maintenance_draft", payload: nlpResult.payload };
+
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
                     content: "I've prepared that log for you. Please review and confirm.",
-                    pendingAction: {
-                        type: nlpResult.intent as "log_fuel_draft" | "log_maintenance_draft",
-                        payload: nlpResult.payload
-                    }
+                    pendingAction
                 }]);
                 setIsTyping(false);
                 return;
@@ -124,7 +122,7 @@ export function VeloceCopilot() {
             }
 
             // Context injection for the AI
-            const garageContext = vehicles.map(v => ({
+            const garageContext: CopilotVehicleContext[] = vehicles.map(v => ({
                 id: v.id,
                 make: v.make,
                 model: v.model,
@@ -143,7 +141,7 @@ export function VeloceCopilot() {
             });
 
             if (!res.ok) throw new Error("Failed to get response");
-            const data = await res.json();
+            const data = await res.json() as CopilotResponseBody;
 
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -155,12 +153,12 @@ export function VeloceCopilot() {
             setMessages(prev => [...prev, aiMsg]);
             setIsTyping(false);
 
-        } catch (e) {
-            console.error(e);
+        } catch (error: unknown) {
+            console.error(error);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
-                content: "An error occurred connecting to the AI. Please try again later."
+                content: getErrorMessage(error, "An error occurred connecting to the AI. Please try again later.")
             }]);
             setIsTyping(false);
         }
@@ -171,9 +169,9 @@ export function VeloceCopilot() {
             const formData = new FormData();
             formData.append('vehicle_id', action.payload.vehicle_id);
             formData.append('date', action.payload.date || new Date().toISOString().split('T')[0]);
-            formData.append('odometer', action.payload.odometer);
-            formData.append('fuel_volume', action.payload.volume);
-            formData.append('total_cost', action.payload.cost);
+            formData.append('odometer', String(action.payload.odometer));
+            formData.append('fuel_volume', String(action.payload.volume));
+            formData.append('total_cost', String(action.payload.cost));
 
             const result = await submitFuelLog(formData);
             if (result.error) {
@@ -181,21 +179,21 @@ export function VeloceCopilot() {
             } else {
                 toast.success("Fuel log saved to your vehicle!");
                 if (result.newBadges?.length) {
-                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 // Easiest way to clear context is to reset the chat.
                 // We'll reset it to empty so the NLP engine starts fresh for the next command.
                 setTimeout(() => setMessages([]), 1500);
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
+                setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
             }
         } else if (action.type === 'log_maintenance_draft') {
             const formData = new FormData();
             formData.append('vehicle_id', action.payload.vehicle_id);
             formData.append('date', action.payload.date || new Date().toISOString().split('T')[0]);
             formData.append('service_type', action.payload.service_type);
-            formData.append('cost', action.payload.cost);
+            formData.append('cost', String(action.payload.cost));
             if (action.payload.notes) {
                 formData.append('notes', action.payload.notes);
             }
@@ -209,17 +207,17 @@ export function VeloceCopilot() {
             } else {
                 toast.success("Maintenance log saved to your vehicle!");
                 if (result.newBadges?.length) {
-                    result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                    result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
                 await fetchVehicles(); // Force a UI refresh to show the new log immediately
 
                 setTimeout(() => setMessages([]), 1500);
-                setMessages(messages.map(m => m.pendingAction === action ? { ...m, pendingAction: undefined, content: "✅ " + m.content } : m));
+                setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
             }
         }
     };
 
-    const handleDismissAction = (messageId: string) => {
+    const handleDismissAction = () => {
         // We can just clear the chat context entirely to start fresh, 
         // or just clear the pending action. Let's clear the pending action and append a system message, 
         // but since the NLP uses the full array, resetting the entire history on dismiss prevents the bug.
@@ -242,7 +240,7 @@ export function VeloceCopilot() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not logged in");
 
-            const newAttachments: { url: string, name: string, mimeType: string }[] = [];
+            const newAttachments: CopilotAttachment[] = [];
 
             for (const file of files) {
                 const fileExt = file.name.split('.').pop();
@@ -268,8 +266,8 @@ export function VeloceCopilot() {
 
             setPendingAttachments(prev => [...prev, ...newAttachments]);
 
-        } catch (err: any) {
-            toast.error(err.message || "Failed to upload file");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to upload file"));
         } finally {
             setIsUploadingFile(false);
             if (fileInputRef.current) {
@@ -336,7 +334,7 @@ export function VeloceCopilot() {
                                 <Bot className="h-12 w-12 opacity-20" />
                                 <div>
                                     <p className="font-medium">How can I help?</p>
-                                    <p className="text-sm mt-1">Try saying: "I filled up the Datsun for 1500 rupees today."</p>
+                                    <p className="text-sm mt-1">Try saying: &quot;I filled up the Datsun for 1500 rupees today.&quot;</p>
                                 </div>
                             </div>
                         )}
@@ -394,7 +392,7 @@ export function VeloceCopilot() {
                                                     size="sm"
                                                     variant="outline"
                                                     className="h-7 w-full text-xs border-white/10 text-white"
-                                                    onClick={() => handleDismissAction(msg.id)}
+                                                    onClick={() => handleDismissAction()}
                                                 >
                                                     Dismiss
                                                 </Button>

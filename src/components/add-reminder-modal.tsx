@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { BellRing, Calendar, Activity } from "lucide-react";
 import { createServiceReminder } from "@/app/actions/reminders";
 import { useUserStore } from "@/store/user-store";
+import { getErrorMessage } from "@/utils/errors";
 
 export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
     const [open, setOpen] = useState(false);
@@ -21,8 +22,8 @@ export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
             try {
                 await createServiceReminder(formData);
                 setOpen(false);
-            } catch (e: any) {
-                setError(e.message || "Failed to create reminder");
+            } catch (error: unknown) {
+                setError(getErrorMessage(error, "Failed to create reminder"));
             }
         });
     }
@@ -39,7 +40,7 @@ export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
                 <DialogHeader>
                     <DialogTitle>Setup Service Reminder</DialogTitle>
                     <DialogDescription>
-                        Track a component's lifespan. We'll alert you when it's due for service based on time or mileage.
+                        Track a component lifespan. We will alert you when service is due based on time or mileage.
                     </DialogDescription>
                 </DialogHeader>
                 <form action={onSubmit} className="space-y-4 pt-4">

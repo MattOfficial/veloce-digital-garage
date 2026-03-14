@@ -6,6 +6,7 @@ import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircl
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { getUserBadges } from "@/app/actions/badges";
 import { BADGE_REGISTRY } from "@/lib/badges";
+import type { BadgeDefinition } from "@/lib/badges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { isProviderPreference, type ProviderPreference } from "@/types/ai";
 
 const currencies = [
     { value: "₹", label: "Indian Rupee (₹)" },
@@ -35,18 +37,32 @@ const currencies = [
     { value: "¥", label: "Japanese Yen (¥)" },
 ];
 
+type ProfileDraft = {
+    displayName: string;
+    currency: string;
+    distanceUnit: "km" | "miles";
+    avatarUrl: string | null;
+    preferredProvider: ProviderPreference;
+};
+
+function createProfileDraft(profile: ReturnType<typeof useUserStore.getState>["profile"]): ProfileDraft {
+    return {
+        displayName: profile.displayName || "",
+        currency: profile.currency || "₹",
+        distanceUnit: profile.distanceUnit || "km",
+        avatarUrl: profile.avatarUrl || null,
+        preferredProvider: profile.preferredProvider || "gemini",
+    };
+}
+
 export default function ProfilePage() {
     const { profile, fetchProfile } = useUserStore();
 
     // We keep local state for formatting edits before save, initialized from the store
-    const [displayName, setDisplayName] = useState(profile.displayName || "");
-    const [currency, setCurrency] = useState(profile.currency || "₹");
-    const [distanceUnit, setDistanceUnit] = useState<"km" | "miles">(profile.distanceUnit || "km");
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatarUrl);
+    const [profileDraft, setProfileDraft] = useState<ProfileDraft | null>(null);
     const [llmKey, setLlmKey] = useState<string>("");
     const [openAiKey, setOpenAiKey] = useState<string>("");
     const [deepseekKey, setDeepseekKey] = useState<string>("");
-    const [preferredProvider, setPreferredProvider] = useState<'gemini' | 'openai' | 'deepseek'>(profile.preferredProvider || 'gemini');
 
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -74,16 +90,14 @@ export default function ProfilePage() {
         initialize();
     }, [fetchProfile]);
 
-    // Sync profile to local state when loaded
-    useEffect(() => {
-        if (profile) {
-            setDisplayName(profile.displayName || "");
-            setCurrency(profile.currency || "₹");
-            setDistanceUnit((profile.distanceUnit as "km" | "miles") || "km");
-            setAvatarUrl(profile.avatarUrl || null);
-            setPreferredProvider(profile.preferredProvider || 'gemini');
-        }
-    }, [profile]);
+    const resolvedProfile = profileDraft ?? createProfileDraft(profile);
+
+    const updateProfileDraft = <K extends keyof ProfileDraft>(field: K, value: ProfileDraft[K]) => {
+        setProfileDraft((currentDraft) => ({
+            ...(currentDraft ?? createProfileDraft(profile)),
+            [field]: value,
+        }));
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,11 +105,11 @@ export default function ProfilePage() {
         setMessage(null);
 
         const formData = new FormData();
-        formData.append("display_name", displayName);
-        formData.append("currency", currency);
-        formData.append("distance_unit", distanceUnit);
-        if (avatarUrl) {
-            formData.append("avatar_url", avatarUrl);
+        formData.append("display_name", resolvedProfile.displayName);
+        formData.append("currency", resolvedProfile.currency);
+        formData.append("distance_unit", resolvedProfile.distanceUnit);
+        if (resolvedProfile.avatarUrl) {
+            formData.append("avatar_url", resolvedProfile.avatarUrl);
         }
         if (llmKey) {
             formData.append("llm_key", llmKey);
@@ -106,7 +120,7 @@ export default function ProfilePage() {
         if (deepseekKey) {
             formData.append("deepseek_key", deepseekKey);
         }
-        formData.append("preferred_provider", preferredProvider);
+        formData.append("preferred_provider", resolvedProfile.preferredProvider);
 
         const result = await updateProfile(formData);
 
@@ -114,16 +128,17 @@ export default function ProfilePage() {
             setMessage({ type: 'error', text: result.error });
         } else {
             setMessage({ type: 'success', text: "Profile updated successfully!" });
-            setLlmKey(""); 
+            setProfileDraft(null);
+            setLlmKey("");
             setOpenAiKey("");
             setDeepseekKey("");
-            fetchProfile(); 
+            await fetchProfile();
         }
         setIsSaving(false);
     };
 
     const handleAvatarUpload = (url: string) => {
-        setAvatarUrl(url);
+        updateProfileDraft("avatarUrl", url);
         // We don't auto-save here, user must click Save Profile
         setMessage({ type: 'success', text: "Image uploaded! Don't forget to save." });
     };
@@ -167,7 +182,7 @@ export default function ProfilePage() {
         } else {
             setVehicleMessage({ type: 'success', text: "Vehicle added successfully!" });
             if (result.newBadges?.length) {
-                result.newBadges.forEach((b: any) => setTimeout(() => toast.success(`🏆 Unlocked: ${b.name}!`, { description: b.description }), 500));
+                result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
             }
             setDialogOpen(false);
             setNewVehicleImageUrl(""); // Reset local image state
@@ -190,6 +205,18 @@ export default function ProfilePage() {
             fetchVehicles(); // Refresh
         }
         setIsDeletingId(null);
+    };
+
+    const handlePreferredProviderChange = (value: string) => {
+        if (isProviderPreference(value)) {
+            updateProfileDraft("preferredProvider", value);
+        }
+    };
+
+    const handleDistanceUnitChange = (value: string) => {
+        if (value === "km" || value === "miles") {
+            updateProfileDraft("distanceUnit", value);
+        }
     };
 
     return (
@@ -292,9 +319,9 @@ export default function ProfilePage() {
                                     Display Picture
                                 </Label>
                                 <AvatarUpload
-                                    currentUrl={avatarUrl}
+                                    currentUrl={resolvedProfile.avatarUrl}
                                     onUploadSuccess={handleAvatarUpload}
-                                    fallbackText={displayName ? displayName.charAt(0).toUpperCase() : "U"}
+                                    fallbackText={resolvedProfile.displayName ? resolvedProfile.displayName.charAt(0).toUpperCase() : "U"}
                                 />
                             </div>
 
@@ -307,8 +334,8 @@ export default function ProfilePage() {
                                     <Input
                                         id="display_name"
                                         placeholder="Awesome Driver"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        value={resolvedProfile.displayName}
+                                        onChange={(e) => updateProfileDraft("displayName", e.target.value)}
                                         className="max-w-md h-12 rounded-xl"
                                     />
                                     <p className="text-sm text-muted-foreground">
@@ -319,7 +346,7 @@ export default function ProfilePage() {
                                     <Label htmlFor="currency" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
                                         Preferred Currency
                                     </Label>
-                                    <Select value={currency} onValueChange={setCurrency}>
+                                    <Select value={resolvedProfile.currency} onValueChange={(value) => updateProfileDraft("currency", value)}>
                                         <SelectTrigger id="currency" className="max-w-md h-12 rounded-xl">
                                             <SelectValue placeholder="Select a currency" />
                                         </SelectTrigger>
@@ -339,7 +366,7 @@ export default function ProfilePage() {
                                     <Label htmlFor="distance_unit" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
                                         Distance Unit
                                     </Label>
-                                    <Select value={distanceUnit} onValueChange={(val) => setDistanceUnit(val as "km" | "miles")}>
+                                    <Select value={resolvedProfile.distanceUnit} onValueChange={handleDistanceUnitChange}>
                                         <SelectTrigger id="distance_unit" className="max-w-md h-12 rounded-xl">
                                             <SelectValue placeholder="Select distance unit" />
                                         </SelectTrigger>
@@ -371,7 +398,7 @@ export default function ProfilePage() {
                                     <Label htmlFor="preferred_provider" className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
                                         Preferred AI Provider
                                     </Label>
-                                    <Select value={preferredProvider} onValueChange={(val) => setPreferredProvider(val as any)}>
+                                    <Select value={resolvedProfile.preferredProvider} onValueChange={handlePreferredProviderChange}>
                                         <SelectTrigger id="preferred_provider" className="h-12 rounded-xl">
                                             <SelectValue placeholder="Select provider" />
                                         </SelectTrigger>
@@ -596,7 +623,7 @@ export default function ProfilePage() {
                                             <Input id="year" name="year" type="number" min="1900" max={new Date().getFullYear() + 1} placeholder="2020" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="baseline_odometer">Initial Distance ({distanceUnit})</Label>
+                                            <Label htmlFor="baseline_odometer">Initial Distance ({resolvedProfile.distanceUnit})</Label>
                                             <Input id="baseline_odometer" name="baseline_odometer" type="number" min="0" step="any" placeholder="0" required className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                         </div>
                                     </div>
@@ -703,7 +730,7 @@ export default function ProfilePage() {
                                             <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                             Active
                                             <span className="mx-1 opacity-50">•</span>
-                                            {vehicle.baseline_odometer.toLocaleString()} {distanceUnit}
+                                            {vehicle.baseline_odometer.toLocaleString()} {resolvedProfile.distanceUnit}
                                         </div>
                                     </div>
 

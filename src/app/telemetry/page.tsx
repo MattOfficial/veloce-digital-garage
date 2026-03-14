@@ -71,7 +71,7 @@ export default function TelemetryHud() {
                 if (newRpm < idleRpm) newRpm = idleRpm;
 
                 const acceleration = diff;
-                let newGY = -(acceleration * 0.05);
+                const newGY = -(acceleration * 0.05);
                 let newGX = prev.gForce.x;
                 if (newSpeed > 50) {
                     newGX += (Math.random() * 0.4 - 0.2);

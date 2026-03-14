@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges, awardAiMechanicBadge } from "./badges";
+import type { BadgeDefinition } from "@/lib/badges";
 
 export async function submitMaintenanceLog(formData: FormData) {
     const supabase = await createClient();
@@ -54,7 +55,7 @@ export async function submitMaintenanceLog(formData: FormData) {
     revalidatePath("/dashboard/maintenance");
     revalidatePath(`/dashboard/vehicles/${vehicle_id}`);
 
-    let newBadges: any[] = [];
+    let newBadges: BadgeDefinition[] = [];
     if (user) {
         newBadges = await evaluateBadges(user.id);
         if (receipt_url) {
