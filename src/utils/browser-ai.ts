@@ -2,6 +2,7 @@ import type {
     CopilotRequestMessage,
     CopilotResponseBody,
     CopilotResponseSource,
+    CopilotIntent,
     CopilotVehicleContext,
     PendingAction,
 } from "@/types/ai";
@@ -46,6 +47,10 @@ const BROWSER_COPILOT_SCHEMA = {
     type: "object",
     additionalProperties: false,
     properties: {
+        intent: {
+            type: "string",
+            enum: ["app_scoped_chat"],
+        },
         content: { type: "string" },
         pendingAction: {
             anyOf: [
@@ -67,7 +72,7 @@ const BROWSER_COPILOT_SCHEMA = {
             ],
         },
     },
-    required: ["content", "pendingAction"],
+    required: ["intent", "content", "pendingAction"],
 } satisfies Record<string, unknown>;
 
 function getLanguageModelFactory(): BrowserLanguageModelFactory | null {
@@ -190,11 +195,12 @@ function stripMarkdownFences(value: string) {
 function parseBrowserCopilotResponse(rawResponse: string): BrowserCopilotResponse | null {
     try {
         const parsed = JSON.parse(stripMarkdownFences(rawResponse)) as {
+            intent?: unknown;
             content?: unknown;
             pendingAction?: { type?: unknown; payload?: unknown } | null;
         };
 
-        if (typeof parsed.content !== "string" || parsed.content.trim() === "") {
+        if (parsed.intent !== "app_scoped_chat" || typeof parsed.content !== "string" || parsed.content.trim() === "") {
             return null;
         }
 
@@ -207,6 +213,7 @@ function parseBrowserCopilotResponse(rawResponse: string): BrowserCopilotRespons
             content: parsed.content.trim(),
             pendingAction,
             source: "edge-local" satisfies CopilotResponseSource,
+            intent: "app_scoped_chat" satisfies CopilotIntent,
         };
     } catch {
         return null;
@@ -237,6 +244,7 @@ ${JSON.stringify(conversation, null, 2)}
 
 Respond ONLY as valid JSON with this exact shape:
 {
+  "intent": "app_scoped_chat",
   "content": "string",
   "pendingAction": null | {
     "type": "log_fuel_draft" | "log_maintenance_draft",
@@ -245,15 +253,17 @@ Respond ONLY as valid JSON with this exact shape:
 }
 
 Rules:
-1. Stay strictly within vehicle ownership, fuel, charging, maintenance, and garage tracking topics.
-2. If the request is out of scope, set "pendingAction" to null and politely refuse in "content".
-3. If the user wants to log fuel or charging, only create "log_fuel_draft" when vehicle_id, cost, volume, and odometer are all known.
-4. If the user wants to log maintenance, only create "log_maintenance_draft" when vehicle_id, service_type, and cost are all known.
-5. If any required detail is missing or the vehicle match is ambiguous, ask one concise follow-up question in "content" and set "pendingAction" to null.
-6. Map vehicles by nickname, make, or model when unambiguous.
-7. Use YYYY-MM-DD dates. If no date is given, use today's date.
-8. Keep "content" concise and helpful.
-9. Never include markdown fences or extra commentary outside the JSON object.
+1. Stay strictly within vehicle ownership, fuel, charging, maintenance, garage tracking, and Veloce feature-help topics.
+2. The current request is conversational app-scoped chat, not a deterministic analytics query.
+3. If the user asks for advice or explanation, answer directly and concisely.
+4. Do NOT ask for cost, volume, odometer, or service details unless the user is explicitly asking to log an event.
+5. If the request is out of scope, set "pendingAction" to null and politely refuse in "content".
+6. If the user explicitly asks to log fuel or charging, only create "log_fuel_draft" when vehicle_id, cost, volume, and odometer are all known.
+7. If the user explicitly asks to log maintenance, only create "log_maintenance_draft" when vehicle_id, service_type, and cost are all known.
+8. If any required detail is missing or the vehicle match is ambiguous, ask one concise follow-up question in "content" and set "pendingAction" to null.
+9. Map vehicles by nickname, make, or model when unambiguous.
+10. Use YYYY-MM-DD dates when a tool payload needs a date.
+11. Never include markdown fences or extra commentary outside the JSON object.
 `.trim();
 }
 

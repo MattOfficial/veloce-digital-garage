@@ -12,7 +12,9 @@ import { useUserStore } from "@/store/user-store";
 import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
 import type {
+    CopilotAnalyticsQuery,
     CopilotAttachment,
+    CopilotIntent,
     CopilotRequestMessage,
     CopilotResponseBody,
     CopilotResponseSource,
@@ -24,6 +26,7 @@ import { getErrorMessage } from "@/utils/errors";
 import { brand } from "@/content/en/brand";
 import { ui } from "@/content/en/ui";
 import { getEdgeBrowserAiAvailability, promptEdgeBrowserCopilot } from "@/utils/browser-ai";
+import { classifyCopilotIntent } from "@/utils/copilot-intents";
 
 const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
     ssr: false,
@@ -34,6 +37,8 @@ interface ChatMessage extends CopilotRequestMessage {
     id: string;
     pendingAction?: PendingAction;
     source?: CopilotResponseSource;
+    intent?: CopilotIntent;
+    analyticsQuery?: CopilotAnalyticsQuery;
 }
 
 function getCopilotSourceLabel(source?: CopilotResponseSource) {
@@ -42,12 +47,16 @@ function getCopilotSourceLabel(source?: CopilotResponseSource) {
             return ui.copilot.sources.localNlp;
         case "edge-local":
             return ui.copilot.sources.edgeLocal;
+        case "server-analytics":
+            return ui.copilot.sources.serverAnalytics;
         case "server-gemini":
             return ui.copilot.sources.serverGemini;
         case "server-openai":
             return ui.copilot.sources.serverOpenAi;
         case "server-deepseek":
             return ui.copilot.sources.serverDeepSeek;
+        case "guardrail-refusal":
+            return ui.copilot.sources.guardrailRefusal;
         case "server":
             return ui.copilot.sources.server;
         default:
@@ -65,7 +74,7 @@ export function VeloceCopilot() {
     const [isUploadingFile, setIsUploadingFile] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { vehicles, fetchVehicles } = useVehicleStore();
+    const { vehicles, fetchVehicles, selectedVehicleId } = useVehicleStore();
     const { profile } = useUserStore();
     const hasPreferredProviderKey =
         profile.preferredProvider === "gemini"
@@ -163,6 +172,53 @@ export function VeloceCopilot() {
                 odometer: v.baseline_odometer
             }));
 
+            const classifiedIntent = classifyCopilotIntent(
+                [...messages, userMsg],
+                garageContext,
+                selectedVehicleId,
+            );
+
+            if (classifiedIntent.intent === "out_of_scope") {
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    content: classifiedIntent.refusalMessage || ui.copilot.messages.scopeRefusal,
+                    source: "guardrail-refusal",
+                    intent: "out_of_scope",
+                }]);
+                setIsTyping(false);
+                return;
+            }
+
+            if (classifiedIntent.intent === "analytics_query") {
+                const res = await fetch("/api/copilot", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [...messages, userMsg],
+                        vehicles: garageContext,
+                        selectedVehicleId,
+                        intentHint: "analytics_query",
+                        query: classifiedIntent.query,
+                    }),
+                });
+
+                if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
+                const data = await res.json() as CopilotResponseBody;
+
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant",
+                    content: data.content,
+                    pendingAction: data.pendingAction,
+                    source: data.source,
+                    intent: data.intent,
+                    analyticsQuery: classifiedIntent.query,
+                }]);
+                setIsTyping(false);
+                return;
+            }
+
             // 2. Experimental Edge local model path for text-only chat
             if (currentAttachments.length === 0 && edgeBrowserAiAvailability === "available") {
                 const browserLocalResponse = await promptEdgeBrowserCopilot(
@@ -177,6 +233,7 @@ export function VeloceCopilot() {
                         content: browserLocalResponse.content,
                         pendingAction: browserLocalResponse.pendingAction,
                         source: browserLocalResponse.source,
+                        intent: browserLocalResponse.intent,
                     }]);
                     setIsTyping(false);
                     return;
@@ -190,6 +247,7 @@ export function VeloceCopilot() {
                     role: "assistant",
                     content: ui.copilot.messages.missingKey(profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseekFull),
                     source: "server",
+                    intent: "app_scoped_chat",
                 }]);
                 setIsTyping(false);
                 return;
@@ -200,7 +258,9 @@ export function VeloceCopilot() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
-                    vehicles: garageContext
+                    vehicles: garageContext,
+                    selectedVehicleId,
+                    intentHint: classifiedIntent.intent,
                 })
             });
 
@@ -213,6 +273,7 @@ export function VeloceCopilot() {
                 content: data.content,
                 pendingAction: data.pendingAction,
                 source: data.source,
+                intent: data.intent,
             };
 
             setMessages(prev => [...prev, aiMsg]);

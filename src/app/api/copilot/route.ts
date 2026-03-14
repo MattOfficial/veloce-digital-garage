@@ -2,9 +2,13 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { createClient } from "@/utils/supabase/server";
 import { decrypt } from "@/utils/crypto";
 import {
+    type CopilotAnalyticsQuery,
+    type CopilotAnalyticsResult,
     isProviderPreference,
     type CopilotAttachment,
+    type CopilotIntent,
     type CopilotRequestMessage,
+    type CopilotRequestBody,
     type CopilotResponseBody,
     type CopilotResponseSource,
     type CopilotVehicleContext,
@@ -13,13 +17,11 @@ import {
 } from "@/types/ai";
 import { getErrorMessage } from "@/utils/errors";
 import { brand } from "@/content/en/brand";
+import { classifyCopilotIntent, parseAnalyticsQuery } from "@/utils/copilot-intents";
+import { computeCopilotAnalytics } from "@/utils/copilot-analytics";
+import type { VehicleWithLogs } from "@/types/database";
 
 export const dynamic = 'force-dynamic';
-
-interface CopilotRequestBody {
-    messages: CopilotRequestMessage[];
-    vehicles: CopilotVehicleContext[];
-}
 
 type GeminiPart =
     | { text: string }
@@ -103,6 +105,18 @@ function parseRequestBody(value: unknown): CopilotRequestBody {
     return {
         messages: value.messages,
         vehicles: value.vehicles,
+        selectedVehicleId:
+            value.selectedVehicleId === undefined || value.selectedVehicleId === null || typeof value.selectedVehicleId === "string"
+                ? value.selectedVehicleId ?? null
+                : null,
+        intentHint:
+            typeof value.intentHint === "string"
+                ? value.intentHint as CopilotIntent
+                : undefined,
+        query:
+            value.query && isRecord(value.query)
+                ? value.query as unknown as CopilotAnalyticsQuery
+                : undefined,
     };
 }
 
@@ -179,13 +193,31 @@ function createAssistantResponse(
     content: string,
     pendingAction?: PendingAction,
     source: CopilotResponseSource = "server",
+    intent?: CopilotIntent,
+    analyticsResult?: CopilotAnalyticsResult,
 ): CopilotResponseBody {
     return {
         role: "assistant",
         content,
         pendingAction,
         source,
+        intent,
+        analyticsResult,
     };
+}
+
+function buildVehicleContext(vehicles: VehicleWithLogs[]): CopilotVehicleContext[] {
+    return vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        nickname: vehicle.nickname,
+        odometer: Math.max(
+            vehicle.baseline_odometer,
+            ...vehicle.fuel_logs.map((log) => log.odometer),
+        ),
+    }));
 }
 
 export async function POST(req: Request) {
@@ -201,11 +233,80 @@ export async function POST(req: Request) {
             } satisfies CopilotResponseBody);
         }
 
+        const requestBody = parseRequestBody(await req.json());
+
         const { data: userData } = await supabase
             .from("users")
-            .select("encrypted_llm_key, encrypted_openai_key, encrypted_deepseek_key, preferred_llm_provider")
+            .select("encrypted_llm_key, encrypted_openai_key, encrypted_deepseek_key, preferred_llm_provider, currency, distance_unit")
             .eq("id", user.id)
             .single();
+
+        const { data: garageData, error: garageError } = await supabase
+            .from("vehicles")
+            .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*)")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+        if (garageError) {
+            throw new Error(garageError.message);
+        }
+
+        const garage = (garageData as unknown as VehicleWithLogs[]) ?? [];
+        const garageContext = buildVehicleContext(garage);
+        const selectedVehicleId = requestBody.selectedVehicleId ?? null;
+        const latestUserMessage = [...requestBody.messages].reverse().find((message) => message.role === "user");
+        const localClassification = classifyCopilotIntent(requestBody.messages, garageContext, selectedVehicleId);
+
+        if (requestBody.intentHint === "out_of_scope" || localClassification.intent === "out_of_scope") {
+            return Response.json(
+                createAssistantResponse(
+                    localClassification.refusalMessage ?? `I’m scoped to ${brand.app.fullName}, your garage data, and vehicle ownership questions only.`,
+                    undefined,
+                    "guardrail-refusal",
+                    "out_of_scope",
+                )
+            );
+        }
+
+        const hintedAnalyticsQuery = requestBody.query;
+        const resolvedAnalyticsQuery: CopilotAnalyticsQuery | null =
+            requestBody.intentHint === "analytics_query"
+                ? hintedAnalyticsQuery ?? parseAnalyticsQuery(latestUserMessage?.content ?? "", garageContext, selectedVehicleId)
+                : localClassification.intent === "analytics_query"
+                    ? localClassification.query ?? null
+                    : null;
+
+        if (resolvedAnalyticsQuery) {
+            if (resolvedAnalyticsQuery.clarificationPrompt) {
+                return Response.json(
+                    createAssistantResponse(
+                        resolvedAnalyticsQuery.clarificationPrompt,
+                        undefined,
+                        "server-analytics",
+                        "analytics_query",
+                    )
+                );
+            }
+
+            const analyticsResult = computeCopilotAnalytics(
+                resolvedAnalyticsQuery,
+                garage,
+                {
+                    currency: userData?.currency || "₹",
+                    distanceUnit: (userData?.distance_unit as "km" | "miles" | null) || "km",
+                },
+            );
+
+            return Response.json(
+                createAssistantResponse(
+                    analyticsResult.summary,
+                    undefined,
+                    "server-analytics",
+                    "analytics_query",
+                    analyticsResult,
+                )
+            );
+        }
 
         const preferredProvider = userData?.preferred_llm_provider;
         const provider: ProviderPreference =
@@ -223,41 +324,42 @@ export async function POST(req: Request) {
 
         if (!encryptedKey) {
             const providerName = provider === 'gemini' ? 'Google Gemini' : provider === 'openai' ? 'OpenAI' : 'Deepseek';
-            return Response.json(createAssistantResponse(`To use ${brand.ai.copilotName} with ${providerName}, please provide your API key in your Profile Settings.`, undefined, "server"));
+            return Response.json(createAssistantResponse(`To use ${brand.ai.copilotName} with ${providerName}, please provide your API key in your Profile Settings.`, undefined, "server", "app_scoped_chat"));
         }
 
         let apiKey = "";
         try {
             apiKey = decrypt(encryptedKey);
         } catch {
-            return Response.json(createAssistantResponse("Failed to decrypt your API key. Please re-enter it in Profile Settings.", undefined, "server"));
+            return Response.json(createAssistantResponse("Failed to decrypt your API key. Please re-enter it in Profile Settings.", undefined, "server", "app_scoped_chat"));
         }
-
-        const { messages, vehicles } = parseRequestBody(await req.json());
 
         // System instructions to guide the Orchestrator
         const systemInstruction = `
             You are "${brand.ai.copilotName}", an AI assistant built into the ${brand.app.fullName} app.
-            Your job is to help users track their vehicle expenses, fuel, and maintenance.
-            You have access to tools to log data on the user's behalf.
+            Your job is to help users with vehicle ownership topics inside the ${brand.app.fullName} experience.
+            You can discuss fuel economy, maintenance, running costs, garage organization, and Veloce features.
+            Only use logging tools when the user is explicitly asking to record an event or clearly describing a completed fuel or maintenance event.
             
             Current User Garage:
-            ${JSON.stringify(vehicles, null, 2)}
+            ${JSON.stringify(garageContext, null, 2)}
             
             STRICT GUARDRAILS & RULES:
             1. DOMAIN RESTRICTION: You are explicitly restricted to topics regarding vehicles, cars, motorcycles, automotive maintenance, fuel efficiency, and the user's garage. 
             2. OUT OF SCOPE REJECTION: If the user asks you to write code (e.g., Python, JavaScript), solve math problems, write essays, or act as a general-purpose AI, you MUST politely refuse. Example response: "I am specialized for the ${brand.app.fullName} application. I can only assist you with managing your vehicles, fuel logs, and maintenance."
-            3. FUEL LOGGING: If the user asks to log fuel, you MUST use the log_fuel_draft tool. However, you MUST NOT use the tool if the user hasn't provided the Cost, Volume (liters/gallons), and Odometer reading. If they are missing, ask them explicitly.
-            4. VEHICLE RESOLUTION: If the user refers to a vehicle by "nickname" or "make" and it's unambiguous, map it to the correct vehicle_id. If it IS ambiguous (e.g. they say "Honda" and have two Hondas), ask them to clarify before calling the tool.
-            5. DOCUMENT UPLOADS: If the user attaches an invoice/receipt, analyze it thoroughly. Extract the total cost, date, and service provider. ALSO, extract ALL SPECIFIC line items (parts and labor) and append them into the 'notes' parameter as a bulleted list. Always include the receipt_url in your tool call if one was provided in the context. 
-            6. TONE: For general chat within the automotive domain, be helpful, concise, and friendly.
+            3. FUEL LOGGING: If the user explicitly asks to log fuel or charging, you MUST use the log_fuel_draft tool. However, you MUST NOT use the tool if the user hasn't provided the Cost, Volume (liters/gallons/kWh), and Odometer reading. If they are missing, ask them explicitly.
+            4. MAINTENANCE LOGGING: Only use the maintenance tool when the user explicitly asks to log maintenance or clearly reports a completed maintenance event.
+            5. DO NOT FORCE LOGGING: If the user asks for advice, explanation, or feature help, answer normally and do not ask for log-entry fields.
+            6. VEHICLE RESOLUTION: If the user refers to a vehicle by nickname or make/model and it is unambiguous, map it to the correct vehicle_id. If it is ambiguous, ask a concise clarification question.
+            7. DOCUMENT UPLOADS: If the user attaches an invoice or receipt, analyze it thoroughly. Extract the total cost, date, and service provider. ALSO, extract ALL SPECIFIC line items and append them into the notes parameter as a bulleted list. Always include the receipt_url in your tool call if one was provided in the context.
+            8. TONE: Be concise, friendly, and app-focused.
         `;
 
         if (provider === 'gemini') {
             const ai = new GoogleGenAI({ apiKey });
             
             // Map the chat history to the format Google GenAI expects
-            const contents: GeminiMessage[] = await Promise.all(messages.map(async (message) => {
+            const contents: GeminiMessage[] = await Promise.all(requestBody.messages.map(async (message) => {
                 const parts: GeminiPart[] = [{ text: message.content }];
 
                 if (message.attachments) {
@@ -336,16 +438,21 @@ export async function POST(req: Request) {
                 const pendingAction = parsePendingAction(functionCall.name, functionCall.args);
                 if (pendingAction) {
                     return Response.json(
-                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction, "server-gemini")
+                        createAssistantResponse(
+                            "I've prepared that log for you. Please review and confirm.",
+                            pendingAction,
+                            "server-gemini",
+                            pendingAction.type === "log_maintenance_draft" ? "draft_maintenance_log" : "draft_fuel_log",
+                        )
                     );
                 }
 
                 return Response.json(
-                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, "server-gemini")
+                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, "server-gemini", "app_scoped_chat")
                 );
             }
 
-            return Response.json(createAssistantResponse(response.text || "I wasn't able to generate a response.", undefined, "server-gemini"));
+            return Response.json(createAssistantResponse(response.text || "I wasn't able to generate a response.", undefined, "server-gemini", "app_scoped_chat"));
         } 
         
         // OpenAI / Deepseek Support (OpenAI Compatible)
@@ -358,7 +465,7 @@ export async function POST(req: Request) {
             // Format messages for OpenAI
             const openaiMessages = [
                 { role: "system", content: systemInstruction },
-                ...messages.map((message) => ({
+                ...requestBody.messages.map((message) => ({
                     role: message.role,
                     content: message.content
                 }))
@@ -438,13 +545,18 @@ export async function POST(req: Request) {
                 if (pendingAction) {
                     const responseSource: CopilotResponseSource = provider === "deepseek" ? "server-deepseek" : "server-openai";
                     return Response.json(
-                        createAssistantResponse("I've prepared that log for you. Please review and confirm.", pendingAction, responseSource)
+                        createAssistantResponse(
+                            "I've prepared that log for you. Please review and confirm.",
+                            pendingAction,
+                            responseSource,
+                            pendingAction.type === "log_maintenance_draft" ? "draft_maintenance_log" : "draft_fuel_log",
+                        )
                     );
                 }
 
                 const responseSource: CopilotResponseSource = provider === "deepseek" ? "server-deepseek" : "server-openai";
                 return Response.json(
-                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, responseSource)
+                    createAssistantResponse("I started preparing that log, but some required details were missing. Please add the missing vehicle and service details.", undefined, responseSource, "app_scoped_chat")
                 );
             }
 
@@ -453,6 +565,7 @@ export async function POST(req: Request) {
                     message?.content || "I wasn't able to generate a response.",
                     undefined,
                     provider === "deepseek" ? "server-deepseek" : "server-openai",
+                    "app_scoped_chat",
                 )
             );
         }

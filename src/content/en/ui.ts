@@ -137,6 +137,7 @@ export const ui = {
             uploadedDocuments: (count: number) => `Uploaded ${count} document(s)`,
             needsMoreInfo: "I need more information.",
             preparedLog: "I've prepared that log for you. Please review and confirm.",
+            scopeRefusal: `I can help with ${brand.app.shortName}, your garage data, fuel, maintenance, and vehicle ownership topics only.`,
             missingKey(provider: string) {
                 return `I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your ${provider} API key in Profile Settings to unlock conversational AI.`;
             },
@@ -180,10 +181,12 @@ export const ui = {
         sources: {
             localNlp: "Local NLP",
             edgeLocal: "Edge Local",
+            serverAnalytics: "Server Analytics",
             server: "Server",
             serverGemini: "Server Gemini",
             serverOpenAi: "Server OpenAI",
             serverDeepSeek: "Server DeepSeek",
+            guardrailRefusal: "Guardrail Refusal",
         },
         titles: {
             close: "Close",

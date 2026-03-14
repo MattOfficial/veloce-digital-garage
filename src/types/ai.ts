@@ -29,13 +29,76 @@ export type PendingAction =
     | { type: "log_fuel_draft"; payload: FuelDraftPayload }
     | { type: "log_maintenance_draft"; payload: MaintenanceDraftPayload };
 
+export type CopilotIntent =
+    | "draft_fuel_log"
+    | "draft_maintenance_log"
+    | "analytics_query"
+    | "app_scoped_chat"
+    | "out_of_scope";
+
 export type CopilotResponseSource =
     | "local-nlp"
     | "edge-local"
+    | "server-analytics"
     | "server"
     | "server-gemini"
     | "server-openai"
-    | "server-deepseek";
+    | "server-deepseek"
+    | "guardrail-refusal";
+
+export type CopilotQueryMetric =
+    | "distance"
+    | "fuel_spend"
+    | "maintenance_spend"
+    | "total_spend"
+    | "fuel_efficiency"
+    | "service_count"
+    | "refuel_count"
+    | "odometer";
+
+export type CopilotQueryScope = "vehicle" | "garage";
+
+export type CopilotDateRangePreset =
+    | "today"
+    | "yesterday"
+    | "last_7_days"
+    | "last_week"
+    | "this_week"
+    | "this_month"
+    | "last_month"
+    | "last_30_days"
+    | "this_year"
+    | "last_year"
+    | "all_time";
+
+export interface CopilotDateRange {
+    preset: CopilotDateRangePreset;
+    start: string;
+    end: string;
+    label: string;
+}
+
+export interface CopilotAnalyticsQuery {
+    metric: CopilotQueryMetric;
+    scope: CopilotQueryScope;
+    vehicleIds: string[];
+    dateRange: CopilotDateRange;
+    question: string;
+    selectedVehicleId?: string | null;
+    clarificationPrompt?: string;
+}
+
+export interface CopilotAnalyticsResult {
+    metric: CopilotQueryMetric;
+    scope: CopilotQueryScope;
+    vehicleIds: string[];
+    value: number | null;
+    unit: string | null;
+    label: string;
+    summary: string;
+    dateRangeLabel: string;
+    hasSufficientData: boolean;
+}
 
 export interface CopilotAttachment {
     url: string;
@@ -58,11 +121,21 @@ export interface CopilotVehicleContext {
     odometer: number;
 }
 
+export interface CopilotRequestBody {
+    messages: CopilotRequestMessage[];
+    vehicles: CopilotVehicleContext[];
+    selectedVehicleId?: string | null;
+    intentHint?: CopilotIntent;
+    query?: CopilotAnalyticsQuery;
+}
+
 export interface CopilotResponseBody {
     role: "assistant";
     content: string;
     pendingAction?: PendingAction;
     source?: CopilotResponseSource;
+    intent?: CopilotIntent;
+    analyticsResult?: CopilotAnalyticsResult;
 }
 
 export interface OcrLineItem {
