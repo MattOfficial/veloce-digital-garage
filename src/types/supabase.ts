@@ -150,8 +150,9 @@ export type Database = {
           calculated_efficiency: number | null
           created_at: string | null
           date: string
-          energy_type: string | null
+          energy_type: "fuel" | "charge" | null
           estimated_range: number | null
+          fill_type: "full" | "partial"
           fuel_volume: number
           id: string
           odometer: number
@@ -162,8 +163,9 @@ export type Database = {
           calculated_efficiency?: number | null
           created_at?: string | null
           date: string
-          energy_type?: string | null
+          energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
+          fill_type?: "full" | "partial"
           fuel_volume: number
           id?: string
           odometer: number
@@ -174,8 +176,9 @@ export type Database = {
           calculated_efficiency?: number | null
           created_at?: string | null
           date?: string
-          energy_type?: string | null
+          energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
+          fill_type?: "full" | "partial"
           fuel_volume?: number
           id?: string
           odometer?: number

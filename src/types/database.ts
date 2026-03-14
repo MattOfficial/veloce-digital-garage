@@ -47,6 +47,9 @@ export type Vehicle = {
   created_at: string;
 };
 
+export type FuelLogFillType = 'full' | 'partial';
+export type FuelLogEnergyType = 'fuel' | 'charge';
+
 export type FuelLog = {
   id: string;
   vehicle_id: string;
@@ -55,7 +58,8 @@ export type FuelLog = {
   fuel_volume: number; // For EVs this represents kWh. Legacy name kept for DB column mapping context. 
   total_cost: number;
   calculated_efficiency: number | null;
-  energy_type: 'fuel' | 'charge';
+  energy_type: FuelLogEnergyType;
+  fill_type: FuelLogFillType;
   estimated_range: number | null;
   created_at: string;
 };

@@ -73,6 +73,7 @@ Columns used by the app:
 - `total_cost`
 - `calculated_efficiency`
 - `energy_type`
+- `fill_type`
 - `estimated_range`
 - `created_at`
 
@@ -80,6 +81,7 @@ Notes:
 
 - `fuel_volume` also represents charge energy for EV-related entries
 - `energy_type` currently uses values such as `fuel` and `charge`
+- `fill_type` is `full` or `partial` and controls whether the row closes an analytics segment
 
 ### `maintenance_logs`
 
