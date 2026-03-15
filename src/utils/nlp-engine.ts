@@ -1,6 +1,7 @@
 import nlp from 'compromise';
 import type { VehicleWithLogs } from '@/types/database';
 import type { FuelDraftPayload, MaintenanceDraftPayload } from '@/types/ai';
+import { detectExplicitDraftIntent as detectDraftIntent, type LocalDraftIntent } from '@/utils/copilot-draft-intent';
 
 type NlpMessage = {
     role: string;
@@ -14,6 +15,14 @@ type CompromiseNumberJson = {
         num?: number;
     } | number;
 };
+
+function detectMessageIntent(content: string): LocalDraftIntent | null {
+    return detectDraftIntent(content);
+}
+
+export function detectExplicitDraftIntent(content: string): LocalDraftIntent | null {
+    return detectMessageIntent(content);
+}
 
 export type NLPEngineResult =
     | {
@@ -32,8 +41,16 @@ export type NLPEngineResult =
         missingInfo?: string;
     };
 
-export function parseMessage(messages: NlpMessage[], vehicles: NlpVehicle[]): NLPEngineResult {
-    let currentIntent: 'log_fuel_draft' | 'log_maintenance_draft' | 'unknown' = 'unknown';
+type ParseMessageOptions = {
+    forcedIntent?: LocalDraftIntent | null;
+};
+
+export function parseMessage(
+    messages: NlpMessage[],
+    vehicles: NlpVehicle[],
+    options: ParseMessageOptions = {},
+): NLPEngineResult {
+    let currentIntent: 'log_fuel_draft' | 'log_maintenance_draft' | 'unknown' = options.forcedIntent ?? 'unknown';
 
     // Accumulators across the conversation piece
     let matchedVehicle = null;
@@ -43,25 +60,15 @@ export function parseMessage(messages: NlpMessage[], vehicles: NlpVehicle[]): NL
     let odometer: number | null = null;
     let serviceType = "General Service";
 
-    const fuelKeywords = ['fuel', 'gas', 'petrol', 'diesel', 'fill', 'refuel', 'pump', 'tank', 'charge', 'charging', 'recharge', 'ev', 'plug', 'kwh'];
-    const maintenanceKeywords = ['fix', 'repair', 'maintenance', 'oil', 'service', 'tire', 'tyre', 'brake', 'engine', 'mechanic', 'gearbox', 'transmission', 'battery', 'wash', 'detail', 'filter', 'fluid', 'replace', 'change', 'inspection'];
-
     for (const msg of messages) {
         if (msg.role !== 'user') continue;
 
         const doc = nlp(msg.content);
-        const words = doc.terms().out('array').map((w: string) => w.toLowerCase());
+        const detectedIntent = detectMessageIntent(msg.content);
 
-        let msgIsFuel = false;
-        let msgIsMaintenance = false;
-
-        for (const word of words) {
-            if (fuelKeywords.some(k => word.includes(k))) msgIsFuel = true;
-            if (maintenanceKeywords.some(k => word.includes(k))) msgIsMaintenance = true;
+        if (detectedIntent && currentIntent === 'unknown') {
+            currentIntent = detectedIntent;
         }
-
-        if (msgIsFuel && currentIntent === 'unknown') currentIntent = 'log_fuel_draft';
-        if (msgIsMaintenance && currentIntent === 'unknown') currentIntent = 'log_maintenance_draft';
 
         // Vehicle resolution (most recent mentions override older ones)
         for (const v of vehicles) {
