@@ -39,6 +39,7 @@ export type CopilotIntent =
 export type CopilotResponseSource =
     | "local-nlp"
     | "edge-local"
+    | "chrome-local"
     | "server-analytics"
     | "server"
     | "server-gemini"

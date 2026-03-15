@@ -1,7 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Link2, CheckCircle2, RotateCcw, Paperclip } from "lucide-react";
+import { useState, useRef, useEffect, type JSX } from "react";
+import {
+    MessageSquare,
+    X,
+    Send,
+    Bot,
+    User,
+    Loader2,
+    Link2,
+    CheckCircle2,
+    RotateCcw,
+    Paperclip,
+    Sparkles,
+    Cpu,
+    Cloud,
+    ShieldX,
+    BarChart3,
+    type LucideIcon,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -25,8 +42,12 @@ import type { BadgeDefinition } from "@/lib/badges";
 import { getErrorMessage } from "@/utils/errors";
 import { brand } from "@/content/en/brand";
 import { ui } from "@/content/en/ui";
-import { getEdgeBrowserAiAvailability, promptEdgeBrowserCopilot } from "@/utils/browser-ai";
-import { classifyCopilotIntent } from "@/utils/copilot-intents";
+import {
+    getBrowserAiAvailability,
+    type BrowserAiProvider,
+    promptBrowserCopilot,
+} from "@/utils/browser-ai";
+import { getCopilotClientRoute } from "@/utils/copilot-routing";
 
 const DynamicChatMarkdown = dynamic(() => import("./chat-markdown"), {
     ssr: false,
@@ -39,29 +60,174 @@ interface ChatMessage extends CopilotRequestMessage {
     source?: CopilotResponseSource;
     intent?: CopilotIntent;
     analyticsQuery?: CopilotAnalyticsQuery;
+    isStreaming?: boolean;
 }
 
-function getCopilotSourceLabel(source?: CopilotResponseSource) {
-    switch (source) {
-        case "local-nlp":
-            return ui.copilot.sources.localNlp;
-        case "edge-local":
-            return ui.copilot.sources.edgeLocal;
-        case "server-analytics":
-            return ui.copilot.sources.serverAnalytics;
-        case "server-gemini":
-            return ui.copilot.sources.serverGemini;
-        case "server-openai":
-            return ui.copilot.sources.serverOpenAi;
-        case "server-deepseek":
-            return ui.copilot.sources.serverDeepSeek;
-        case "guardrail-refusal":
-            return ui.copilot.sources.guardrailRefusal;
-        case "server":
-            return ui.copilot.sources.server;
-        default:
-            return null;
+type CopilotVisualState = {
+    label: string;
+    mark?: string;
+    icon: LucideIcon;
+    shellClassName: string;
+    iconClassName: string;
+    badgeClassName: string;
+    subtitleClassName: string;
+};
+
+function getProviderLabel(preferredProvider: "gemini" | "openai" | "deepseek") {
+    switch (preferredProvider) {
+        case "gemini":
+            return ui.copilot.providers.gemini;
+        case "openai":
+            return ui.copilot.providers.openai;
+        case "deepseek":
+            return ui.copilot.providers.deepseek;
     }
+}
+
+function getCopilotVisualState(source?: CopilotResponseSource): CopilotVisualState {
+    switch (source) {
+        case "edge-local":
+            return {
+                label: ui.copilot.sources.edgeLocal,
+                mark: "Phi",
+                icon: Cpu,
+                shellClassName: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+                iconClassName: "text-emerald-300",
+                badgeClassName: "bg-emerald-400 text-emerald-950",
+                subtitleClassName: "text-emerald-400",
+            };
+        case "chrome-local":
+            return {
+                label: ui.copilot.sources.chromeLocal,
+                mark: "G",
+                icon: Sparkles,
+                shellClassName: "bg-sky-500/15 text-sky-300 border-sky-500/20",
+                iconClassName: "text-sky-300",
+                badgeClassName: "bg-sky-300 text-sky-950",
+                subtitleClassName: "text-sky-400",
+            };
+        case "local-nlp":
+            return {
+                label: ui.copilot.sources.localNlp,
+                mark: "NLP",
+                icon: Cpu,
+                shellClassName: "bg-amber-500/15 text-amber-300 border-amber-500/20",
+                iconClassName: "text-amber-300",
+                badgeClassName: "bg-amber-300 text-amber-950",
+                subtitleClassName: "text-amber-400",
+            };
+        case "server-gemini":
+            return {
+                label: ui.copilot.providers.gemini,
+                mark: "G",
+                icon: Sparkles,
+                shellClassName: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20",
+                iconClassName: "text-cyan-300",
+                badgeClassName: "bg-cyan-300 text-cyan-950",
+                subtitleClassName: "text-cyan-400",
+            };
+        case "server-openai":
+            return {
+                label: ui.copilot.providers.openai,
+                mark: "O",
+                icon: Sparkles,
+                shellClassName: "bg-teal-500/15 text-teal-300 border-teal-500/20",
+                iconClassName: "text-teal-300",
+                badgeClassName: "bg-teal-300 text-teal-950",
+                subtitleClassName: "text-teal-400",
+            };
+        case "server-deepseek":
+            return {
+                label: ui.copilot.providers.deepseekFull,
+                mark: "D",
+                icon: Bot,
+                shellClassName: "bg-indigo-500/15 text-indigo-300 border-indigo-500/20",
+                iconClassName: "text-indigo-300",
+                badgeClassName: "bg-indigo-300 text-indigo-950",
+                subtitleClassName: "text-indigo-400",
+            };
+        case "server-analytics":
+            return {
+                label: ui.copilot.sources.serverAnalytics,
+                mark: "Σ",
+                icon: BarChart3,
+                shellClassName: "bg-blue-500/15 text-blue-300 border-blue-500/20",
+                iconClassName: "text-blue-300",
+                badgeClassName: "bg-blue-300 text-blue-950",
+                subtitleClassName: "text-blue-400",
+            };
+        case "guardrail-refusal":
+            return {
+                label: ui.copilot.sources.guardrailRefusal,
+                mark: "X",
+                icon: ShieldX,
+                shellClassName: "bg-rose-500/15 text-rose-300 border-rose-500/20",
+                iconClassName: "text-rose-300",
+                badgeClassName: "bg-rose-300 text-rose-950",
+                subtitleClassName: "text-rose-400",
+            };
+        case "server":
+            return {
+                label: ui.copilot.sources.server,
+                mark: "AI",
+                icon: Cloud,
+                shellClassName: "bg-slate-500/15 text-slate-300 border-slate-500/20",
+                iconClassName: "text-slate-300",
+                badgeClassName: "bg-slate-300 text-slate-950",
+                subtitleClassName: "text-slate-400",
+            };
+        default:
+            return {
+                label: brand.ai.copilotName,
+                mark: undefined,
+                icon: Bot,
+                shellClassName: "bg-primary/20 text-primary border-primary/20",
+                iconClassName: "text-primary",
+                badgeClassName: "bg-primary text-primary-foreground",
+                subtitleClassName: "text-primary/80",
+            };
+    }
+}
+
+function CopilotAvatar({
+    source,
+    size = "md",
+    spinning = false,
+}: {
+    source?: CopilotResponseSource;
+    size?: "sm" | "md" | "lg";
+    spinning?: boolean;
+}): JSX.Element {
+    const visual = getCopilotVisualState(source);
+    const Icon = spinning ? Loader2 : visual.icon;
+    const sizeClasses = size === "lg"
+        ? {
+            shell: "h-12 w-12",
+            icon: "h-6 w-6",
+            badge: "text-[9px] px-1.5 py-0.5 -bottom-1 -right-2",
+        }
+        : size === "sm"
+            ? {
+                shell: "h-8 w-8",
+                icon: "h-4 w-4",
+                badge: "text-[8px] px-1 py-0.5 -bottom-1 -right-2",
+            }
+            : {
+                shell: "h-9 w-9",
+                icon: "h-5 w-5",
+                badge: "text-[8px] px-1 py-0.5 -bottom-1 -right-2",
+            };
+
+    return (
+        <div className={`relative shrink-0 rounded-full border flex items-center justify-center ${sizeClasses.shell} ${visual.shellClassName}`}>
+            <Icon className={`${sizeClasses.icon} ${visual.iconClassName} ${spinning ? "animate-spin" : ""}`} />
+            {visual.mark && (
+                <span className={`absolute rounded-full font-semibold leading-none border border-background/80 shadow-sm ${sizeClasses.badge} ${visual.badgeClassName}`}>
+                    {visual.mark}
+                </span>
+            )}
+        </div>
+    );
 }
 
 export function VeloceCopilot() {
@@ -69,7 +235,9 @@ export function VeloceCopilot() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
-    const [edgeBrowserAiAvailability, setEdgeBrowserAiAvailability] = useState<"available" | "downloadable" | "downloading" | "unavailable">("unavailable");
+    const [activeDraftIntent, setActiveDraftIntent] = useState<PendingAction["type"] | null>(null);
+    const [browserAiProvider, setBrowserAiProvider] = useState<BrowserAiProvider | null>(null);
+    const [browserAiAvailability, setBrowserAiAvailability] = useState<"available" | "downloadable" | "downloading" | "unavailable">("unavailable");
     const [pendingAttachments, setPendingAttachments] = useState<CopilotAttachment[]>([]);
     const [isUploadingFile, setIsUploadingFile] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -93,19 +261,33 @@ export function VeloceCopilot() {
     useEffect(() => {
         let isMounted = true;
 
-        const checkEdgeBrowserAi = async () => {
-            const availability = await getEdgeBrowserAiAvailability();
+        const checkBrowserAi = async () => {
+            const { provider, availability } = await getBrowserAiAvailability();
             if (isMounted) {
-                setEdgeBrowserAiAvailability(availability);
+                setBrowserAiProvider(provider);
+                setBrowserAiAvailability(availability);
             }
         };
 
-        void checkEdgeBrowserAi();
+        void checkBrowserAi();
 
         return () => {
             isMounted = false;
         };
     }, []);
+
+    const clearChat = () => {
+        setMessages([]);
+        setActiveDraftIntent(null);
+    };
+
+    const appendAssistantMessage = (message: Omit<ChatMessage, "id" | "role">) => {
+        setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            ...message,
+        }]);
+    };
 
     const handleSend = async () => {
         if (!input.trim() && pendingAttachments.length === 0) return;
@@ -126,43 +308,6 @@ export function VeloceCopilot() {
         setIsTyping(true);
 
         try {
-            // 1. Try Local NLP First (Zero Latency & Cost)
-            // Dynamically import heavy nlp-engine to keep initial bundle small
-            const { parseMessage } = await import("@/utils/nlp-engine");
-
-            // Pass the entire conversation history instead of just the latest text
-            const nlpResult = parseMessage([...messages, userMsg], vehicles);
-
-            // If NLP found an intent but needs more info
-            if (nlpResult.intent !== 'unknown' && nlpResult.missingInfo) {
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
-                    content: nlpResult.missingInfo || ui.copilot.messages.needsMoreInfo,
-                    source: "local-nlp",
-                }]);
-                setIsTyping(false);
-                return;
-            }
-
-            // If NLP successfully drafted a full payload locally
-            if (nlpResult.intent !== 'unknown' && nlpResult.payload) {
-                const pendingAction: PendingAction =
-                    nlpResult.intent === "log_fuel_draft"
-                        ? { type: "log_fuel_draft", payload: nlpResult.payload }
-                        : { type: "log_maintenance_draft", payload: nlpResult.payload };
-
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
-                    content: ui.copilot.messages.preparedLog,
-                    pendingAction,
-                    source: "local-nlp",
-                }]);
-                setIsTyping(false);
-                return;
-            }
-
             const garageContext: CopilotVehicleContext[] = vehicles.map(v => ({
                 id: v.id,
                 make: v.make,
@@ -171,101 +316,185 @@ export function VeloceCopilot() {
                 nickname: v.nickname,
                 odometer: v.baseline_odometer
             }));
-
-            const classifiedIntent = classifyCopilotIntent(
-                [...messages, userMsg],
-                garageContext,
+            const nextMessages = [...messages, userMsg];
+            const route = getCopilotClientRoute({
+                messages: nextMessages,
+                vehicles: garageContext,
                 selectedVehicleId,
-            );
+                hasAttachments: currentAttachments.length > 0,
+                activeDraftIntent,
+                browserAiAvailable: browserAiAvailability === "available",
+            });
 
-            if (classifiedIntent.intent === "out_of_scope") {
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
-                    content: classifiedIntent.refusalMessage || ui.copilot.messages.scopeRefusal,
-                    source: "guardrail-refusal",
-                    intent: "out_of_scope",
-                }]);
-                setIsTyping(false);
-                return;
-            }
-
-            if (classifiedIntent.intent === "analytics_query") {
+            const sendServerChat = async (intentHint: CopilotIntent = "app_scoped_chat") => {
                 const res = await fetch("/api/copilot", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        messages: [...messages, userMsg],
+                        messages: nextMessages,
+                        vehicles: garageContext,
+                        selectedVehicleId,
+                        intentHint,
+                    }),
+                });
+
+                if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
+                return res.json() as Promise<CopilotResponseBody>;
+            };
+
+            if (route.kind === "cancel_draft") {
+                setActiveDraftIntent(null);
+                appendAssistantMessage({
+                    content: ui.copilot.messages.draftCancelled,
+                    source: "local-nlp",
+                    intent: "app_scoped_chat",
+                });
+                setIsTyping(false);
+                return;
+            }
+
+            if (route.kind === "local_nlp") {
+                const { parseMessage } = await import("@/utils/nlp-engine");
+                const nlpResult = parseMessage(nextMessages, vehicles, {
+                    forcedIntent: route.draftIntent,
+                });
+
+                if (nlpResult.intent !== "unknown" && nlpResult.missingInfo) {
+                    setActiveDraftIntent(nlpResult.intent);
+                    appendAssistantMessage({
+                        content: nlpResult.missingInfo || ui.copilot.messages.needsMoreInfo,
+                        source: "local-nlp",
+                    });
+                    setIsTyping(false);
+                    return;
+                }
+
+                if (nlpResult.intent !== "unknown" && nlpResult.payload) {
+                    const pendingAction: PendingAction =
+                        nlpResult.intent === "log_fuel_draft"
+                            ? { type: "log_fuel_draft", payload: nlpResult.payload }
+                            : { type: "log_maintenance_draft", payload: nlpResult.payload };
+
+                    setActiveDraftIntent(null);
+                    appendAssistantMessage({
+                        content: ui.copilot.messages.preparedLog,
+                        pendingAction,
+                        source: "local-nlp",
+                    });
+                    setIsTyping(false);
+                    return;
+                }
+
+                setActiveDraftIntent(null);
+            } else {
+                setActiveDraftIntent(null);
+            }
+
+            if (route.kind === "guardrail_refusal") {
+                appendAssistantMessage({
+                    content: route.refusalMessage || ui.copilot.messages.scopeRefusal,
+                    source: "guardrail-refusal",
+                    intent: "out_of_scope",
+                });
+                setIsTyping(false);
+                return;
+            }
+
+            if (route.kind === "server_analytics") {
+                const res = await fetch("/api/copilot", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: nextMessages,
                         vehicles: garageContext,
                         selectedVehicleId,
                         intentHint: "analytics_query",
-                        query: classifiedIntent.query,
+                        query: route.query,
                     }),
                 });
 
                 if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
                 const data = await res.json() as CopilotResponseBody;
 
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
+                appendAssistantMessage({
                     content: data.content,
                     pendingAction: data.pendingAction,
                     source: data.source,
                     intent: data.intent,
-                    analyticsQuery: classifiedIntent.query,
-                }]);
+                    analyticsQuery: route.query,
+                });
                 setIsTyping(false);
                 return;
             }
 
-            // 2. Experimental Edge local model path for text-only chat
-            if (currentAttachments.length === 0 && edgeBrowserAiAvailability === "available") {
-                const browserLocalResponse = await promptEdgeBrowserCopilot(
-                    [...messages, userMsg],
+            if (route.kind === "browser_local_chat") {
+                const streamingMessageId = (Date.now() + 1).toString();
+                let hasReceivedPartialContent = false;
+
+                const browserLocalResponse = await promptBrowserCopilot(
+                    nextMessages,
                     garageContext,
+                    {
+                        onPartialContent: (content, source) => {
+                            hasReceivedPartialContent = true;
+                            setIsTyping(false);
+                            setMessages(prev => {
+                                const existingIndex = prev.findIndex(message => message.id === streamingMessageId);
+                                const partialMessage: ChatMessage = {
+                                    id: streamingMessageId,
+                                    role: "assistant",
+                                    content,
+                                    source,
+                                    intent: "app_scoped_chat",
+                                    isStreaming: true,
+                                };
+
+                                if (existingIndex === -1) {
+                                    return [...prev, partialMessage];
+                                }
+
+                                return prev.map(message => message.id === streamingMessageId ? { ...message, ...partialMessage } : message);
+                            });
+                        },
+                    },
                 );
 
                 if (browserLocalResponse) {
-                    setMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        role: "assistant",
-                        content: browserLocalResponse.content,
-                        pendingAction: browserLocalResponse.pendingAction,
-                        source: browserLocalResponse.source,
-                        intent: browserLocalResponse.intent,
-                    }]);
+                    setMessages(prev => {
+                        const finalizedMessage: ChatMessage = {
+                            id: streamingMessageId,
+                            role: "assistant",
+                            content: browserLocalResponse.content,
+                            pendingAction: browserLocalResponse.pendingAction,
+                            source: browserLocalResponse.source,
+                            intent: browserLocalResponse.intent,
+                            isStreaming: false,
+                        };
+
+                        return prev.some(message => message.id === streamingMessageId)
+                            ? prev.map(message => message.id === streamingMessageId ? { ...message, ...finalizedMessage } : message)
+                            : [...prev, finalizedMessage];
+                    });
                     setIsTyping(false);
                     return;
                 }
+
+                if (hasReceivedPartialContent) {
+                    setMessages(prev => prev.filter(message => message.id !== streamingMessageId));
+                }
             }
 
-            // 3. Fallback to cloud provider for conversational matching
             if (!hasPreferredProviderKey) {
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: "assistant",
+                appendAssistantMessage({
                     content: ui.copilot.messages.missingKey(profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseekFull),
                     source: "server",
                     intent: "app_scoped_chat",
-                }]);
+                });
                 setIsTyping(false);
                 return;
             }
 
-            const res = await fetch("/api/copilot", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    messages: [...messages, userMsg],
-                    vehicles: garageContext,
-                    selectedVehicleId,
-                    intentHint: classifiedIntent.intent,
-                })
-            });
-
-            if (!res.ok) throw new Error(ui.copilot.messages.failedResponse);
-            const data = await res.json() as CopilotResponseBody;
+            const data = await sendServerChat();
 
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -313,6 +542,7 @@ export function VeloceCopilot() {
                 // We'll reset it to empty so the NLP engine starts fresh for the next command.
                 setTimeout(() => setMessages([]), 1500);
                 setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
+                setActiveDraftIntent(null);
             }
         } else if (action.type === 'log_maintenance_draft') {
             const formData = new FormData();
@@ -339,6 +569,7 @@ export function VeloceCopilot() {
 
                 setTimeout(() => setMessages([]), 1500);
                 setMessages(prev => prev.map(message => message.pendingAction === action ? { ...message, pendingAction: undefined, content: "✅ " + message.content } : message));
+                setActiveDraftIntent(null);
             }
         }
     };
@@ -347,7 +578,7 @@ export function VeloceCopilot() {
         // We can just clear the chat context entirely to start fresh, 
         // or just clear the pending action. Let's clear the pending action and append a system message, 
         // but since the NLP uses the full array, resetting the entire history on dismiss prevents the bug.
-        setMessages([]);
+        clearChat();
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,12 +633,25 @@ export function VeloceCopilot() {
         }
     };
 
-    const hasExperimentalEdgeLocal = edgeBrowserAiAvailability !== "unavailable";
-    const edgeExperimentalStatus = edgeBrowserAiAvailability === "available"
-        ? ui.copilot.header.experimentalReady
-        : edgeBrowserAiAvailability === "downloadable" || edgeBrowserAiAvailability === "downloading"
-            ? ui.copilot.header.experimentalNotReady
+    const experimentalBrowserLabel = browserAiProvider === "chrome"
+        ? ui.copilot.providers.chromeExperimental
+        : browserAiProvider === "edge"
+            ? ui.copilot.providers.edgeExperimental
             : null;
+    const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+    const activeVisualState = getCopilotVisualState(lastAssistantMessage?.source);
+    const browserExperimentalStatus = experimentalBrowserLabel && browserAiAvailability === "available"
+        ? ui.copilot.header.experimentalReady(experimentalBrowserLabel)
+        : experimentalBrowserLabel && (browserAiAvailability === "downloadable" || browserAiAvailability === "downloading")
+            ? ui.copilot.header.experimentalNotReady(experimentalBrowserLabel)
+            : null;
+    const headerStatus = lastAssistantMessage?.source
+        ? `${activeVisualState.label} handled the last reply`
+        : browserExperimentalStatus
+            ? browserExperimentalStatus
+            : hasPreferredProviderKey
+                ? `${getProviderLabel(profile.preferredProvider)} ready for cloud fallback`
+                : ui.copilot.header.keyMissing;
 
     return (
         <>
@@ -427,32 +671,18 @@ export function VeloceCopilot() {
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
                         <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center">
-                                <Bot className="h-5 w-5" />
-                            </div>
+                            <CopilotAvatar source={lastAssistantMessage?.source} />
                             <div>
-                                <div className="flex items-center gap-1.5">
-                                    <h3 className="font-semibold text-sm">{brand.ai.copilotName}</h3>
-                                    {hasExperimentalEdgeLocal && (
-                                        <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/15 font-medium">
-                                            {ui.copilot.providers.edgeExperimental}
-                                        </div>
-                                    )}
-                                    <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/80 border border-primary/10 font-medium">
-                                        {profile.preferredProvider === 'gemini' ? ui.copilot.providers.gemini : profile.preferredProvider === 'openai' ? ui.copilot.providers.openai : ui.copilot.providers.deepseek}
-                                    </div>
-                                </div>
-                                <p className={`text-[10px] ${edgeExperimentalStatus ? "text-emerald-400" : ""}`}>
-                                    {edgeExperimentalStatus ?? ((profile.preferredProvider === 'gemini' ? profile.hasLlmKey :
-                                      profile.preferredProvider === 'openai' ? profile.hasOpenAiKey :
-                                      profile.hasDeepseekKey) ? ui.copilot.header.online : ui.copilot.header.keyMissing)}
+                                <h3 className="font-semibold text-sm">{brand.ai.copilotName}</h3>
+                                <p className={`text-[10px] ${lastAssistantMessage?.source ? activeVisualState.subtitleClassName : browserExperimentalStatus ? "text-emerald-400" : "text-muted-foreground"}`}>
+                                    {headerStatus}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
                             {messages.length > 0 && (
                                 <button
-                                    onClick={() => setMessages([])}
+                                    onClick={clearChat}
                                     className="text-muted-foreground hover:text-foreground p-1.5 hover:bg-white/10 rounded-full transition-colors"
                                     title={ui.copilot.header.newChatTitle}
                                 >
@@ -469,7 +699,7 @@ export function VeloceCopilot() {
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                         {messages.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 text-muted-foreground">
-                                <Bot className="h-12 w-12 opacity-20" />
+                                <CopilotAvatar source={lastAssistantMessage?.source} size="lg" />
                                 <div>
                                     <p className="font-medium">{ui.copilot.emptyState.title}</p>
                                     <p className="text-sm mt-1">{ui.copilot.emptyState.example}</p>
@@ -480,22 +710,13 @@ export function VeloceCopilot() {
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 {msg.role === 'assistant' && (
-                                    <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-white/5">
-                                        <Bot className="h-4 w-4 text-primary" />
-                                    </div>
+                                    <CopilotAvatar source={msg.source} size="sm" />
                                 )}
 
                                 <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
                                     ? 'bg-primary text-primary-foreground rounded-tr-sm'
                                     : 'bg-white/5 border border-white/10 text-foreground rounded-tl-sm'
                                     }`}>
-                                    {msg.role === "assistant" && getCopilotSourceLabel(msg.source) && (
-                                        <div className="mb-2">
-                                            <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                                {getCopilotSourceLabel(msg.source)}
-                                            </span>
-                                        </div>
-                                    )}
                                     {msg.attachments && msg.attachments.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {msg.attachments.map((att, i) => (
@@ -509,6 +730,13 @@ export function VeloceCopilot() {
                                     <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:p-0">
                                         <DynamicChatMarkdown content={msg.content} />
                                     </div>
+                                    {msg.isStreaming && (
+                                        <div className="mt-2 flex gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+                                        </div>
+                                    )}
 
                                     {/* Pending Action Card inside Chat */}
                                     {msg.pendingAction && (
@@ -556,9 +784,7 @@ export function VeloceCopilot() {
 
                         {isTyping && (
                             <div className="flex gap-3 justify-start">
-                                <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                                </div>
+                                <CopilotAvatar source={lastAssistantMessage?.source} size="sm" spinning />
                                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                                     <div className="flex gap-1">
                                         <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />

@@ -19,7 +19,10 @@ const quantitativeSignalPattern =
     /\b(how many|how much|what did i spend|what's my|what is my|what was my|average|avg|total|count|number of|current|latest|did i|have i|last week|this week|this month|last month|last 30 days|last 7 days|lately|this year|last year)\b/i;
 
 const appScopedKeywordPattern =
-    /\b(vehicle|garage|fuel|gas|petrol|diesel|charge|charging|maintenance|service|repair|oil|tyre|tire|odometer|mileage|efficiency|running cost|veloce)\b/i;
+    /\b(vehicle|garage|fuel|gas|petrol|diesel|fill-up|fill up|top-up|top up|refuel|refuelling|refueling|charge|charging|maintenance|service|repair|oil|brake|engine|transmission|gearbox|tyre|tire|battery|odometer|mileage|efficiency|mpg|km\/l|l\/100|range|tracker|trackers|reminder|reminders|receipt|invoice|dashboard|garage data|running cost|vehicle ownership|car|cars|motorcycle|bike|truck|ev|hybrid|veloce)\b/i;
+
+const contextualFollowUpPattern =
+    /^(and|also|what about|how about|why|why not|which one|that|this|it|them|those|these|can you elaborate|explain more|make it shorter|shorter|summarize|rephrase)\b/i;
 
 const outOfScopePattern =
     /\b(python|javascript|typescript|java|c\+\+|rust|golang|bash|sql|regex|algorithm|leetcode|essay|poem|story|capital of|prime number|integral|differentiate|homework|exam answer|write code|generate code)\b/i;
@@ -32,6 +35,35 @@ const vehicleReferenceAliases = [
 
 function normalizeText(value: string) {
     return value.trim().toLowerCase();
+}
+
+function mentionsKnownVehicle(content: string, vehicles: CopilotVehicleContext[]) {
+    const normalized = normalizeText(content);
+
+    return vehicles.some((vehicle) => {
+        const aliases = [
+            vehicle.nickname,
+            vehicle.make,
+            vehicle.model,
+            `${vehicle.make} ${vehicle.model}`,
+        ]
+            .filter(Boolean)
+            .map((alias) => normalizeText(alias as string));
+
+        return aliases.some((alias) => alias.length > 0 && normalized.includes(alias));
+    });
+}
+
+function isAppScopedMessage(content: string, vehicles: CopilotVehicleContext[]) {
+    const normalized = normalizeText(content);
+
+    return appScopedKeywordPattern.test(normalized) || mentionsKnownVehicle(normalized, vehicles);
+}
+
+function hasRecentInScopeContext(messages: CopilotRequestMessage[], vehicles: CopilotVehicleContext[]) {
+    return messages
+        .slice(-4)
+        .some((message) => message.role === "user" && isAppScopedMessage(message.content, vehicles));
 }
 
 function formatMonthLabel(date: Date) {
@@ -272,7 +304,11 @@ export function classifyCopilotIntent(
         };
     }
 
-    if (appScopedKeywordPattern.test(normalized)) {
+    if (isAppScopedMessage(content, vehicles)) {
+        return { intent: "app_scoped_chat" };
+    }
+
+    if (contextualFollowUpPattern.test(normalized) && hasRecentInScopeContext(messages.slice(0, -1), vehicles)) {
         return { intent: "app_scoped_chat" };
     }
 

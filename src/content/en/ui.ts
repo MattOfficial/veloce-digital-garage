@@ -137,6 +137,7 @@ export const ui = {
             uploadedDocuments: (count: number) => `Uploaded ${count} document(s)`,
             needsMoreInfo: "I need more information.",
             preparedLog: "I've prepared that log for you. Please review and confirm.",
+            draftCancelled: "Okay, I cancelled that draft.",
             scopeRefusal: `I can help with ${brand.app.shortName}, your garage data, fuel, maintenance, and vehicle ownership topics only.`,
             missingKey(provider: string) {
                 return `I can process basic fuel and maintenance logs locally, but I didn't quite catch that. Please add your ${provider} API key in Profile Settings to unlock conversational AI.`;
@@ -153,8 +154,8 @@ export const ui = {
             online: "Online",
             keyMissing: "Key Missing",
             newChatTitle: "New Chat / Clear Context",
-            experimentalReady: "Edge local experimental ready",
-            experimentalNotReady: "Edge local model detected but not ready yet",
+            experimentalReady: (provider: string) => `${provider} local AI ready`,
+            experimentalNotReady: (provider: string) => `${provider} local AI detected but not ready yet`,
         },
         emptyState: {
             title: "How can I help?",
@@ -176,11 +177,13 @@ export const ui = {
             openai: "OpenAI",
             deepseek: "Deepseek",
             deepseekFull: "DeepSeek",
-            edgeExperimental: "Edge Local Exp",
+            edgeExperimental: "Edge Local",
+            chromeExperimental: "Chrome Nano",
         },
         sources: {
             localNlp: "Local NLP",
             edgeLocal: "Edge Local",
+            chromeLocal: "Chrome Nano",
             serverAnalytics: "Server Analytics",
             server: "Server",
             serverGemini: "Server Gemini",

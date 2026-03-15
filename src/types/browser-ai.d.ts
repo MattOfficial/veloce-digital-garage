@@ -14,6 +14,14 @@ interface BrowserLanguageModelSession {
             signal?: AbortSignal;
         },
     ) => Promise<string>;
+    promptStreaming?: (
+        input: string,
+        options?: {
+            responseConstraint?: Record<string, unknown>;
+            omitResponseConstraintInput?: boolean;
+            signal?: AbortSignal;
+        },
+    ) => ReadableStream<string> & AsyncIterable<string>;
     destroy?: () => void | Promise<void>;
 }
 
@@ -29,4 +37,3 @@ declare global {
 }
 
 export {};
-
