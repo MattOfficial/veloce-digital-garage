@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircle2, Flag, Droplet, Wrench, Fuel, Timer, ShieldCheck, Bot, Trophy } from "lucide-react";
+import { User, Save, Car, Trash2, PlusCircle, Zap, Leaf, Truck, Lock, CheckCircle2, Flag, Droplet, Wrench, Fuel, Timer, ShieldCheck, Bot, Trophy, Route } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { getUserBadges } from "@/app/actions/badges";
 import { BADGE_REGISTRY } from "@/lib/badges";
@@ -28,6 +28,12 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { isProviderPreference, type ProviderPreference } from "@/types/ai";
+import {
+    createTrailingDayRange,
+    createTrailingMonthRange,
+    getGarageDistanceSummary,
+    getGarageLifetimeDistanceSummary,
+} from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
 
 type ProfileDraft = {
@@ -76,14 +82,22 @@ export default function ProfilePage() {
     // Initial fetch to sync store if not already loaded, and set local state
     useEffect(() => {
         const initialize = async () => {
-            await fetchProfile();
+            await Promise.all([fetchProfile(), fetchVehicles()]);
             const badges = await getUserBadges();
             setEarnedBadges(badges);
         };
         initialize();
-    }, [fetchProfile]);
+    }, [fetchProfile, fetchVehicles]);
 
     const resolvedProfile = profileDraft ?? createProfileDraft(profile);
+    const formatDistance = (value: number) => new Intl.NumberFormat(undefined, {
+        maximumFractionDigits: 0,
+    }).format(value);
+    const garageDistanceMetrics = useMemo(() => ({
+        last30Days: getGarageDistanceSummary(vehicles, createTrailingDayRange(30)),
+        last12Months: getGarageDistanceSummary(vehicles, createTrailingMonthRange(12)),
+        lifetime: getGarageLifetimeDistanceSummary(vehicles),
+    }), [vehicles]);
 
     const updateProfileDraft = <K extends keyof ProfileDraft>(field: K, value: ProfileDraft[K]) => {
         setProfileDraft((currentDraft) => ({
@@ -289,6 +303,54 @@ export default function ProfilePage() {
                                             {new Date(earned.earned_at).toLocaleDateString()}
                                         </span>
                                     )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-56 h-56 bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none" />
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                        <Route className="h-6 w-6 text-cyan-400" />
+                        {ui.profile.distanceAnalyticsTitle}
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                        {ui.profile.distanceAnalyticsDescription}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {[
+                            { key: "last30Days", label: ui.profile.distanceLastThirtyDays },
+                            { key: "last12Months", label: ui.profile.distanceLastTwelveMonths },
+                            { key: "lifetime", label: ui.profile.lifetimeDistance },
+                        ].map(({ key, label }) => {
+                            const summary = garageDistanceMetrics[key as keyof typeof garageDistanceMetrics];
+                            const helperText = summary.hasSufficientData
+                                ? summary.coverage === "partial"
+                                    ? ui.profile.distancePartialCoverage(summary.contributingVehicles, summary.totalVehicles)
+                                    : ui.profile.distanceFullCoverageDescription
+                                : ui.profile.distanceUnavailableDescription;
+
+                            return (
+                                <div
+                                    key={key}
+                                    className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+                                >
+                                    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                                    <div className="mt-3 text-3xl font-black">
+                                        {isVehiclesLoading && vehicles.length === 0
+                                            ? ui.common.emptyValue
+                                            : summary.hasSufficientData && summary.value != null
+                                            ? `${formatDistance(summary.value)} ${resolvedProfile.distanceUnit}`
+                                            : ui.profile.distanceUnavailable}
+                                    </div>
+                                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                                        {isVehiclesLoading && vehicles.length === 0 ? ui.dashboard.loading : helperText}
+                                    </p>
                                 </div>
                             );
                         })}
