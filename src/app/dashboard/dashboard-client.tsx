@@ -11,6 +11,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { useUserStore } from "@/store/user-store";
 
 import { CustomLogCategory } from "@/types/database";
+import { createTrailingDayRange, getVehicleDistanceSummary } from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444']; // Blue, Amber, Emerald, Red
@@ -68,6 +69,9 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
     const currencySymbol = profile?.currency === "USD" ? "$" : profile?.currency === "EUR" ? "€" : profile?.currency === "GBP" ? "£" : "₹";
     const distanceUnit = profile?.distanceUnit || "km";
+    const formatDistance = (value: number) => new Intl.NumberFormat(undefined, {
+        maximumFractionDigits: 0,
+    }).format(value);
 
     // 1. Calculate Vitals
     const totalFuelCost = selectedVehicle.fuel_logs?.reduce((sum, log) => sum + log.total_cost, 0) || 0;
@@ -93,6 +97,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
 
     const costLast30Days = getCostInPeriod(thirtyDaysAgo, now);
     const costPrev30Days = getCostInPeriod(sixtyDaysAgo, thirtyDaysAgo);
+    const distanceLast30Days = getVehicleDistanceSummary(selectedVehicle, createTrailingDayRange(30, now));
 
     let spendTrend = 0;
     if (costPrev30Days > 0) {
@@ -193,13 +198,21 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                 <MotionWrapper delay={0.3}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.lifetimeFuel}</CardTitle>
-                            <Droplet className="h-4 w-4 text-amber-500 opacity-70" />
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{ui.dashboard.distanceLastThirtyDays}</CardTitle>
+                            <MapIcon className="h-4 w-4 text-amber-500 opacity-70" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{currencySymbol}{totalFuelCost.toFixed(2)}</div>
+                            <div className="text-2xl font-bold">
+                                {distanceLast30Days.hasSufficientData && distanceLast30Days.value != null
+                                    ? `${formatDistance(distanceLast30Days.value)} ${distanceUnit}`
+                                    : ui.common.emptyValue}
+                            </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                {ui.dashboard.allTimeFuelCost}
+                                {distanceLast30Days.hasSufficientData
+                                    ? distanceLast30Days.coverage === "partial"
+                                        ? ui.dashboard.basedOnAvailableOdometerLogs
+                                        : ui.dashboard.distanceLastThirtyDaysDescription
+                                    : ui.dashboard.distanceNeedsOdometerLogs}
                             </p>
                         </CardContent>
                     </Card>

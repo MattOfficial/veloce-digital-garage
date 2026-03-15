@@ -1,4 +1,5 @@
 import { buildFuelAnalytics } from "@/utils/fuel-analytics";
+import { getGarageDistanceSummary } from "@/utils/distance-analytics";
 import type {
     CopilotAnalyticsQuery,
     CopilotAnalyticsResult,
@@ -46,46 +47,45 @@ function getCurrentOdometer(vehicle: VehicleWithLogs, endDate?: string) {
     return logs[0]?.odometer ?? vehicle.baseline_odometer;
 }
 
-function getOdometerBefore(vehicle: VehicleWithLogs, startDate: string) {
-    const logs = [...(vehicle.fuel_logs ?? [])]
-        .filter((log) => log.date < startDate)
-        .sort((left, right) => right.odometer - left.odometer);
-
-    return logs[0]?.odometer ?? vehicle.baseline_odometer;
-}
-
 function filterLogsByDate<T extends { date: string }>(logs: T[], start: string, end: string) {
     return logs.filter((log) => log.date >= start && log.date <= end);
 }
 
 function getDistanceResult(query: CopilotAnalyticsQuery, vehicles: VehicleWithLogs[], profile: AnalyticsProfile): CopilotAnalyticsResult {
-    let totalDistance = 0;
-    let hadAnyReading = false;
+    const summary = getGarageDistanceSummary(vehicles, {
+        start: query.dateRange.start,
+        end: query.dateRange.end,
+    });
+    const vehicleLabel = getVehicleLabel(vehicles);
 
-    for (const vehicle of vehicles) {
-        const endOdometer = getCurrentOdometer(vehicle, query.dateRange.end);
-        const startOdometer = getOdometerBefore(vehicle, query.dateRange.start);
-
-        if ((vehicle.fuel_logs ?? []).length > 0) {
-            hadAnyReading = true;
-        }
-
-        totalDistance += Math.max(0, endOdometer - startOdometer);
+    if (!summary.hasSufficientData || summary.value == null) {
+        return {
+            metric: query.metric,
+            scope: query.scope,
+            vehicleIds: vehicles.map((vehicle) => vehicle.id),
+            value: null,
+            unit: profile.distanceUnit,
+            label: "Distance driven",
+            summary: `I don’t have enough odometer history to calculate distance for ${vehicleLabel} during ${query.dateRange.label}.`,
+            dateRangeLabel: query.dateRange.label,
+            hasSufficientData: false,
+        };
     }
 
-    const vehicleLabel = getVehicleLabel(vehicles);
+    const coverageNote = summary.coverage === "partial"
+        ? " based on the odometer logs currently available."
+        : ".";
+
     return {
         metric: query.metric,
         scope: query.scope,
         vehicleIds: vehicles.map((vehicle) => vehicle.id),
-        value: hadAnyReading ? totalDistance : null,
+        value: summary.value,
         unit: profile.distanceUnit,
         label: "Distance driven",
-        summary: hadAnyReading
-            ? `You drove ${formatNumber(totalDistance)} ${profile.distanceUnit} across ${vehicleLabel} during ${query.dateRange.label}.`
-            : `I don’t have enough odometer history to calculate distance for ${vehicleLabel} during ${query.dateRange.label}.`,
+        summary: `You drove ${formatNumber(summary.value)} ${profile.distanceUnit} across ${vehicleLabel} during ${query.dateRange.label}${coverageNote}`,
         dateRangeLabel: query.dateRange.label,
-        hasSufficientData: hadAnyReading,
+        hasSufficientData: true,
     };
 }
 

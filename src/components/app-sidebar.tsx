@@ -28,7 +28,7 @@ const navigation = [
     { name: ui.sidebar.items.dashboard, href: "/dashboard", icon: Car },
     { name: ui.sidebar.items.fuelHistory, href: "/dashboard/fuel", icon: Fuel },
     { name: ui.sidebar.items.maintenance, href: "/dashboard/maintenance", icon: Wrench },
-    { name: ui.sidebar.items.runningCosts, href: "/dashboard/insights", icon: BarChart2 },
+    { name: ui.sidebar.items.insights, href: "/dashboard/insights", icon: BarChart2 },
 ];
 
 export function AppSidebar() {
