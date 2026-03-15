@@ -28,12 +28,12 @@ Find the **Environment Variables** dropdown on the "Configure Project" screen. A
 | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Go to your Supabase Project Dashboard > Project Settings (gear icon) > API. Copy the **Project URL**. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | In the exact same Supabase settings page, copy the long key labeled `anon` `public`. |
-| `ENCRYPTION_MASTER_KEY` | Use the exact same 32-byte secret code you generated when setting up the app locally in your `.env.local` file. |
+| `ENCRYPTION_MASTER_KEY` | Use the exact same 64-character hex key you generated when setting up the app locally in your `.env.local` file. |
 | `GEMINI_MODEL` | Optional. Leave unset to use the app default, or set your preferred Gemini model override. |
 | `OPENAI_MODEL` | Optional. Leave unset to use the app default, or set your preferred OpenAI model override. |
 | `DEEPSEEK_MODEL` | Optional. Leave unset to use the app default, or set your preferred DeepSeek model override. |
 
-*Note: You do not add user LLM API keys in Vercel. Users bring their own keys inside the app, and those keys are encrypted before storage. `ENCRYPTION_MASTER_KEY` is the only server-side secret required for that flow.*
+*Note: You do not add user LLM API keys in Vercel. Users bring their own keys inside the app, and those keys are encrypted before storage. `ENCRYPTION_MASTER_KEY` is the only server-side secret required for that flow. Browser-local AI paths in Edge and Chrome also do not require a server-side provider key, but they depend on the end user's browser support and local model availability.*
 
 Once all variables are added, click the big **Deploy** button! Vercel will now build your app. This usually takes 1 to 3 minutes.
 

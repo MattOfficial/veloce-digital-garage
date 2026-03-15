@@ -14,8 +14,8 @@ Primary routes:
 - `/dashboard` overview
 - `/dashboard/fuel` fuel history and fuel-efficiency analysis
 - `/dashboard/maintenance` maintenance analytics, OCR review, custom trackers, and tire tracking
-- `/dashboard/insights` running-cost analytics
-- `/dashboard/profile` profile, provider key management, badges, and garage management
+- `/dashboard/insights` tabbed insights for running costs and distance analytics
+- `/dashboard/profile` profile, provider key management, badges, garage management, and garage-wide distance metrics
 - `/dashboard/vehicles/[id]` vehicle detail editor and service history
 - `/telemetry` experimental visual demo
 
@@ -51,10 +51,12 @@ Primary routes:
 
 ### Copilot
 
-`src/components/veloce-copilot.tsx` uses a two-step flow:
+`src/components/veloce-copilot.tsx` uses a client-side router plus server fallback:
 
-1. Local parsing via `src/utils/nlp-engine.ts` for straightforward fuel and maintenance commands
-2. Cloud fallback via `POST /api/copilot` when local parsing cannot confidently draft an action
+1. Local parsing via `src/utils/nlp-engine.ts` for explicit fuel and maintenance draft flows
+2. Guardrail / analytics / general-chat routing via `src/utils/copilot-routing.ts`
+3. Browser-local chat via `src/utils/browser-ai.ts` when Edge local models or Chrome Gemini Nano are available
+4. Server fallback via `POST /api/copilot` for analytics, provider-backed chat, and attachment-routed flows
 
 Supported providers in the current branch:
 
@@ -62,9 +64,15 @@ Supported providers in the current branch:
 - OpenAI
 - DeepSeek
 
+Supported browser-local paths in the current branch:
+
+- Edge local built-in model path
+- Chrome Gemini Nano Prompt API path
+
 Current limitation:
 
-- Chat attachments are only processed end-to-end in the Gemini path
+- Chat attachments route through the server path, but inline attachment understanding is still Gemini-led today
+- OCR and receipt extraction remain Gemini-key based
 
 ### OCR
 
@@ -107,6 +115,8 @@ Implemented in this branch:
 - Tire tracking
 - Badges
 - Multi-provider Copilot
+- Browser-local AI support for Edge and Chrome
+- Distance analytics on overview, insights, and profile surfaces
 
 Partially implemented:
 
@@ -117,5 +127,5 @@ Partially implemented:
 
 - `src/types/supabase.ts` should be kept aligned with `supabase/migrations`
 - `supabase/schema.sql` is historical bootstrap SQL, not the best source of truth for the current schema
+- `npm run lint` currently passes on this branch
 - `npm run build` currently passes on this branch
-- `npm run lint` still reports existing lint debt outside the scope of this doc refresh

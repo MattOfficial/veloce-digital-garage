@@ -64,8 +64,17 @@ export default function AnalyticsDashboard() {
 ## Form Components (Shadcn UI)
 The project utilizes the `shadcn/ui` ecosystem (`components/ui/*`). Several core primitives (`Card`, `Dialog`, `Sidebar`) have been fundamentally overridden to force the translucent styling globally. When extending from Shadcn or `radix-ui`, do not revert back to hard-coded `bg-background` and `border-border` colors if they obscure the interactive matrix wallpaper.
 
+## Dashboard Layout Patterns
+
+- Prefer tabbed layouts when a dashboard surface contains multiple distinct analytic modes. The current app uses this pattern in:
+  - `src/app/dashboard/maintenance/maintenance-client.tsx`
+  - `src/app/dashboard/insights/page.tsx`
+- Use rounded tab lists that feel native to the glassmorphic shell: `rounded-full` on the list and triggers, with simple 2-3 tab groupings.
+- Keep each tab internally cohesive. For example, the Insights route separates `Running Costs` from `Distance` instead of stacking all analytics into one scroll-heavy page.
+
 ## AI Assistant Paradigms (`VeloceCopilot`)
 The UI implements an always-accessible global chat interface for the LLM Copilot:
 - **Floating Action Button (FAB):** Placed `fixed bottom-6 right-6` with pulsating ambient scale bounds.
 - **Chat Window:** Employs maximum backdrop blur and strict border containment (`animate-in slide-in-from-bottom-5 fade-in duration-300`).
 - **Rich Text Rendering:** The application explicitly implements `react-markdown` and `remark-gfm` nested inside `prose prose-sm dark:prose-invert`. All generative AI output MUST go through this markdown parser to preserve the structural styling intended by LLMs (bolding, lists, code fences). Do not render literal `msg.content` text fields.
+- **Source-aware assistant visuals:** The assistant iconography now changes based on the response path. Browser-local, local NLP, provider-backed server responses, analytics replies, and guardrail refusals each have distinct avatars instead of raw debug labels.
