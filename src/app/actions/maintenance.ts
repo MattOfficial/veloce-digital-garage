@@ -4,6 +4,14 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges, awardAiMechanicBadge } from "./badges";
 import type { BadgeDefinition } from "@/lib/badges";
+import { syncVehicleServiceInterval, syncVehicleCurrentOdometer } from "./_vehicle-sync";
+
+function revalidateMaintenanceRelatedPaths(vehicleId: string) {
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath("/dashboard/insights");
+    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+}
 
 export async function submitMaintenanceLog(formData: FormData) {
     const supabase = await createClient();
@@ -21,6 +29,7 @@ export async function submitMaintenanceLog(formData: FormData) {
     const date = formData.get("date")?.toString();
     const service_type = formData.get("service_type")?.toString();
     const costStr = formData.get("cost")?.toString();
+    const odometerStr = formData.get("odometer")?.toString();
     const notes = formData.get("notes")?.toString();
     const receipt_url = formData.get("receipt_url")?.toString();
 
@@ -32,6 +41,10 @@ export async function submitMaintenanceLog(formData: FormData) {
     if (isNaN(cost) || cost < 0) {
         return { error: "Cost must be a valid positive number." };
     }
+    const odometer = odometerStr ? parseFloat(odometerStr) : null;
+    if (odometerStr && (odometer == null || Number.isNaN(odometer) || odometer < 0)) {
+        return { error: "Odometer must be a valid positive number." };
+    }
 
     // Insert into Supabase
     const { error: insertError } = await supabase
@@ -42,6 +55,7 @@ export async function submitMaintenanceLog(formData: FormData) {
             date,
             service_type,
             cost,
+            odometer,
             notes: notes || null,
             receipt_url: receipt_url || null,
         });
@@ -51,9 +65,9 @@ export async function submitMaintenanceLog(formData: FormData) {
         return { error: insertError.message };
     }
 
-    // Revalidate paths that might show this data
-    revalidatePath("/dashboard/maintenance");
-    revalidatePath(`/dashboard/vehicles/${vehicle_id}`);
+    await syncVehicleServiceInterval(supabase as any, vehicle_id, service_type, date, odometer);
+    await syncVehicleCurrentOdometer(supabase as any, vehicle_id);
+    revalidateMaintenanceRelatedPaths(vehicle_id);
 
     let newBadges: BadgeDefinition[] = [];
     if (user) {
@@ -90,8 +104,8 @@ export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
         return { error: error.message };
     }
 
-    revalidatePath("/dashboard/maintenance");
-    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+    await syncVehicleCurrentOdometer(supabase as any, vehicleId);
+    revalidateMaintenanceRelatedPaths(vehicleId);
 
     return { success: true };
 }
@@ -112,6 +126,7 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
     const date = formData.get("date")?.toString();
     const service_type = formData.get("service_type")?.toString();
     const costStr = formData.get("cost")?.toString();
+    const odometerStr = formData.get("odometer")?.toString();
     const notes = formData.get("notes")?.toString();
 
     if (!vehicle_id || !date || !service_type || !costStr) {
@@ -122,6 +137,10 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
     if (isNaN(cost) || cost < 0) {
         return { error: "Cost must be a valid positive number." };
     }
+    const odometer = odometerStr ? parseFloat(odometerStr) : null;
+    if (odometerStr && (odometer == null || Number.isNaN(odometer) || odometer < 0)) {
+        return { error: "Odometer must be a valid positive number." };
+    }
 
     const { error: updateError } = await supabase
         .from("maintenance_logs")
@@ -129,6 +148,7 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
             date,
             service_type,
             cost,
+            odometer,
             notes: notes || null,
         })
         .eq("id", logId)
@@ -139,8 +159,9 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
         return { error: updateError.message };
     }
 
-    revalidatePath("/dashboard/maintenance");
-    revalidatePath(`/dashboard/vehicles/${vehicle_id}`);
+    await syncVehicleServiceInterval(supabase as any, vehicle_id, service_type, date, odometer);
+    await syncVehicleCurrentOdometer(supabase as any, vehicle_id);
+    revalidateMaintenanceRelatedPaths(vehicle_id);
 
     return { success: true, newBadges: [] };
 }

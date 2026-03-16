@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useVehicleStore } from "@/store/vehicle-store";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
@@ -33,6 +34,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { VehicleWithLogs } from "@/types/database";
 import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
+import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 const formSchema = z.object({
     date: z.string().nonempty({ message: "Date is required" }),
@@ -89,6 +91,7 @@ function FuelLogForm({
     isEV: boolean;
     onSuccess: () => void;
 }) {
+    const router = useRouter();
     const { fetchVehicles } = useVehicleStore();
     const { profile, getVolumeUnit } = useUserStore();
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -96,9 +99,7 @@ function FuelLogForm({
     const defaultEnergyType = isEV ? 'charge' : 'fuel';
     const [energyType, setEnergyType] = useState<'fuel' | 'charge'>(defaultEnergyType);
 
-    const latestOdometer = vehicle.fuel_logs?.length > 0
-        ? Math.max(...vehicle.fuel_logs.map(log => log.odometer))
-        : vehicle.baseline_odometer || 0;
+    const latestOdometer = getVehicleCurrentOdometer(vehicle);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -136,6 +137,7 @@ function FuelLogForm({
                         result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                     }
                     await fetchVehicles();
+                    router.refresh();
                     setTimeout(() => {
                         onSuccess();
                     }, 1000);

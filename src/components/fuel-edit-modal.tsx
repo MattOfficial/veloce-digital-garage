@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useVehicleStore } from "@/store/vehicle-store";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { editFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
@@ -78,6 +79,7 @@ export function FuelEditModal({ log, open, onOpenChange }: FuelEditModalProps) {
 }
 
 function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open: boolean) => void }) {
+    const router = useRouter();
     const { fetchVehicles } = useVehicleStore();
     const { profile, getVolumeUnit } = useUserStore();
     const [isPending, startTransition] = useTransition();
@@ -115,7 +117,8 @@ function FuelEditForm({ log, onOpenChange }: { log: FuelLog; onOpenChange: (open
                 const result = await editFuelLog(log.id, formData);
                 if (result.success) {
                     toast.success(ui.fuel.modal.editSaved);
-                    fetchVehicles();
+                    await fetchVehicles();
+                    router.refresh();
                     onOpenChange(false);
                 } else {
                     setError(result.error || ui.fuel.modal.editFailed);

@@ -13,6 +13,7 @@ import { useUserStore } from "@/store/user-store";
 import { CustomLogCategory } from "@/types/database";
 import { createTrailingDayRange, getVehicleDistanceSummary } from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
+import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 const EXPENSE_COLORS = {
     fuel: "#f59e0b",
@@ -83,9 +84,7 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
     const totalCustomCost = selectedVehicle.custom_logs?.reduce((sum, log) => sum + (log.cost || 0), 0) || 0;
     const totalSpend = totalFuelCost + totalMaintenanceCost + totalCustomCost;
 
-    const latestOdometer = selectedVehicle.fuel_logs && selectedVehicle.fuel_logs.length > 0
-        ? Math.max(...selectedVehicle.fuel_logs.map(l => l.odometer))
-        : selectedVehicle.baseline_odometer;
+    const latestOdometer = getVehicleCurrentOdometer(selectedVehicle);
 
     // Last 30 days spend vs previous 30 days
     const now = new Date();

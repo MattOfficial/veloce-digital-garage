@@ -31,6 +31,7 @@ export type Vehicle = {
   model: string;
   year: number;
   baseline_odometer: number;
+  current_odometer: number | null;
   image_url: string | null;
   vin: string | null;
   license_plate: string | null;
@@ -70,8 +71,21 @@ export type MaintenanceLog = {
   date: string;
   service_type: string;
   cost: number;
+  odometer: number | null;
   notes: string | null;
   created_at: string;
+};
+
+export type ServiceReminder = {
+  id: string;
+  vehicle_id: string | null;
+  service_type: string;
+  recurring_months: number | null;
+  recurring_distance: number | null;
+  last_completed_date: string | null;
+  last_completed_odometer: number | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type CustomLogCategory = {
@@ -99,6 +113,7 @@ export type VehicleWithLogs = Vehicle & {
   fuel_logs: FuelLog[];
   maintenance_logs: MaintenanceLog[];
   custom_logs: CustomLog[];
+  service_reminders: ServiceReminder[];
 };
 
 export type UserBadge = {

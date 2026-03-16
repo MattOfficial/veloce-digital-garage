@@ -5,6 +5,7 @@ import type { FuelLog, FuelLogEnergyType, FuelLogFillType } from "@/types/databa
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
+import { syncVehicleCurrentOdometer } from "./_vehicle-sync";
 
 type FuelLogMutationPayload = {
     vehicle_id: string;
@@ -158,6 +159,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         return { success: false, error: "Failed to save fuel log" };
     }
 
+    await syncVehicleCurrentOdometer(supabase as any, payload.vehicle_id);
     revalidateFuelRelatedPaths(payload.vehicle_id);
 
     const newBadges = user ? await evaluateBadges(user.id) : [];
@@ -221,6 +223,7 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
         return { success: false, error: error.message };
     }
 
+    await syncVehicleCurrentOdometer(supabase as any, payload.vehicle_id);
     revalidateFuelRelatedPaths(payload.vehicle_id);
     return { success: true };
 }
@@ -248,6 +251,7 @@ export async function deleteFuelLog(logId: string, vehicleId: string) {
         return { success: false, error: error.message };
     }
 
+    await syncVehicleCurrentOdometer(supabase as any, vehicleId);
     revalidateFuelRelatedPaths(vehicleId);
     return { success: true };
 }

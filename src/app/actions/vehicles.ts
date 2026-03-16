@@ -44,6 +44,7 @@ export async function addVehicle(formData: FormData) {
             model,
             year,
             baseline_odometer,
+            current_odometer: baseline_odometer,
             image_url,
             vehicle_type,
             powertrain,
@@ -123,6 +124,14 @@ export async function updateVehicle(id: string, formData: FormData) {
         }
     }
 
+    if (formData.has("current_odometer")) {
+        const odoStr = formData.get("current_odometer")?.toString();
+        if (odoStr) {
+            const odo = parseFloat(odoStr);
+            if (!isNaN(odo)) updates.current_odometer = odo;
+        }
+    }
+
     if (formData.has("battery_capacity_kwh")) {
         const battStr = formData.get("battery_capacity_kwh")?.toString();
         if (battStr) {
@@ -181,6 +190,9 @@ export async function updateVehicle(id: string, formData: FormData) {
 
     revalidatePath(`/dashboard/vehicles/${id}`);
     revalidatePath("/dashboard/profile");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath("/dashboard/insights");
 
     return { success: true, vehicle: data };
 }

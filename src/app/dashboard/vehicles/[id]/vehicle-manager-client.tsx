@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { VehicleWithLogs } from "@/types/database";
 import { useUserStore } from "@/store/user-store";
 import { updateVehicle } from "@/app/actions/vehicles";
+import { upsertVehicleServiceInterval } from "@/app/actions/reminders";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,7 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Save, Car, Droplet, Wrench, Calendar, Gauge, History, Edit3, X } from "lucide-react";
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
+import { UpdateOdometerModal } from "@/components/update-odometer-modal";
 import { ui } from "@/content/en/ui";
+import { getServiceReminderStatus, getVehicleCurrentOdometer, getVehicleServiceInterval } from "@/utils/vehicle-metrics";
+import { toast } from "sonner";
 
 export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: VehicleWithLogs }) {
     const router = useRouter();
@@ -23,6 +27,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
     const { fetchVehicles, selectedVehicleId, setSelectedVehicleId } = useVehicleStore();
     const [vehicle, setVehicle] = useState(initialVehicle);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingServiceInterval, setIsSavingServiceInterval] = useState(false);
     const [isEditingSpecs, setIsEditingSpecs] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [customFields, setCustomFields] = useState<{ key: string, value: string }[]>([]);
@@ -40,9 +45,9 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
     // Calculate Vitals
     const totalFuelCost = vehicle.fuel_logs.reduce((sum, log) => sum + log.total_cost, 0);
     const totalMaintenanceCost = vehicle.maintenance_logs.reduce((sum, log) => sum + log.cost, 0);
-    const latestOdometer = vehicle.fuel_logs.length > 0
-        ? Math.max(...vehicle.fuel_logs.map(l => l.odometer))
-        : vehicle.baseline_odometer;
+    const latestOdometer = getVehicleCurrentOdometer(vehicle);
+    const serviceInterval = getVehicleServiceInterval(vehicle.service_reminders);
+    const serviceIntervalStatus = serviceInterval ? getServiceReminderStatus(serviceInterval, latestOdometer) : null;
 
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
 
@@ -74,6 +79,31 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
             setIsEditingSpecs(false);
         }
         setIsSaving(false);
+    }
+
+    async function handleSaveServiceInterval(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setIsSavingServiceInterval(true);
+        setMessage(null);
+
+        const formData = new FormData(e.currentTarget);
+        formData.append("vehicle_id", vehicle.id);
+
+        try {
+            const result = await upsertVehicleServiceInterval(formData);
+            if (result.reminder) {
+                const existing = vehicle.service_reminders.filter((reminder) => reminder.id !== result.reminder.id);
+                setVehicle({ ...vehicle, service_reminders: [result.reminder, ...existing] });
+            }
+            await fetchVehicles();
+            router.refresh();
+            toast.success(ui.vehicle.serviceIntervalSaved);
+        } catch (error) {
+            const messageText = error instanceof Error ? error.message : "Failed to update service interval.";
+            setMessage({ type: "error", text: messageText });
+        } finally {
+            setIsSavingServiceInterval(false);
+        }
     }
 
 
@@ -141,7 +171,15 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                     <Gauge className="h-4 w-4 mr-2" />
                                     <span className="text-sm font-medium">{ui.vehicle.odometer}</span>
                                 </div>
-                                <span className="font-semibold">{latestOdometer.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">{profile.distanceUnit}</span></span>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-semibold">{latestOdometer.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">{profile.distanceUnit}</span></span>
+                                    <UpdateOdometerModal
+                                        vehicleId={vehicle.id}
+                                        currentOdometer={latestOdometer}
+                                        onUpdated={(nextOdometer) => setVehicle((current) => ({ ...current, current_odometer: nextOdometer }))}
+                                        trigger={<Button variant="outline" size="sm" className="rounded-full px-3">{ui.common.actions.update}</Button>}
+                                    />
+                                </div>
                             </div>
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center text-muted-foreground">
@@ -162,7 +200,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                 </div>
 
                 {/* Specs Form */}
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 space-y-6">
                     <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
                         <CardHeader className="flex flex-row items-start justify-between">
                             <div>
@@ -227,6 +265,19 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                         <div className="space-y-2">
                                             <Label htmlFor="year">{ui.vehicle.modelYear}</Label>
                                             <Input id="year" name="year" type="number" defaultValue={vehicle.year} className="rounded-xl" required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="current_odometer">{ui.vehicle.currentOdometer}</Label>
+                                            <Input
+                                                id="current_odometer"
+                                                name="current_odometer"
+                                                type="number"
+                                                min="0"
+                                                step="any"
+                                                defaultValue={vehicle.current_odometer ?? latestOdometer}
+                                                placeholder={ui.vehicle.currentOdometerPlaceholder}
+                                                className="rounded-xl"
+                                            />
                                         </div>
                                     </div>
 
@@ -349,6 +400,10 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                             <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.modelYear}</p>
                                             <p className="font-medium text-foreground">{vehicle.year}</p>
                                         </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-muted-foreground">{ui.vehicle.currentOdometer}</p>
+                                            <p className="font-medium text-foreground">{latestOdometer.toLocaleString()} {profile.distanceUnit}</p>
+                                        </div>
                                         {/* Render Custom Fields in Read-Only Mode */}
                                         {Object.entries(vehicle.custom_fields || {}).map(([key, value]) => (
                                             <div key={key} className="space-y-1">
@@ -367,6 +422,77 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                     )}
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="rounded-[2rem] shadow-sm border overflow-hidden">
+                        <CardHeader>
+                            <CardTitle>{ui.vehicle.serviceIntervalTitle}</CardTitle>
+                            <CardDescription>{ui.vehicle.serviceIntervalDescription}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSaveServiceInterval} className="space-y-5">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="recurring_months">{ui.vehicle.serviceIntervalMonths}</Label>
+                                        <Input
+                                            id="recurring_months"
+                                            name="recurring_months"
+                                            type="number"
+                                            min="1"
+                                            placeholder="12"
+                                            defaultValue={serviceInterval?.recurring_months ?? ""}
+                                            className="rounded-xl"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="recurring_distance">{ui.vehicle.serviceIntervalDistance(profile.distanceUnit)}</Label>
+                                        <Input
+                                            id="recurring_distance"
+                                            name="recurring_distance"
+                                            type="number"
+                                            min="1"
+                                            step="any"
+                                            placeholder="10000"
+                                            defaultValue={serviceInterval?.recurring_distance ?? ""}
+                                            className="rounded-xl"
+                                        />
+                                    </div>
+                                </div>
+
+                                {serviceInterval && serviceIntervalStatus ? (
+                                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-sm">
+                                        <p className="font-medium text-foreground">
+                                            {serviceIntervalStatus.status === "overdue"
+                                                ? ui.maintenance.reminders.statusOverdue
+                                                : serviceIntervalStatus.status === "due-soon"
+                                                    ? ui.maintenance.reminders.statusDueSoon
+                                                    : serviceIntervalStatus.status === "needs-baseline"
+                                                        ? ui.maintenance.reminders.statusNeedsBaseline
+                                                        : ui.maintenance.reminders.statusHealthy}
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground">
+                                            {serviceInterval.last_completed_date
+                                                ? `${ui.vehicle.serviceIntervalLastService}: ${new Date(serviceInterval.last_completed_date).toLocaleDateString()}${serviceInterval.last_completed_odometer != null ? ` • ${serviceInterval.last_completed_odometer.toLocaleString()} ${profile.distanceUnit}` : ""}`
+                                                : ui.vehicle.serviceIntervalNeedsServiceLog}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">{ui.vehicle.serviceIntervalEmpty}</p>
+                                )}
+
+                                {message && message.type === "error" ? (
+                                    <div className="rounded-xl bg-destructive/15 p-4 text-sm text-destructive">
+                                        {message.text}
+                                    </div>
+                                ) : null}
+
+                                <div className="flex justify-end">
+                                    <Button type="submit" disabled={isSavingServiceInterval} className="rounded-full px-6 shadow-md">
+                                        {isSavingServiceInterval ? ui.common.actions.saving : ui.vehicle.serviceIntervalSave}
+                                    </Button>
+                                </div>
+                            </form>
                         </CardContent>
                     </Card>
                 </div>
@@ -394,6 +520,7 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                         <TableRow className="border-b/50 hover:bg-transparent">
                                             <TableHead className="w-[120px] font-semibold text-muted-foreground pl-6">{ui.vehicle.columns.date}</TableHead>
                                             <TableHead className="font-semibold text-muted-foreground">{ui.vehicle.columns.serviceType}</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground">{ui.vehicle.columns.odometer}</TableHead>
                                             <TableHead className="font-semibold text-muted-foreground w-1/3">{ui.vehicle.columns.notes}</TableHead>
                                             <TableHead className="text-right font-semibold text-muted-foreground pr-6">{ui.vehicle.columns.cost}</TableHead>
                                         </TableRow>
@@ -411,6 +538,9 @@ export function VehicleManagerClient({ vehicle: initialVehicle }: { vehicle: Veh
                                                         </div>
                                                         <span className="font-medium text-foreground/90">{log.service_type}</span>
                                                     </div>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground/80">
+                                                    {log.odometer != null ? `${log.odometer.toLocaleString()} ${profile.distanceUnit}` : ui.vehicle.emptyValue}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground/80 italic text-sm">
                                                     {log.notes || ui.vehicle.emptyValue}
