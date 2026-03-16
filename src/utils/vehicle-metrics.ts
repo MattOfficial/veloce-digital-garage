@@ -58,7 +58,7 @@ export function isRoutineServiceType(value: string) {
     return normalized.includes("service") || normalized.includes("inspection");
 }
 
-export function getVehicleServiceInterval(reminders: ServiceReminder[] = []) {
+export function getVehicleServiceInterval<T extends { service_type: string }>(reminders: T[] = []) {
     return reminders.find((reminder) => reminder.service_type === VEHICLE_SERVICE_INTERVAL_NAME)
         ?? reminders[0]
         ?? null;
