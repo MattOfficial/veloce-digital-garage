@@ -18,7 +18,6 @@ import {
   calculateSmartNextRefill,
   getRefillDisplayString,
   getStatusClassName,
-  type SmartRefillPrediction,
 } from "@/utils/cadence-predictions";
 
 import {
@@ -39,15 +38,10 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Activity,
-  AlertCircle,
-  AlertTriangle,
   BarChart2,
   CalendarClock,
-  CheckCircle,
-  Clock,
   DollarSign,
   Gauge,
-  HelpCircle,
   Route,
   TrendingDown,
   Zap,
