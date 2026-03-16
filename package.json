@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "prepare": "husky",
-    "check:secrets": "node -e \"const os = require('os'); const { execSync } = require('child_process'); const platform = os.platform(); if (platform === 'win32') { try { execSync('pwsh -File scripts/check-staged-secrets.ps1', { stdio: 'inherit' }); } catch { process.exit(1); } } else { try { execSync('chmod +x scripts/check-staged-secrets.sh', { stdio: 'inherit' }); execSync('scripts/check-staged-secrets.sh', { stdio: 'inherit' }); } catch { process.exit(1); } }\""
+    "check:secrets": "node scripts/check-staged-secrets.js"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
