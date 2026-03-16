@@ -206,14 +206,14 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                         <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
                             <Card className="border-primary/20 bg-primary/5">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-primary">{ui.maintenance.serviceLogCompleteness}</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-primary">{ui.maintenance.servicesLogged}</CardTitle>
                                     <FileText className="h-4 w-4 text-primary" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
                                         {logs.length}
                                     </div>
-                                    <p className="text-xs text-primary/70 mt-1 font-medium">{ui.maintenance.recordedInvoices}</p>
+                                    <p className="text-xs text-primary/70 mt-1 font-medium">{ui.maintenance.totalServiceRecords}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>

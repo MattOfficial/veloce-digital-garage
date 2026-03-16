@@ -28,7 +28,7 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Activity, BarChart2, CalendarClock, DollarSign, Route, TrendingDown, Zap } from "lucide-react";
+import { Activity, BarChart2, CalendarClock, DollarSign, Gauge, Route, TrendingDown, Zap } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -333,37 +333,37 @@ export default function InsightsPage() {
                 <TabsContent value="distance" className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-3">
                         <MotionWrapper delay={0.1}>
-                            <Card className="relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                            <Card className="relative overflow-hidden border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-background to-background shadow-sm">
+                                <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-sky-500/10 blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.insights.averageDailyDistance}</CardTitle>
-                                    <div className="p-2 bg-blue-500/10 rounded-full text-blue-500">
-                                        <Activity className="h-4 w-4" />
+                                    <CardTitle className="text-sm font-medium text-sky-900 dark:text-sky-100">{ui.insights.averageDailyDistance}</CardTitle>
+                                    <div className="rounded-full bg-sky-500/15 p-2 text-sky-500 ring-1 ring-sky-500/20">
+                                        <Gauge className="h-4 w-4" />
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-black text-foreground">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-muted-foreground">{distanceUnit}</span></div>
-                                    <p className="text-xs text-muted-foreground mt-1">{ui.insights.averageDailyDistanceDescription}</p>
+                                    <div className="text-3xl font-black text-sky-950 dark:text-sky-50">{Math.round(avgDistancePerDay)} <span className="text-base font-medium text-sky-700/80 dark:text-sky-200/80">{distanceUnit}</span></div>
+                                    <p className="mt-1 text-xs text-sky-800/75 dark:text-sky-200/75">{ui.insights.averageDailyDistanceDescription}</p>
                                 </CardContent>
                             </Card>
                         </MotionWrapper>
 
                         <MotionWrapper delay={0.2}>
-                            <Card className="relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                            <Card className="relative overflow-hidden border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-background to-background shadow-sm">
+                                <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-teal-500/10 blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.insights.distanceLastThirtyDays}</CardTitle>
-                                    <div className="p-2 bg-cyan-500/10 rounded-full text-cyan-400">
-                                        <Route className="h-4 w-4" />
+                                    <CardTitle className="text-sm font-medium text-teal-900 dark:text-teal-100">{ui.insights.distanceLastThirtyDays}</CardTitle>
+                                    <div className="rounded-full bg-teal-500/15 p-2 text-teal-500 ring-1 ring-teal-500/20">
+                                        <CalendarClock className="h-4 w-4" />
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-black text-foreground">
+                                    <div className="text-3xl font-black text-teal-950 dark:text-teal-50">
                                         {distanceLast30Days?.hasSufficientData && distanceLast30Days.value != null
                                             ? `${formatDistance(distanceLast30Days.value)} ${distanceUnit}`
                                             : ui.common.emptyValue}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="mt-1 text-xs text-teal-800/75 dark:text-teal-200/75">
                                         {distanceLast30Days?.hasSufficientData
                                             ? distanceLast30Days.coverage === "partial"
                                                 ? ui.insights.basedOnAvailableOdometerLogs
@@ -375,21 +375,21 @@ export default function InsightsPage() {
                         </MotionWrapper>
 
                         <MotionWrapper delay={0.3}>
-                            <Card className="relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                            <Card className="relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-background to-background shadow-sm">
+                                <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.insights.distanceLastTwelveMonths}</CardTitle>
-                                    <div className="p-2 bg-indigo-500/10 rounded-full text-indigo-400">
+                                    <CardTitle className="text-sm font-medium text-violet-900 dark:text-violet-100">{ui.insights.distanceLastTwelveMonths}</CardTitle>
+                                    <div className="rounded-full bg-violet-500/15 p-2 text-violet-500 ring-1 ring-violet-500/20">
                                         <Route className="h-4 w-4" />
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-black text-foreground">
+                                    <div className="text-3xl font-black text-violet-950 dark:text-violet-50">
                                         {distanceLast12Months?.hasSufficientData && distanceLast12Months.value != null
                                             ? `${formatDistance(distanceLast12Months.value)} ${distanceUnit}`
                                             : ui.common.emptyValue}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="mt-1 text-xs text-violet-800/75 dark:text-violet-200/75">
                                         {distanceLast12Months?.hasSufficientData
                                             ? distanceLast12Months.coverage === "partial"
                                                 ? ui.insights.basedOnAvailableOdometerLogs
@@ -415,7 +415,7 @@ export default function InsightsPage() {
                                             <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} />
                                             <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${value}`} />
                                             <ChartTooltip
-                                                content={<ChartTooltipContent formatter={(value) => [`${value} ${distanceUnit}`, ui.insights.monthlyDistanceHistoryTitle]} />}
+                                                content={<ChartTooltipContent formatter={(value) => `${formatDistance(Number(value))} ${distanceUnit}`} />}
                                             />
                                             <Bar dataKey="value" fill="var(--color-distance)" radius={[8, 8, 0, 0]} />
                                         </BarChart>
