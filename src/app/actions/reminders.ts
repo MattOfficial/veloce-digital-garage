@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 import { getVehicleServiceInterval, VEHICLE_SERVICE_INTERVAL_NAME } from "@/utils/vehicle-metrics";
 
@@ -66,7 +67,7 @@ export async function upsertVehicleServiceInterval(formData: FormData) {
         throw new Error("Failed to load service interval");
     }
 
-    const existingInterval = getVehicleServiceInterval((reminders as any[]) || []);
+    const existingInterval = getVehicleServiceInterval((reminders as Database["public"]["Tables"]["service_reminders"]["Row"][]) || []);
     const payload = {
         vehicle_id: vehicleId,
         service_type: VEHICLE_SERVICE_INTERVAL_NAME,

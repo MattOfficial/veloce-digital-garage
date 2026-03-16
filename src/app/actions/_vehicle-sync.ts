@@ -1,18 +1,17 @@
+import { createClient } from "@/utils/supabase/server";
+import type { Database } from "@/types/supabase";
 import { getVehicleCurrentOdometer, getVehicleServiceInterval, isRoutineServiceType } from "@/utils/vehicle-metrics";
 
-type SupabaseLikeClient = {
-    from: (table: string) => {
-        select: (query: string) => {
-            eq: (column: string, value: string) => Promise<{ data: any; error: any }>;
-        };
-        update: (values: Record<string, unknown>) => {
-            eq: (column: string, value: string) => Promise<{ error: any }>;
-        };
+type ActionSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type VehicleOdometerSyncRow =
+    Pick<Database["public"]["Tables"]["vehicles"]["Row"], "baseline_odometer" | "current_odometer"> & {
+        fuel_logs: Array<Pick<Database["public"]["Tables"]["fuel_logs"]["Row"], "odometer">>;
+        maintenance_logs: Array<Pick<Database["public"]["Tables"]["maintenance_logs"]["Row"], "odometer">>;
     };
-};
+type ServiceIntervalRow = Pick<Database["public"]["Tables"]["service_reminders"]["Row"], "id" | "service_type">;
 
 export async function syncVehicleCurrentOdometer(
-    supabase: SupabaseLikeClient,
+    supabase: ActionSupabaseClient,
     vehicleId: string,
 ) {
     const { data: vehicle, error } = await supabase
@@ -20,7 +19,7 @@ export async function syncVehicleCurrentOdometer(
         .select("baseline_odometer, current_odometer, fuel_logs(odometer), maintenance_logs(odometer)")
         .eq("id", vehicleId);
 
-    const vehicleRow = Array.isArray(vehicle) ? vehicle[0] : vehicle;
+    const vehicleRow = ((vehicle as unknown as VehicleOdometerSyncRow[]) ?? [])[0];
     if (error || !vehicleRow) {
         if (error) {
             console.error("Error loading vehicle for odometer sync:", error);
@@ -43,7 +42,7 @@ export async function syncVehicleCurrentOdometer(
 }
 
 export async function syncVehicleServiceInterval(
-    supabase: SupabaseLikeClient,
+    supabase: ActionSupabaseClient,
     vehicleId: string,
     serviceType: string,
     completedDate: string,
@@ -63,7 +62,7 @@ export async function syncVehicleServiceInterval(
         return;
     }
 
-    const reminder = getVehicleServiceInterval(Array.isArray(reminders) ? reminders : []);
+    const reminder = getVehicleServiceInterval((reminders as unknown as ServiceIntervalRow[]) ?? []);
     if (!reminder) {
         return;
     }

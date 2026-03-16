@@ -65,8 +65,8 @@ export async function submitMaintenanceLog(formData: FormData) {
         return { error: insertError.message };
     }
 
-    await syncVehicleServiceInterval(supabase as any, vehicle_id, service_type, date, odometer);
-    await syncVehicleCurrentOdometer(supabase as any, vehicle_id);
+    await syncVehicleServiceInterval(supabase, vehicle_id, service_type, date, odometer);
+    await syncVehicleCurrentOdometer(supabase, vehicle_id);
     revalidateMaintenanceRelatedPaths(vehicle_id);
 
     let newBadges: BadgeDefinition[] = [];
@@ -104,7 +104,7 @@ export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
         return { error: error.message };
     }
 
-    await syncVehicleCurrentOdometer(supabase as any, vehicleId);
+    await syncVehicleCurrentOdometer(supabase, vehicleId);
     revalidateMaintenanceRelatedPaths(vehicleId);
 
     return { success: true };
@@ -159,8 +159,8 @@ export async function editMaintenanceLog(logId: string, formData: FormData) {
         return { error: updateError.message };
     }
 
-    await syncVehicleServiceInterval(supabase as any, vehicle_id, service_type, date, odometer);
-    await syncVehicleCurrentOdometer(supabase as any, vehicle_id);
+    await syncVehicleServiceInterval(supabase, vehicle_id, service_type, date, odometer);
+    await syncVehicleCurrentOdometer(supabase, vehicle_id);
     revalidateMaintenanceRelatedPaths(vehicle_id);
 
     return { success: true, newBadges: [] };
