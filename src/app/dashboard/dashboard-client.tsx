@@ -14,7 +14,11 @@ import { CustomLogCategory } from "@/types/database";
 import { createTrailingDayRange, getVehicleDistanceSummary } from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
 
-const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444']; // Blue, Amber, Emerald, Red
+const EXPENSE_COLORS = {
+    fuel: "#f59e0b",
+    maintenance: "#3b82f6",
+    other: "#10b981",
+} as const;
 type ExpenseCategoryName = typeof ui.dashboard.expenseCategories[keyof typeof ui.dashboard.expenseCategories];
 type ExpenseDatum = { name: ExpenseCategoryName; value: number };
 
@@ -258,8 +262,8 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                             formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, undefined]}
                                         />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                                        <Bar dataKey="Fuel" stackId="a" fill={COLORS[1]} radius={[0, 0, 4, 4]} />
-                                        <Bar dataKey="Maintenance" stackId="a" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="Fuel" stackId="a" fill={EXPENSE_COLORS.fuel} radius={[0, 0, 4, 4]} />
+                                        <Bar dataKey="Maintenance" stackId="a" fill={EXPENSE_COLORS.maintenance} radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -290,7 +294,16 @@ export default function DashboardClient({ categories = [] }: { categories?: Cust
                                                 stroke="none"
                                             >
                                                 {expenseData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={
+                                                            entry.name === ui.dashboard.expenseCategories.fuel
+                                                                ? EXPENSE_COLORS.fuel
+                                                                : entry.name === ui.dashboard.expenseCategories.maintenance
+                                                                    ? EXPENSE_COLORS.maintenance
+                                                                    : EXPENSE_COLORS.other
+                                                        }
+                                                    />
                                                 ))}
                                             </Pie>
                                             <Tooltip
