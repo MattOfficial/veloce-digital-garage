@@ -18,8 +18,11 @@ export type ServiceReminderStatus = {
     status: ReminderHealth;
     distanceDueAt: number | null;
     distanceRemaining: number | null;
+    distanceProgress: number | null;
     dueDate: Date | null;
     daysRemaining: number | null;
+    timeProgress: number | null;
+    overallProgress: number | null;
     missingDistanceBaseline: boolean;
     missingTimeBaseline: boolean;
 };
@@ -75,6 +78,7 @@ export function getServiceReminderStatus(
     currentOdometer: number,
     today: Date = new Date(),
 ): ServiceReminderStatus {
+    const todayStart = new Date(today);
     const distanceDueAt = reminder.recurring_distance != null && reminder.last_completed_odometer != null
         ? reminder.last_completed_odometer + reminder.recurring_distance
         : null;
@@ -83,15 +87,20 @@ export function getServiceReminderStatus(
         ? addMonths(new Date(reminder.last_completed_date), reminder.recurring_months)
         : null;
     const daysRemaining = dueDate ? differenceInCalendarDays(dueDate, today) : null;
+    const distanceProgress = reminder.recurring_distance != null && reminder.last_completed_odometer != null
+        ? (currentOdometer - reminder.last_completed_odometer) / reminder.recurring_distance
+        : null;
+    const timeProgress = reminder.recurring_months != null && reminder.last_completed_date && dueDate
+        ? (
+            differenceInCalendarDays(todayStart, new Date(reminder.last_completed_date))
+            / Math.max(1, differenceInCalendarDays(dueDate, new Date(reminder.last_completed_date)))
+        )
+        : null;
+    const progressValues = [distanceProgress, timeProgress].filter((value): value is number => value != null);
+    const overallProgress = progressValues.length > 0 ? Math.max(...progressValues) : null;
 
     const missingDistanceBaseline = reminder.recurring_distance != null && reminder.last_completed_odometer == null;
     const missingTimeBaseline = reminder.recurring_months != null && !reminder.last_completed_date;
-    const distanceSoonThreshold = reminder.recurring_distance != null
-        ? Math.max(500, Math.round(reminder.recurring_distance * 0.1))
-        : null;
-    const timeSoonThreshold = reminder.recurring_months != null
-        ? Math.max(14, Math.round(reminder.recurring_months * 30 * 0.15))
-        : null;
 
     let status: ReminderHealth = "healthy";
     if (missingDistanceBaseline || missingTimeBaseline) {
@@ -100,10 +109,7 @@ export function getServiceReminderStatus(
 
     if ((distanceRemaining != null && distanceRemaining <= 0) || (daysRemaining != null && daysRemaining <= 0)) {
         status = "overdue";
-    } else if (
-        (distanceRemaining != null && distanceSoonThreshold != null && distanceRemaining <= distanceSoonThreshold)
-        || (daysRemaining != null && timeSoonThreshold != null && daysRemaining <= timeSoonThreshold)
-    ) {
+    } else if (overallProgress != null && overallProgress >= 0.8) {
         status = "due-soon";
     }
 
@@ -112,8 +118,11 @@ export function getServiceReminderStatus(
         status,
         distanceDueAt,
         distanceRemaining,
+        distanceProgress,
         dueDate,
         daysRemaining,
+        timeProgress,
+        overallProgress,
         missingDistanceBaseline,
         missingTimeBaseline,
     };

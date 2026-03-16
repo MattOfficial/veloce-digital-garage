@@ -5,7 +5,7 @@ import { useUserStore } from "@/store/user-store";
 import { CustomLogCategory } from "@/types/database";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, CheckCircle2, AlertTriangle, AlertCircle, DollarSign, Activity, FileText, Sparkles, BellRing, Gauge, CalendarClock } from "lucide-react";
+import { Wrench, DollarSign, Activity, FileText, Sparkles, BellRing, Gauge } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
@@ -13,7 +13,6 @@ import { AddTrackerModal } from "@/components/add-tracker-modal";
 import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
 import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 import { MaintenanceLogActions } from "@/components/maintenance-log-actions";
-import { UpdateOdometerModal } from "@/components/update-odometer-modal";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -105,46 +104,40 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
     const tableLogs = [...logs].reverse();
 
-    const describeReminderInterval = (months: number | null, distance: number | null) => {
-        const parts: string[] = [];
-
-        if (months != null) {
-            parts.push(ui.maintenance.reminders.everyMonths(months));
+    const nextServicePill = (() => {
+        if (!serviceInterval || !serviceIntervalStatus) {
+            return {
+                className: "border-white/10 bg-white/5 text-muted-foreground",
+                label: ui.maintenance.reminders.emptyTitle,
+            };
         }
 
-        if (distance != null) {
-            parts.push(ui.maintenance.reminders.everyDistance(formatDistance(distance), distanceUnit));
+        if (serviceIntervalStatus.status === "overdue") {
+            return {
+                className: "border-red-500/25 bg-red-500/15 text-red-200",
+                label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusOverdue}`,
+            };
         }
 
-        return parts.join(" • ");
-    };
-
-    const describeReminderDueState = (distanceRemaining: number | null, daysRemaining: number | null, status: string) => {
-        if (status === "needs-baseline") {
-            return ui.maintenance.reminders.baselineMissing;
+        if (serviceIntervalStatus.status === "due-soon") {
+            return {
+                className: "border-amber-500/25 bg-amber-500/15 text-amber-100",
+                label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusDueSoon}`,
+            };
         }
 
-        if (status === "overdue") {
-            const overdueParts: string[] = [];
-            if (distanceRemaining != null && distanceRemaining <= 0) {
-                overdueParts.push(`${formatDistance(Math.abs(distanceRemaining))} ${distanceUnit} overdue`);
-            }
-            if (daysRemaining != null && daysRemaining <= 0) {
-                overdueParts.push(`${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? "" : "s"} overdue`);
-            }
-            return overdueParts.length > 0 ? overdueParts.join(" • ") : ui.maintenance.reminders.dueNow;
+        if (serviceIntervalStatus.status === "needs-baseline") {
+            return {
+                className: "border-white/10 bg-white/5 text-muted-foreground",
+                label: ui.maintenance.reminders.statusNeedsBaseline,
+            };
         }
 
-        const upcomingParts: string[] = [];
-        if (distanceRemaining != null) {
-            upcomingParts.push(`Due in ${formatDistance(distanceRemaining)} ${distanceUnit}`);
-        }
-        if (daysRemaining != null) {
-            upcomingParts.push(`Due in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`);
-        }
-
-        return upcomingParts.length > 0 ? upcomingParts.join(" or ") : ui.maintenance.reminders.statusHealthy;
-    };
+        return {
+            className: "border-emerald-500/25 bg-emerald-500/15 text-emerald-100",
+            label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusHealthy}`,
+        };
+    })();
 
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6 pb-10">
@@ -154,7 +147,10 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                 icon={Wrench}
             >
                 <div className="flex flex-wrap gap-2">
-                    <UpdateOdometerModal vehicleId={selectedVehicle.id} currentOdometer={currentOdometer} />
+                    <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm ${nextServicePill.className}`}>
+                        <BellRing className="h-4 w-4" />
+                        <span>{nextServicePill.label}</span>
+                    </div>
                     <AddMaintenanceModal vehicleId={selectedVehicle.id} />
                 </div>
             </PageHeader>
@@ -233,82 +229,8 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                         </MotionWrapper>
                     </div>
 
-                    {/* Pending Maintenance Health Monitor */}
-                    <MotionWrapper delay={0.5}>
-                        <Card>
-                            <CardHeader className="border-b border-white/5 bg-white/5">
-                                <CardTitle className="flex items-center gap-2">
-                                    <BellRing className="h-5 w-5 text-primary" />
-                                    {ui.maintenance.reminders.titleList}
-                                </CardTitle>
-                                <CardDescription>
-                                    {ui.maintenance.reminders.descriptionList}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                {!serviceInterval || !serviceIntervalStatus ? (
-                                    <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-8 text-center">
-                                        <h3 className="text-lg font-semibold">{ui.maintenance.reminders.emptyTitle}</h3>
-                                        <p className="mt-2 text-sm text-muted-foreground">{ui.maintenance.reminders.emptyDescription}</p>
-                                    </div>
-                                ) : (
-                                    (() => {
-                                        const item = serviceIntervalStatus;
-                                        const statusColor = item.status === "overdue"
-                                            ? "text-red-500"
-                                            : item.status === "due-soon"
-                                                ? "text-amber-500"
-                                                : item.status === "needs-baseline"
-                                                    ? "text-slate-400"
-                                                    : "text-emerald-500";
-                                        const statusBg = item.status === "overdue"
-                                            ? "bg-red-500/10 border-red-500/20"
-                                            : item.status === "due-soon"
-                                                ? "bg-amber-500/10 border-amber-500/20"
-                                                : item.status === "needs-baseline"
-                                                    ? "bg-slate-500/10 border-slate-500/20"
-                                                    : "bg-emerald-500/10 border-emerald-500/20";
-
-                                        return (
-                                            <div className={`rounded-2xl border p-5 ${statusBg}`}>
-                                                <div className="flex items-center gap-2">
-                                                    {item.status === "overdue" ? <AlertCircle className={`h-4 w-4 ${statusColor}`} /> :
-                                                        item.status === "due-soon" ? <AlertTriangle className={`h-4 w-4 ${statusColor}`} /> :
-                                                            item.status === "needs-baseline" ? <CalendarClock className={`h-4 w-4 ${statusColor}`} /> :
-                                                                <CheckCircle2 className={`h-4 w-4 ${statusColor}`} />}
-                                                    <h4 className="font-semibold">{serviceInterval.service_type}</h4>
-                                                </div>
-                                                <p className="mt-2 text-xs text-muted-foreground">
-                                                    {describeReminderInterval(serviceInterval.recurring_months, serviceInterval.recurring_distance)}
-                                                </p>
-                                                <p className={`mt-4 text-sm font-semibold ${statusColor}`}>
-                                                    {item.status === "healthy" ? ui.maintenance.reminders.statusHealthy :
-                                                        item.status === "due-soon" ? ui.maintenance.reminders.statusDueSoon :
-                                                            item.status === "overdue" ? ui.maintenance.reminders.statusOverdue :
-                                                                ui.maintenance.reminders.statusNeedsBaseline}
-                                                </p>
-                                                <p className="mt-1 text-sm text-muted-foreground">
-                                                    {describeReminderDueState(item.distanceRemaining, item.daysRemaining, item.status)}
-                                                </p>
-                                                <p className="mt-3 text-xs text-muted-foreground">
-                                                    {ui.maintenance.reminders.lastCompleted}:{" "}
-                                                    {serviceInterval.last_completed_date
-                                                        ? new Date(serviceInterval.last_completed_date).toLocaleDateString()
-                                                        : ui.common.emptyValue}
-                                                    {serviceInterval.last_completed_odometer != null
-                                                        ? ` • ${formatDistance(serviceInterval.last_completed_odometer)} ${distanceUnit}`
-                                                        : ""}
-                                                </p>
-                                            </div>
-                                        );
-                                    })()
-                                )}
-                            </CardContent>
-                        </Card>
-                    </MotionWrapper>
-
                     {!hasLogs ? (
-                        <MotionWrapper delay={0.6}>
+                        <MotionWrapper delay={0.5}>
                             <Card className="bg-white/5 border-dashed border-2 border-white/10">
                                 <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                                     <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -324,7 +246,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                             {/* Analytics Charts */}
                             <div className="grid gap-6 md:grid-cols-5">
-                                <MotionWrapper delay={0.7} className="md:col-span-2">
+                                <MotionWrapper delay={0.6} className="md:col-span-2">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
                                             <CardTitle>{ui.maintenance.spendByCategory}</CardTitle>
@@ -363,7 +285,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                     </Card>
                                 </MotionWrapper>
 
-                                <MotionWrapper delay={0.8} className="md:col-span-3">
+                                <MotionWrapper delay={0.7} className="md:col-span-3">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
                                             <CardTitle>{ui.maintenance.maintenanceTimeline}</CardTitle>
