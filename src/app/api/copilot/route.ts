@@ -20,6 +20,7 @@ import { brand } from "@/content/en/brand";
 import { classifyCopilotIntent, parseAnalyticsQuery } from "@/utils/copilot-intents";
 import { computeCopilotAnalytics } from "@/utils/copilot-analytics";
 import type { VehicleWithLogs } from "@/types/database";
+import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 export const dynamic = 'force-dynamic';
 
@@ -213,10 +214,7 @@ function buildVehicleContext(vehicles: VehicleWithLogs[]): CopilotVehicleContext
         model: vehicle.model,
         year: vehicle.year,
         nickname: vehicle.nickname,
-        odometer: Math.max(
-            vehicle.baseline_odometer,
-            ...vehicle.fuel_logs.map((log) => log.odometer),
-        ),
+        odometer: getVehicleCurrentOdometer(vehicle),
     }));
 }
 
@@ -243,7 +241,7 @@ export async function POST(req: Request) {
 
         const { data: garageData, error: garageError } = await supabase
             .from("vehicles")
-            .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*)")
+            .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*), service_reminders(*)")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false });
 

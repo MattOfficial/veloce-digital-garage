@@ -22,7 +22,7 @@ export default async function VehiclePage({
     // Fetch the specific vehicle with all logs
     const { data: vehicle, error: vehicleError } = await supabase
         .from("vehicles")
-        .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*)")
+        .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*), service_reminders(*)")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();

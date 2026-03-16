@@ -202,6 +202,7 @@ export type Database = {
           date: string
           id: string
           notes: string | null
+          odometer: number | null
           receipt_url: string | null
           service_type: string
           user_id: string | null
@@ -213,6 +214,7 @@ export type Database = {
           date: string
           id?: string
           notes?: string | null
+          odometer?: number | null
           receipt_url?: string | null
           service_type: string
           user_id?: string | null
@@ -224,6 +226,7 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
+          odometer?: number | null
           receipt_url?: string | null
           service_type?: string
           user_id?: string | null
@@ -364,6 +367,7 @@ export type Database = {
           battery_capacity_kwh: number | null
           color: string | null
           created_at: string | null
+          current_odometer: number | null
           custom_fields: Json | null
           engine_type: string | null
           id: string
@@ -385,6 +389,7 @@ export type Database = {
           battery_capacity_kwh?: number | null
           color?: string | null
           created_at?: string | null
+          current_odometer?: number | null
           custom_fields?: Json | null
           engine_type?: string | null
           id?: string
@@ -406,6 +411,7 @@ export type Database = {
           battery_capacity_kwh?: number | null
           color?: string | null
           created_at?: string | null
+          current_odometer?: number | null
           custom_fields?: Json | null
           engine_type?: string | null
           id?: string

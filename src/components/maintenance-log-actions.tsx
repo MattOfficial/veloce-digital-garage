@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MaintenanceLog } from "@/types/database";
 import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface MaintenanceLogActionsProps {
 }
 
 export function MaintenanceLogActions({ log, vehicleId }: MaintenanceLogActionsProps) {
+    const router = useRouter();
     const { fetchVehicles } = useVehicleStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -34,7 +36,8 @@ export function MaintenanceLogActions({ log, vehicleId }: MaintenanceLogActionsP
         if (result.error) {
             alert(result.error);
         } else {
-            fetchVehicles();
+            await fetchVehicles();
+            router.refresh();
         }
         setIsDeleting(false);
     };

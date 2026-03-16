@@ -5,6 +5,7 @@ import type {
     CopilotAnalyticsResult,
 } from "@/types/ai";
 import type { VehicleWithLogs } from "@/types/database";
+import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 type AnalyticsProfile = {
     currency: string;
@@ -40,11 +41,15 @@ function getVehicleLabel(vehicles: VehicleWithLogs[]) {
 }
 
 function getCurrentOdometer(vehicle: VehicleWithLogs, endDate?: string) {
+    if (!endDate) {
+        return getVehicleCurrentOdometer(vehicle);
+    }
+
     const logs = [...(vehicle.fuel_logs ?? [])]
-        .filter((log) => !endDate || log.date <= endDate)
+        .filter((log) => log.date <= endDate)
         .sort((left, right) => right.odometer - left.odometer);
 
-    return logs[0]?.odometer ?? vehicle.baseline_odometer;
+    return logs[0]?.odometer ?? vehicle.current_odometer ?? vehicle.baseline_odometer;
 }
 
 function filterLogsByDate<T extends { date: string }>(logs: T[], start: string, end: string) {

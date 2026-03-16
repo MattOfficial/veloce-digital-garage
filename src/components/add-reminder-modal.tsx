@@ -7,21 +7,27 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { BellRing, Calendar, Activity } from "lucide-react";
 import { createServiceReminder } from "@/app/actions/reminders";
+import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/user-store";
+import { useVehicleStore } from "@/store/vehicle-store";
 import { getErrorMessage } from "@/utils/errors";
 import { ui } from "@/content/en/ui";
 
-export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
+export function AddReminderModal({ vehicleId, currentOdometer }: { vehicleId: string; currentOdometer: number }) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     const { profile } = useUserStore();
+    const { fetchVehicles } = useVehicleStore();
+    const router = useRouter();
 
     function onSubmit(formData: FormData) {
         setError(null);
         startTransition(async () => {
             try {
                 await createServiceReminder(formData);
+                await fetchVehicles();
+                router.refresh();
                 setOpen(false);
             } catch (error: unknown) {
                 setError(getErrorMessage(error, ui.maintenance.reminders.failed));
@@ -106,6 +112,7 @@ export function AddReminderModal({ vehicleId }: { vehicleId: string }) {
                                     name="last_completed_odometer"
                                     type="number"
                                     placeholder={ui.maintenance.reminders.lastServiceOdoPlaceholder}
+                                    defaultValue={currentOdometer}
                                     className="bg-white/5 border-white/10"
                                 />
                             </div>

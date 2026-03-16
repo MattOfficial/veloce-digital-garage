@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Wrench, CalendarIcon, Plus, Edit } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { ui } from "@/content/en/ui";
+import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 interface AddMaintenanceModalProps {
     vehicleId: string;
@@ -48,8 +50,9 @@ interface AddMaintenanceModalProps {
 }
 
 export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddMaintenanceModalProps) {
+    const router = useRouter();
     const { profile } = useUserStore();
-    const { fetchVehicles } = useVehicleStore();
+    const { vehicles, fetchVehicles } = useVehicleStore();
 
     const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
     const isControlled = controlledOpen !== undefined;
@@ -61,6 +64,8 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
     const [isPending, startTransition] = useTransition();
 
     const currencySymbol = profile.currency === "USD" ? "$" : profile.currency === "EUR" ? "€" : profile.currency === "GBP" ? "£" : "₹";
+    const vehicle = vehicles.find((entry) => entry.id === vehicleId);
+    const currentOdometer = vehicle ? getVehicleCurrentOdometer(vehicle) : 0;
 
     function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -84,7 +89,8 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                 if ("newBadges" in result && result.newBadges?.length) {
                     result.newBadges.forEach((badge: BadgeDefinition) => setTimeout(() => toast.success(`🏆 Unlocked: ${badge.name}!`, { description: badge.description }), 500));
                 }
-                fetchVehicles();
+                await fetchVehicles();
+                router.refresh();
                 setOpen(false);
             }
         });
@@ -154,6 +160,21 @@ export function AddMaintenanceModal({ vehicleId, logToEdit, trigger, open: contr
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="odometer">{ui.maintenance.addMaintenance.labels.odometerAtService(profile.distanceUnit)}</Label>
+                        <Input
+                            id="odometer"
+                            name="odometer"
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder={ui.maintenance.addMaintenance.odometerPlaceholder}
+                            defaultValue={logToEdit?.odometer ?? currentOdometer}
+                            required
+                            className="rounded-xl"
+                        />
                     </div>
 
                     {/* Cost Input */}

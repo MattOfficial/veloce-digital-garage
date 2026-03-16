@@ -5,7 +5,7 @@ import { useUserStore } from "@/store/user-store";
 import { CustomLogCategory } from "@/types/database";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, CheckCircle2, AlertTriangle, AlertCircle, DollarSign, Activity, FileText, Sparkles } from "lucide-react";
+import { Wrench, DollarSign, Activity, FileText, Sparkles, BellRing, Gauge } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
@@ -20,6 +20,7 @@ import { OcrReviewModal } from "@/components/ocr-review-modal";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ui } from "@/content/en/ui";
+import { getServiceReminderStatus, getVehicleCurrentOdometer, getVehicleServiceInterval } from "@/utils/vehicle-metrics";
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'];
 
@@ -62,6 +63,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
     const currencySymbol = currency || '$';
     const numberFormat = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formatCurrency = (val: number) => `${currencySymbol}${numberFormat.format(val)}`;
+    const formatDistance = (val: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(val);
 
     const logs = [...(selectedVehicle.maintenance_logs || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const hasLogs = logs.length > 0;
@@ -94,62 +96,48 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
         .map(([date, cost]) => ({ date, cost }));
 
     // --- Distance & Cost Metrics ---
-    let currentOdometer = selectedVehicle.baseline_odometer || 0;
-    if (selectedVehicle.fuel_logs && selectedVehicle.fuel_logs.length > 0) {
-        const sortedLogs = [...selectedVehicle.fuel_logs].sort((a, b) => b.odometer - a.odometer);
-        currentOdometer = sortedLogs[0].odometer;
-    }
-
+    const currentOdometer = getVehicleCurrentOdometer(selectedVehicle);
     const distanceTracked = currentOdometer - (selectedVehicle.baseline_odometer || 0);
     const costPerDistance = distanceTracked > 0 ? (totalSpend / distanceTracked) : 0;
+    const serviceInterval = getVehicleServiceInterval(selectedVehicle.service_reminders || []);
+    const serviceIntervalStatus = serviceInterval ? getServiceReminderStatus(serviceInterval, currentOdometer) : null;
 
-    // --- Predictive Maintenance Health Rings ---
-    const maintenanceSchedules = [
-        { name: "Engine Oil Change", interval: 10000, color: "text-amber-500", bg: "bg-amber-500" },
-        { name: "Tire Replacement", interval: 40000, color: "text-blue-500", bg: "bg-blue-500" },
-        { name: "Air Filter", interval: 20000, color: "text-emerald-500", bg: "bg-emerald-500" },
-        { name: "Brake Pads", interval: 30000, color: "text-rose-500", bg: "bg-rose-500" },
-    ];
+    const tableLogs = [...logs].reverse();
 
-    const maintenanceStatus = maintenanceSchedules.map(schedule => {
-        let lastDoneDate = "Never";
-        // Convert interval from km to miles if user prefers miles (rough approx, ideal would use a fixed unit in backend)
-        let adjustedInterval = schedule.interval;
-        if (distanceUnit === 'miles') {
-            adjustedInterval = schedule.interval * 0.621371;
+    const nextServicePill = (() => {
+        if (!serviceInterval || !serviceIntervalStatus) {
+            return {
+                className: "border-white/10 bg-white/5 text-muted-foreground",
+                label: ui.maintenance.reminders.emptyTitle,
+            };
         }
 
-        const relatedLogs = logs.filter(log =>
-            log.service_type.toLowerCase().includes(schedule.name.toLowerCase().split(' ')[0])
-        ).reverse(); // sort newest first
-
-        if (relatedLogs.length > 0) {
-            lastDoneDate = new Date(relatedLogs[0].date).toLocaleDateString();
+        if (serviceIntervalStatus.status === "overdue") {
+            return {
+                className: "border-red-500/25 bg-red-500/15 text-red-200",
+                label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusOverdue}`,
+            };
         }
 
-        const drivenSinceLast = distanceTracked; // Assuming baseline unless we had odo_at_service
-        const progress = (drivenSinceLast % adjustedInterval) / adjustedInterval;
-        const kmUntilNext = adjustedInterval - (drivenSinceLast % adjustedInterval);
+        if (serviceIntervalStatus.status === "due-soon") {
+            return {
+                className: "border-amber-500/25 bg-amber-500/15 text-amber-100",
+                label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusDueSoon}`,
+            };
+        }
 
-        let statusRaw: "good" | "warning" | "critical" = "good";
-        if (kmUntilNext <= (distanceUnit === 'miles' ? 620 : 1000)) statusRaw = "critical";
-        else if (kmUntilNext <= (distanceUnit === 'miles' ? 1860 : 3000)) statusRaw = "warning";
-
-        if (relatedLogs.length > 0) {
-            statusRaw = "good"; // For demo purposes, if they have logged it let's consider it good since we don't have accurate delta odos yet
+        if (serviceIntervalStatus.status === "needs-baseline") {
+            return {
+                className: "border-white/10 bg-white/5 text-muted-foreground",
+                label: ui.maintenance.reminders.statusNeedsBaseline,
+            };
         }
 
         return {
-            ...schedule,
-            lastDoneDate,
-            kmUntilNext,
-            status: statusRaw,
-            progressPercent: progress * 100,
-            adjustedInterval
+            className: "border-emerald-500/25 bg-emerald-500/15 text-emerald-100",
+            label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusHealthy}`,
         };
-    });
-
-    const tableLogs = [...logs].reverse();
+    })();
 
     return (
         <MotionWrapper className="max-w-6xl mx-auto space-y-6 pb-10">
@@ -158,7 +146,13 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                 description={ui.maintenance.pageDescription(`${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`)}
                 icon={Wrench}
             >
-                <AddMaintenanceModal vehicleId={selectedVehicle.id} />
+                <div className="flex flex-wrap gap-2">
+                    <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm ${nextServicePill.className}`}>
+                        <BellRing className="h-4 w-4" />
+                        <span>{nextServicePill.label}</span>
+                    </div>
+                    <AddMaintenanceModal vehicleId={selectedVehicle.id} />
+                </div>
             </PageHeader>
 
             <Tabs defaultValue="overview" className="w-full space-y-6">
@@ -170,7 +164,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                 <TabsContent value="overview" className="space-y-6">
                     {/* Vitals Row */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <MotionWrapper delay={0.1}>
                             <Card className="relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
@@ -189,6 +183,22 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                         <MotionWrapper delay={0.2}>
                             <Card className="relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">{ui.maintenance.currentOdometer}</CardTitle>
+                                    <Gauge className="h-4 w-4 text-sky-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-black text-sky-500 shadow-sky-500/20 drop-shadow-md">
+                                        {formatDistance(currentOdometer)} <span className="text-base font-semibold">{distanceUnit}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 font-medium">{ui.maintenance.currentOdometerDescription}</p>
+                                </CardContent>
+                            </Card>
+                        </MotionWrapper>
+
+                        <MotionWrapper delay={0.3}>
+                            <Card className="relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-sm font-medium text-muted-foreground">{ui.maintenance.maintenanceCostPerDistance(distanceUnit)}</CardTitle>
@@ -203,7 +213,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             </Card>
                         </MotionWrapper>
 
-                        <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
+                        <MotionWrapper delay={0.4} className="md:col-span-2 xl:col-span-1">
                             <Card className="border-primary/20 bg-primary/5">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-sm font-medium text-primary">{ui.maintenance.servicesLogged}</CardTitle>
@@ -218,42 +228,6 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                             </Card>
                         </MotionWrapper>
                     </div>
-
-                    {/* Pending Maintenance Health Monitor */}
-                    <MotionWrapper delay={0.4}>
-                        <Card>
-                            <CardHeader className="border-b border-white/5 bg-white/5">
-                                <CardTitle>{ui.maintenance.healthMonitorTitle}</CardTitle>
-                                <CardDescription>{ui.maintenance.healthMonitorDescription(currentOdometer.toLocaleString(), distanceUnit)}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                                    {maintenanceStatus.map((item, index) => (
-                                        <div key={index} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-black/20 border border-white/5 shadow-inner">
-                                            {/* Simple circular gauge simulation */}
-                                            <div className="relative w-24 h-24 mb-3 flex items-center justify-center">
-                                                <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-                                                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-muted opacity-20" strokeWidth="2"></circle>
-                                                    <circle cx="18" cy="18" r="16" fill="none" className={`stroke-current ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`} strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - (item.status === 'good' ? 100 : item.progressPercent)} strokeLinecap="round" style={{ filter: `drop-shadow(0 0 4px currentColor)` }}></circle>
-                                                </svg>
-                                                <div className="absolute flex flex-col items-center justify-center drop-shadow-md">
-                                                    {item.status === 'good' ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> :
-                                                        item.status === 'warning' ? <AlertTriangle className="h-6 w-6 text-amber-500" /> :
-                                                            <AlertCircle className="h-6 w-6 text-red-500 animate-pulse" />
-                                                    }
-                                                </div>
-                                            </div>
-                                            <h4 className="font-semibold text-center leading-tight mb-1">{item.name}</h4>
-                                            <p className={`text-xs font-bold ${item.status === 'critical' ? 'text-red-500' : item.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                                {item.status === "good" ? ui.maintenance.healthHealthy : `Due in ${Math.floor(item.kmUntilNext).toLocaleString()}${distanceUnit}`}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground mt-1">Last: {item.lastDoneDate}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </MotionWrapper>
 
                     {!hasLogs ? (
                         <MotionWrapper delay={0.5}>
@@ -272,7 +246,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
 
                             {/* Analytics Charts */}
                             <div className="grid gap-6 md:grid-cols-5">
-                                <MotionWrapper delay={0.5} className="md:col-span-2">
+                                <MotionWrapper delay={0.6} className="md:col-span-2">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
                                             <CardTitle>{ui.maintenance.spendByCategory}</CardTitle>
@@ -311,7 +285,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                     </Card>
                                 </MotionWrapper>
 
-                                <MotionWrapper delay={0.6} className="md:col-span-3">
+                                <MotionWrapper delay={0.7} className="md:col-span-3">
                                     <Card className="h-full overflow-hidden">
                                         <CardHeader className="border-b border-white/5">
                                             <CardTitle>{ui.maintenance.maintenanceTimeline}</CardTitle>
@@ -366,6 +340,7 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                             <tr>
                                                 <th className="px-6 py-4 font-medium">{ui.maintenance.columns.date}</th>
                                                 <th className="px-6 py-4 font-medium">{ui.maintenance.columns.servicePerformed}</th>
+                                                <th className="px-6 py-4 font-medium">{ui.vehicle.columns.odometer}</th>
                                                 <th className="px-6 py-4 font-medium">{ui.maintenance.columns.additionalNotes}</th>
                                                 <th className="px-6 py-4 font-medium text-right">{ui.maintenance.columns.invoiceCost}</th>
                                                 <th className="px-6 py-4 font-medium text-right">{ui.maintenance.columns.actions}</th>
@@ -379,6 +354,9 @@ export default function MaintenanceClient({ categories }: { categories: CustomLo
                                                     </td>
                                                     <td className="px-6 py-4 font-semibold text-primary">
                                                         {log.service_type}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                                                        {log.odometer != null ? `${formatDistance(log.odometer)} ${distanceUnit}` : ui.common.emptyValue}
                                                     </td>
                                                     <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
                                                         {log.notes || "--"}
