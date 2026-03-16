@@ -16,6 +16,6 @@ try {
     execSync("chmod +x scripts/check-staged-secrets.sh", { stdio: "inherit" });
     execSync("scripts/check-staged-secrets.sh", { stdio: "inherit" });
   }
-} catch (error) {
+} catch {
   process.exit(1);
 }

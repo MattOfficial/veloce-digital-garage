@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "prepare": "husky",
-    "check:secrets": "node scripts/check-staged-secrets.js"
+    "check:secrets": "node scripts/check-staged-secrets.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
