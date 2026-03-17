@@ -35,7 +35,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ui } from "@/content/en/ui";
-import { Card,
+import {
+  Card,
   CardContent,
   CardHeader,
   CardTitle,
@@ -47,7 +48,8 @@ import { Card,
   Button,
   Tabs,
   TabsList,
-  TabsTrigger } from "@veloce/ui";;
+  TabsTrigger,
+} from "@veloce/ui";
 
 export type FuelEfficiencyUnit = "km/L" | "L/100km" | "MPG (US)" | "MPG (UK)";
 const METRIC_OPTIONS: readonly FuelEfficiencyUnit[] = ui.fuel.metricOptions;
@@ -370,7 +372,8 @@ export default function FuelPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <MotionWrapper delay={0.1}>
-              <Card>
+              <Card className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.fuel.averageEfficiency}
@@ -414,7 +417,8 @@ export default function FuelPage() {
             </MotionWrapper>
 
             <MotionWrapper delay={0.2}>
-              <Card>
+              <Card className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.fuel.costPerDistance(profile.distanceUnit)}
@@ -435,7 +439,8 @@ export default function FuelPage() {
             </MotionWrapper>
 
             <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
-              <Card>
+              <Card className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.fuel.totalLogs}
