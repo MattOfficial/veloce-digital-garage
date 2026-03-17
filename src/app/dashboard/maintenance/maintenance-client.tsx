@@ -11,6 +11,7 @@ import {
   Sparkles,
   BellRing,
   Gauge,
+  CalendarDays,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import {
@@ -42,7 +43,8 @@ import {
   getVehicleCurrentOdometer,
   getVehicleServiceInterval,
 } from "@/utils/vehicle-metrics";
-import { Card,
+import {
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -50,7 +52,8 @@ import { Card,
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger } from "@veloce/ui";;
+  TabsTrigger,
+} from "@veloce/ui";
 
 const COLORS = [
   "#3b82f6",
@@ -124,6 +127,7 @@ export default function MaintenanceClient({
 
   // --- Analytics Calculations ---
   let totalSpend = 0;
+  let thirtyDaySpend = 0;
 
   // Categorize spend for donut chart
   const spendByCategory: Record<string, number> = {};
@@ -131,8 +135,17 @@ export default function MaintenanceClient({
   // Aggregate by month for the bar chart
   const spendByMonth: Record<string, number> = {};
 
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   logs.forEach((log) => {
     totalSpend += log.cost;
+
+    // Calculate 30-day spend
+    const logDate = new Date(log.date);
+    if (logDate >= thirtyDaysAgo) {
+      thirtyDaySpend += log.cost;
+    }
 
     // Extract a simplified category name (e.g., "Engine Oil Change" -> "Engine Oil")
     const catName = log.service_type.split(" - ")[0] || log.service_type;
@@ -239,9 +252,9 @@ export default function MaintenanceClient({
 
         <TabsContent value="overview" className="space-y-6">
           {/* Vitals Row */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MotionWrapper delay={0.1}>
-              <Card className="relative overflow-hidden">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 grid-auto-rows-[1fr] items-stretch">
+            <MotionWrapper delay={0.1} className="h-full">
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -260,31 +273,28 @@ export default function MaintenanceClient({
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.2}>
-              <Card className="relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <MotionWrapper delay={0.2} className="h-full">
+              <Card className="relative overflow-hidden h-full">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.maintenance.currentOdometer}
+                    {ui.maintenance.thirtyDayMaintenanceSpend}
                   </CardTitle>
-                  <Gauge className="h-4 w-4 text-sky-500" />
+                  <CalendarDays className="h-4 w-4 text-violet-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-black text-sky-500 shadow-sky-500/20 drop-shadow-md">
-                    {formatDistance(currentOdometer)}{" "}
-                    <span className="text-base font-semibold">
-                      {distanceUnit}
-                    </span>
+                  <div className="text-3xl font-black text-violet-500 shadow-violet-500/20 drop-shadow-md">
+                    {formatCurrency(thirtyDaySpend)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.maintenance.currentOdometerDescription}
+                    {ui.maintenance.thirtyDayMaintenanceSpendDescription}
                   </p>
                 </CardContent>
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.3}>
-              <Card className="relative overflow-hidden">
+            <MotionWrapper delay={0.3} className="h-full">
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -305,10 +315,11 @@ export default function MaintenanceClient({
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.4} className="md:col-span-2 xl:col-span-1">
-              <Card className="border-primary/20 bg-primary/5">
+            <MotionWrapper delay={0.4} className="h-full">
+              <Card className="relative overflow-hidden h-full">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-primary">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.maintenance.servicesLogged}
                   </CardTitle>
                   <FileText className="h-4 w-4 text-primary" />
@@ -317,7 +328,7 @@ export default function MaintenanceClient({
                   <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
                     {logs.length}
                   </div>
-                  <p className="text-xs text-primary/70 mt-1 font-medium">
+                  <p className="text-xs text-muted-foreground mt-1 font-medium">
                     {ui.maintenance.totalServiceRecords}
                   </p>
                 </CardContent>

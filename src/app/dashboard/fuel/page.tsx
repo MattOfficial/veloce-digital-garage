@@ -370,9 +370,9 @@ export default function FuelPage() {
         </MotionWrapper>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <MotionWrapper delay={0.1}>
-              <Card className="relative overflow-hidden">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-auto-rows-[1fr] items-stretch">
+            <MotionWrapper delay={0.1} className="h-full">
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -416,8 +416,8 @@ export default function FuelPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.2}>
-              <Card className="relative overflow-hidden">
+            <MotionWrapper delay={0.2} className="h-full">
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -438,8 +438,11 @@ export default function FuelPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.3} className="md:col-span-2 lg:col-span-1">
-              <Card className="relative overflow-hidden">
+            <MotionWrapper
+              delay={0.3}
+              className="md:col-span-2 lg:col-span-1 h-full"
+            >
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">

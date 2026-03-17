@@ -301,9 +301,9 @@ export default function DashboardClient({
       </PageHeader>
 
       {/* Top Vitals Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MotionWrapper delay={0.1}>
-          <Card className="relative overflow-hidden">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 grid-auto-rows-[1fr] items-stretch">
+        <MotionWrapper delay={0.1} className="h-full">
+          <Card className="relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -322,8 +322,8 @@ export default function DashboardClient({
           </Card>
         </MotionWrapper>
 
-        <MotionWrapper delay={0.2}>
-          <Card className="relative overflow-hidden">
+        <MotionWrapper delay={0.2} className="h-full">
+          <Card className="relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -345,8 +345,8 @@ export default function DashboardClient({
           </Card>
         </MotionWrapper>
 
-        <MotionWrapper delay={0.3}>
-          <Card className="relative overflow-hidden">
+        <MotionWrapper delay={0.3} className="h-full">
+          <Card className="relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -372,8 +372,8 @@ export default function DashboardClient({
           </Card>
         </MotionWrapper>
 
-        <MotionWrapper delay={0.4}>
-          <Card className="relative overflow-hidden">
+        <MotionWrapper delay={0.4} className="h-full">
+          <Card className="relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">

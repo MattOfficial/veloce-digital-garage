@@ -373,9 +373,9 @@ export default function InsightsPage() {
             </Card>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <MotionWrapper delay={0.1}>
-              <Card className="border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative">
+          <div className="grid gap-4 md:grid-cols-2 grid-auto-rows-[1fr] items-stretch">
+            <MotionWrapper delay={0.1} className="h-full">
+              <Card className="border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative h-full">
                 <div className="absolute top-0 right-0 p-4 opacity-20">
                   <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
                 </div>
@@ -399,8 +399,8 @@ export default function InsightsPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.2}>
-              <Card className="relative overflow-hidden">
+            <MotionWrapper delay={0.2} className="h-full">
+              <Card className="relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -490,7 +490,7 @@ export default function InsightsPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.4}>
+            <MotionWrapper delay={0.4} className="h-full">
               <Card className="h-full overflow-hidden flex flex-col">
                 <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -567,8 +567,8 @@ export default function InsightsPage() {
         </TabsContent>
 
         <TabsContent value="distance" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <MotionWrapper delay={0.1}>
+          <div className="grid gap-4 md:grid-cols-3 grid-auto-rows-[1fr] items-stretch">
+            <MotionWrapper delay={0.1} className="h-full">
               <Card className="relative overflow-hidden border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-background to-background shadow-sm">
                 <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-sky-500/10 blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -593,8 +593,8 @@ export default function InsightsPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.2}>
-              <Card className="relative overflow-hidden border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-background to-background shadow-sm">
+            <MotionWrapper delay={0.2} className="h-full">
+              <Card className="relative overflow-hidden h-full border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-background to-background shadow-sm">
                 <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-teal-500/10 blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                   <CardTitle className="text-sm font-medium text-teal-900 dark:text-teal-100">
@@ -622,8 +622,8 @@ export default function InsightsPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.3}>
-              <Card className="relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-background to-background shadow-sm">
+            <MotionWrapper delay={0.3} className="h-full">
+              <Card className="relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-background to-background shadow-sm h-full">
                 <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                   <CardTitle className="text-sm font-medium text-violet-900 dark:text-violet-100">
