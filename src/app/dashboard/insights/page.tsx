@@ -20,21 +20,6 @@ import {
   getStatusClassName,
 } from "@/utils/cadence-predictions";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Activity,
@@ -48,9 +33,24 @@ import {
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { ui } from "@/content/en/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@veloce/ui";
 
 export default function InsightsPage() {
   const { vehicles, selectedVehicleId } = useVehicleStore();

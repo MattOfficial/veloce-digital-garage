@@ -1,7 +1,10 @@
 {
-  "name": "temp-app",
+  "name": "veloce-digital-garage",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +18,7 @@
     "@hookform/resolvers": "~3.9.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
+    "@veloce/ui": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "compromise": "^14.15.0",

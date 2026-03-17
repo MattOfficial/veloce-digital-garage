@@ -1,23 +1,25 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
+"use client";
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppNavbar } from "@/components/app-navbar";
 import { VeloceCopilot } from "@/components/veloce-copilot";
+import { SidebarProvider } from "@veloce/ui";
 
 export default function DashboardLayout({
-    children,
+  children,
 }: Readonly<{
-    children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-    return (
-        <SidebarProvider>
-            <AppSidebar />
-            <div className="flex flex-col flex-1 h-screen w-full">
-                <AppNavbar />
-                <main className="flex-1 overflow-auto bg-muted/40 p-4 md:p-6 lg:p-8">
-                    {children}
-                </main>
-                <VeloceCopilot />
-            </div>
-        </SidebarProvider>
-    );
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <div className="flex flex-col flex-1 h-screen w-full">
+        <AppNavbar />
+        <main className="flex-1 overflow-auto bg-muted/40 p-4 md:p-6 lg:p-8">
+          {children}
+        </main>
+        <VeloceCopilot />
+      </div>
+    </SidebarProvider>
+  );
 }
