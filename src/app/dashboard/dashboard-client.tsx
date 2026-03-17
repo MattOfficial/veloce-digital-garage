@@ -303,18 +303,19 @@ export default function DashboardClient({
       {/* Top Vitals Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MotionWrapper delay={0.1}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {ui.dashboard.currentOdometer}
               </CardTitle>
-              <Activity className="h-4 w-4 text-primary opacity-70" />
+              <Activity className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
                 {latestOdometer.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
                 {ui.dashboard.odometerSuffix(distanceUnit)}
               </p>
             </CardContent>
@@ -322,20 +323,21 @@ export default function DashboardClient({
         </MotionWrapper>
 
         <MotionWrapper delay={0.2}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {ui.dashboard.thirtyDaySpend}
               </CardTitle>
-              <CalendarDays className="h-4 w-4 text-emerald-500 opacity-70" />
+              <CalendarDays className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-black text-emerald-500 shadow-emerald-500/20 drop-shadow-md">
                 {currencySymbol}
                 {costLast30Days.toFixed(2)}
               </div>
               <p
-                className={`text-xs mt-1 flex items-center ${spendTrend > 0 ? "text-destructive" : spendTrend < 0 ? "text-emerald-500" : "text-muted-foreground"}`}
+                className={`text-xs mt-1 font-medium flex items-center ${spendTrend > 0 ? "text-destructive" : spendTrend < 0 ? "text-emerald-500" : "text-muted-foreground"}`}
               >
                 {ui.dashboard.previousThirtyDaysComparison(spendTrend)}
               </p>
@@ -344,21 +346,22 @@ export default function DashboardClient({
         </MotionWrapper>
 
         <MotionWrapper delay={0.3}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {ui.dashboard.distanceLastThirtyDays}
               </CardTitle>
-              <MapIcon className="h-4 w-4 text-amber-500 opacity-70" />
+              <MapIcon className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-black text-amber-500 shadow-amber-500/20 drop-shadow-md">
                 {distanceLast30Days.hasSufficientData &&
                 distanceLast30Days.value != null
                   ? `${formatDistance(distanceLast30Days.value)} ${distanceUnit}`
                   : ui.common.emptyValue}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
                 {distanceLast30Days.hasSufficientData
                   ? distanceLast30Days.coverage === "partial"
                     ? ui.dashboard.basedOnAvailableOdometerLogs
@@ -370,19 +373,20 @@ export default function DashboardClient({
         </MotionWrapper>
 
         <MotionWrapper delay={0.4}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {ui.dashboard.lifetimeMaintenance}
               </CardTitle>
-              <Wrench className="h-4 w-4 text-blue-500 opacity-70" />
+              <Wrench className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-black text-blue-500 shadow-blue-500/20 drop-shadow-md">
                 {currencySymbol}
                 {totalMaintenanceCost.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
                 {ui.dashboard.allTimeRepairCost}
               </p>
             </CardContent>

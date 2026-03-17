@@ -28,7 +28,8 @@ import { useVehicleStore } from "@/store/vehicle-store";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ui } from "@/content/en/ui";
-import { Card,
+import {
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -42,7 +43,8 @@ import { Card,
   DialogTrigger,
   Input,
   Label,
-  Textarea } from "@veloce/ui";;
+  Textarea,
+} from "@veloce/ui";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Sparkles,
@@ -186,7 +188,7 @@ export function CustomTrackerWidget({
                 {ui.trackers.logEvent}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+            <DialogContent className="sm:max-w-106.25 rounded-[2rem]">
               <DialogHeader>
                 <DialogTitle>{ui.trackers.logNew(category.name)}</DialogTitle>
                 <DialogDescription>
@@ -230,7 +232,7 @@ export function CustomTrackerWidget({
                     id="notes"
                     name="notes"
                     placeholder={ui.trackers.notesPlaceholder}
-                    className="rounded-xl min-h-[100px]"
+                    className="rounded-xl min-h-25"
                   />
                 </div>
 
@@ -276,7 +278,7 @@ export function CustomTrackerWidget({
           </div>
         )}
         {sortedLogs.length > 0 ? (
-          <div className="overflow-y-auto overflow-x-hidden flex-1 p-4 space-y-3 max-h-[400px] scrollbar-thin">
+          <div className="overflow-y-auto overflow-x-hidden flex-1 p-4 space-y-3 max-h-100 scrollbar-thin">
             {sortedLogs.map((log) => (
               <LogBubble
                 key={log.id}
@@ -289,7 +291,7 @@ export function CustomTrackerWidget({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/5 flex-1 min-h-[200px]">
+          <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/5 flex-1 min-h-50">
             <div
               className="p-4 rounded-full mb-4 shadow-sm border border-black/5 opacity-50"
               style={{ backgroundColor: `${themeColor}15`, color: themeColor }}
@@ -302,7 +304,7 @@ export function CustomTrackerWidget({
             <p className="text-sm text-muted-foreground w-3/4 mb-4">
               {ui.trackers.noEntriesDescription}
             </p>
-            <p className="text-muted-foreground text-sm max-w-[250px] mt-1 mb-5">
+            <p className="text-muted-foreground text-sm max-w-62.5 mt-1 mb-5">
               {ui.trackers.startTrackingDescription(category.name)}
             </p>
           </div>

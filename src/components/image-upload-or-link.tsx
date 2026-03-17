@@ -107,7 +107,7 @@ export function ImageUploadOrLink({
         </Button>
       </div>
 
-      <div className="border border-dashed rounded-[1.5rem] p-4 flex flex-col items-center justify-center min-h-[160px] bg-muted/20 relative overflow-hidden group transition-all hover:bg-muted/40 text-center">
+      <div className="border border-dashed rounded-[1.5rem] p-4 flex flex-col items-center justify-center min-h-40 bg-muted/20 relative overflow-hidden group transition-all hover:bg-muted/40 text-center">
         {previewUrl ? (
           <div className="absolute inset-0 w-full h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}

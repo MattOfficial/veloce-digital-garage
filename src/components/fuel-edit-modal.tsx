@@ -67,7 +67,7 @@ interface FuelEditModalProps {
 export function FuelEditModal({ log, open, onOpenChange }: FuelEditModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px] rounded-[2rem]">
+      <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Pencil className="h-5 w-5 text-primary" />

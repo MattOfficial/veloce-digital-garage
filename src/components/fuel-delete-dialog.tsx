@@ -71,7 +71,7 @@ export function FuelDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[440px] rounded-[2rem]">
+      <DialogContent className="sm:max-w-110 rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl text-destructive">
             <TriangleAlert className="h-5 w-5" />

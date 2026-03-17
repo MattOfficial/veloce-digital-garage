@@ -74,7 +74,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
           {ui.fuel.modal.trigger}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px] rounded-[2rem]">
+      <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {isEV

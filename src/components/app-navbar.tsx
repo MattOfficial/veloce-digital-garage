@@ -38,7 +38,7 @@ export function AppNavbar() {
             onValueChange={setSelectedVehicleId}
             disabled={vehicles.length === 0}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-45">
               <SelectValue placeholder={ui.common.navigation.selectVehicle} />
             </SelectTrigger>
             <SelectContent>
@@ -50,7 +50,7 @@ export function AppNavbar() {
             </SelectContent>
           </Select>
         ) : (
-          <div className="flex h-9 w-[180px] items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm text-muted-foreground shadow-xs">
+          <div className="flex h-9 w-45 items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm text-muted-foreground shadow-xs">
             {ui.common.navigation.selectVehicle}
           </div>
         )}

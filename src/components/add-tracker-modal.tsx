@@ -19,7 +19,8 @@ import { createTrackerCategory } from "@/app/actions/custom-trackers";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { useRouter } from "next/navigation";
 import { ui } from "@/content/en/ui";
-import { Dialog,
+import {
+  Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -32,7 +33,8 @@ import { Dialog,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  Switch } from "@veloce/ui";;
+  Switch,
+} from "@veloce/ui";
 
 const ICONS = [
   { name: "Sparkles", label: ui.trackers.iconLabels.Sparkles, icon: Sparkles },
@@ -110,7 +112,7 @@ export function AddTrackerModal({
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="border-dashed border-2 bg-muted/20 hover:bg-muted/50 rounded-2xl h-full min-h-[140px] flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary transition-all duration-300 w-full group"
+          className="border-dashed border-2 bg-muted/20 hover:bg-muted/50 rounded-2xl h-full min-h-35 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary transition-all duration-300 w-full group"
         >
           <div className="bg-background rounded-full p-3 shadow-sm group-hover:scale-110 transition-transform duration-300">
             <Plus className="h-6 w-6" />
@@ -120,7 +122,7 @@ export function AddTrackerModal({
           </span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+      <DialogContent className="sm:max-w-106.25 rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {ui.trackers.createTrackerTitle}
