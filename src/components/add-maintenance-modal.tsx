@@ -140,7 +140,7 @@ export function AddMaintenanceModal({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-[2rem] p-0 overflow-hidden border-primary/10 shadow-xl">
+      <DialogContent className="sm:max-w-106.25 rounded-[2rem] p-0 overflow-hidden border-primary/10 shadow-xl">
         <div className="bg-muted/30 p-6 pb-4 border-b">
           <DialogHeader>
             <DialogTitle className="flex items-center text-xl">

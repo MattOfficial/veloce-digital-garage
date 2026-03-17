@@ -40,3 +40,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# UI package artifacts
+packages/ui/dist/
+packages/ui/.vite/
+packages/ui/coverage/
+packages/ui/storybook-static/
+packages/ui/node_modules/.cache/
+packages/ui/*.log

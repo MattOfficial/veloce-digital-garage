@@ -59,7 +59,7 @@ export function AddReminderModal({
           {ui.maintenance.reminders.trigger}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-black/80 backdrop-blur-2xl border-white/10">
+      <DialogContent className="sm:max-w-106.25 bg-black/80 backdrop-blur-2xl border-white/10">
         <DialogHeader>
           <DialogTitle>{ui.maintenance.reminders.title}</DialogTitle>
           <DialogDescription>
@@ -133,7 +133,7 @@ export function AddReminderModal({
                   id="last_completed_date"
                   name="last_completed_date"
                   type="date"
-                  className="bg-white/5 border-white/10 [color-scheme:dark]"
+                  className="bg-white/5 border-white/10 scheme-dark"
                 />
               </div>
               <div className="space-y-2">

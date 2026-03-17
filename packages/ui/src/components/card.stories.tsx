@@ -20,7 +20,7 @@ type Story = StoryObj<typeof Card>;
 
 export const Default: Story = {
   render: () => (
-    <Card className="w-[350px]">
+    <Card className="w-87.5">
       <CardHeader>
         <CardTitle>Card Title</CardTitle>
         <CardDescription>Card description text goes here.</CardDescription>
@@ -43,7 +43,7 @@ export const Default: Story = {
 
 export const WithAction: Story = {
   render: () => (
-    <Card className="w-[400px]">
+    <Card className="w-100">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -75,7 +75,7 @@ export const WithAction: Story = {
 
 export const Simple: Story = {
   render: () => (
-    <Card className="w-[300px]">
+    <Card className="w-75">
       <CardContent className="pt-6">
         <p className="text-center text-sm">
           This is a simple card with just content.

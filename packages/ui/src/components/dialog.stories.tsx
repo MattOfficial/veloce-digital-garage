@@ -65,7 +65,7 @@ export const WithoutCloseButton: Story = {
         <DialogHeader>
           <DialogTitle>Dialog Without Close Button</DialogTitle>
           <DialogDescription>
-            This dialog doesn't have the X button in the top right corner.
+            This dialog doesn&apos;t have the X button in the top right corner.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -92,11 +92,11 @@ export const WithForm: Story = {
       <DialogTrigger asChild>
         <Button>Edit Profile</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Make changes to your profile here. Click save when you're done.
+            Make changes to your profile here. Click save when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
