@@ -6,7 +6,6 @@
  */
 
 const fs = require("fs");
-const path = require("path");
 const { glob } = require("glob");
 
 // Helper to flatten imports: {{a,b},{c}} -> {a,b,c}
@@ -34,12 +33,6 @@ async function main() {
     // Check if file contains malformed import pattern
     if (!content.includes("@veloce/ui")) continue;
 
-    // Pattern to match imports with nested braces
-    // This regex captures the entire import line (single or multi-line)
-    const malformedImportRegex =
-      /import\s+\{([^}]+(?:\{[^}]*\}[^}]*)*)\}\s+from\s+["']@veloce\/ui["']/g;
-
-    let match;
     let changed = false;
 
     // We need to handle multi-line imports by looking for the pattern across lines

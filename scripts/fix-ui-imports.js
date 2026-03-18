@@ -9,7 +9,6 @@
  */
 
 const fs = require("fs");
-const path = require("path");
 const { glob } = require("glob");
 
 async function main() {
@@ -19,12 +18,6 @@ async function main() {
   const files = await glob("src/**/*.{ts,tsx}", { ignore: "node_modules/**" });
 
   let totalFixed = 0;
-  const patterns = [
-    // Pattern 1: import { { Component } } from "@veloce/ui";
-    /\{\s*\{([^}]+)\}\s*\}/g,
-    // Pattern 2: import { { Component1, Component2 }, { Component3 } } from "@veloce/ui";
-    /\{\s*\{([^}]+)\}(?:,\s*\{([^}]+)\})*\s*\}/g,
-  ];
 
   for (const filePath of files) {
     const content = fs.readFileSync(filePath, "utf8");

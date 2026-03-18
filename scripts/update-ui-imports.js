@@ -3,41 +3,6 @@
 const fs = require("fs");
 const path = require("path");
 
-// Define the mapping of component imports
-const componentMap = {
-  button: "Button",
-  input: "Input",
-  label: "Label",
-  card: "Card",
-  tabs: "Tabs",
-  dialog: "Dialog",
-  "dropdown-menu": "DropdownMenu",
-  form: "Form",
-  popover: "Popover",
-  select: "Select",
-  separator: "Separator",
-  sheet: "Sheet",
-  sidebar: "Sidebar",
-  skeleton: "Skeleton",
-  switch: "Switch",
-  table: "Table",
-  textarea: "Textarea",
-  tooltip: "Tooltip",
-  avatar: "Avatar",
-  calendar: "Calendar",
-  chart: "Chart",
-};
-
-// Helper to get the exported component name from the import
-function getExportedName(componentPath) {
-  const componentName = componentPath
-    .split("/")
-    .pop()
-    .replace(".tsx", "")
-    .replace(".ts", "");
-  return componentMap[componentName] || componentName;
-}
-
 function updateFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
 
@@ -58,7 +23,6 @@ function updateFile(filePath) {
   // Collect all imports from @/components/ui
   matches.forEach((match) => {
     const importStatement = match[0];
-    const componentPath = match[1];
 
     // Extract component names from the import
     const importMatch = importStatement.match(/import\s+([^]+?)\s+from/);

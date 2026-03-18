@@ -10,7 +10,6 @@ import {
   FileText,
   Sparkles,
   BellRing,
-  Gauge,
   CalendarDays,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
