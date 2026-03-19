@@ -15,7 +15,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@veloce/ui";
+} from "@mattofficial/veloce-ui";
 
 interface FuelDeleteDialogProps {
   logId: string;

@@ -52,7 +52,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@veloce/ui";
+} from "@mattofficial/veloce-ui";
 
 const COLORS = [
   "#3b82f6",

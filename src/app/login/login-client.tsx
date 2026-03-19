@@ -15,7 +15,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@veloce/ui";
+} from "@mattofficial/veloce-ui";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 import { brand } from "@/content/en/brand";

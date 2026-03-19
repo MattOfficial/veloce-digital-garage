@@ -50,7 +50,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@veloce/ui";
+} from "@mattofficial/veloce-ui";
 
 export default function InsightsPage() {
   const { vehicles, selectedVehicleId } = useVehicleStore();

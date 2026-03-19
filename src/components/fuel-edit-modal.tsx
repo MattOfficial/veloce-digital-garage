@@ -31,7 +31,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@veloce/ui";
+} from "@mattofficial/veloce-ui";
 
 const formSchema = z.object({
   date: z.string().nonempty({ message: "Date is required" }),
