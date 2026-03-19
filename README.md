@@ -54,6 +54,18 @@ Current server providers:
 - OpenAI
 - DeepSeek
 
+## UI Package Dependency
+
+This project depends on `@mattofficial/veloce-ui`, a GitHub NPM package.
+
+### Installation
+
+In case you face issues during `npm install`, you'll need to install it manually:
+
+1. Download the release: [@mattofficial/veloce-ui v1.0.4](https://github.com/MattOfficial/veloce-ui/releases/tag/v1.0.4)
+2. Extract the downloaded `.tgz` file
+3. Install: `npm install /path/to/veloce-ui-1.0.4.tgz`
+
 ## Environment Variables
 
 Copy `.env.example` to `.env.local` and fill in the required values.

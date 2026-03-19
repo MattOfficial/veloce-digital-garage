@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Button } from "./ui/button";
+import { Button } from "@mattofficial/veloce-ui";
 import { ArrowRight, Car, Fuel, Wrench, Activity, ShieldCheck, BarChart3 } from "lucide-react";
 import { brand } from "@/content/en/brand";
 import { ui } from "@/content/en/ui";

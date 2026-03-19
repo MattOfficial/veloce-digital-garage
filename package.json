@@ -1,5 +1,5 @@
 {
-  "name": "temp-app",
+  "name": "veloce-digital-garage",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,6 +13,7 @@
   "dependencies": {
     "@google/genai": "^1.43.0",
     "@hookform/resolvers": "~3.9.0",
+    "@mattofficial/veloce-ui": "^1.0.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "class-variance-authority": "^0.7.1",
