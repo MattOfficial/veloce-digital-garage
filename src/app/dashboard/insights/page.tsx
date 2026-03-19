@@ -40,17 +40,19 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@mattofficial/veloce-ui";
+import {
   ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@mattofficial/veloce-ui";
+} from "@/components/ui/chart";
 
 export default function InsightsPage() {
   const { vehicles, selectedVehicleId } = useVehicleStore();
