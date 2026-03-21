@@ -27,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   Button,
   Input,
@@ -35,7 +36,6 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  Switch,
 } from "@mattofficial/veloce-ui";
 
 const ICONS = [
