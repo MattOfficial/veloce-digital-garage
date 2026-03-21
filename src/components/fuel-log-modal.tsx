@@ -15,10 +15,8 @@ import { VehicleWithLogs } from "@/types/database";
 import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
   Button,
   Form,
   FormControl,
@@ -37,7 +35,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@mattofficial/veloce-ui";
 
 const formSchema = z.object({
@@ -68,12 +65,14 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
         setOpen(o);
       }}
     >
-      <DialogTrigger asChild>
-        <Button className="rounded-full shadow-md transition-all active:scale-95 bg-primary/90 hover:bg-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          {ui.fuel.modal.trigger}
-        </Button>
-      </DialogTrigger>
+      <Button
+        type="button"
+        className="rounded-full shadow-md transition-all active:scale-95 bg-primary/90 hover:bg-primary"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        {ui.fuel.modal.trigger}
+      </Button>
       <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
