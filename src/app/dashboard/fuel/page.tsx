@@ -23,6 +23,7 @@ import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
 import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { PageHeader } from "@/components/page-header";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LineChart,
   Line,
@@ -46,9 +47,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from "@mattofficial/veloce-ui";
 
 export type FuelEfficiencyUnit = "km/L" | "L/100km" | "MPG (US)" | "MPG (UK)";

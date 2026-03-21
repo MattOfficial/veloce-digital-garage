@@ -2,6 +2,12 @@
 
 import { login, signup } from "./actions";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Button,
   Input,
   Label,
@@ -11,10 +17,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@mattofficial/veloce-ui";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { GoogleAuthButton } from "@/components/google-auth-button";

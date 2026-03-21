@@ -13,24 +13,28 @@ import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { ui } from "@/content/en/ui";
 import {
-  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Button,
   Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@mattofficial/veloce-ui";
 
 const formSchema = z.object({
@@ -67,7 +71,7 @@ interface FuelEditModalProps {
 export function FuelEditModal({ log, open, onOpenChange }: FuelEditModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
+      <DialogContent className="sm:max-w-112.5 max-h-[90vh] overflow-y-auto rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Pencil className="h-5 w-5 text-primary" />

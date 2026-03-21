@@ -29,18 +29,20 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ui } from "@/content/en/ui";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
   Input,
   Label,
   Textarea,

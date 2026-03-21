@@ -8,13 +8,15 @@ import { toast } from "sonner";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { ui } from "@/content/en/ui";
 import {
-  Button,
-  Input,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Button,
+  Input,
 } from "@mattofficial/veloce-ui";
 
 interface FuelDeleteDialogProps {

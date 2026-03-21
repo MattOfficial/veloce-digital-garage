@@ -19,13 +19,15 @@ import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Button,
   Input,
   Label,
   Textarea,

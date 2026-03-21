@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+    getNextSyncedVehicleCurrentOdometer,
     normalizeServiceType,
     serviceTypesMatch,
     isRoutineServiceType,
     getVehicleCurrentOdometer,
+    getVehicleRecordedOdometer,
     getVehicleServiceInterval,
     getServiceReminderStatus,
     VEHICLE_SERVICE_INTERVAL_NAME,
@@ -152,6 +154,47 @@ describe("getVehicleCurrentOdometer", () => {
     it("handles missing fuel_logs and maintenance_logs arrays gracefully", () => {
         const vehicle = { baseline_odometer: 3000, current_odometer: 3500 };
         expect(getVehicleCurrentOdometer(vehicle)).toBe(3500);
+    });
+});
+
+describe("getVehicleRecordedOdometer", () => {
+    it("ignores current_odometer and only uses persisted readings", () => {
+        const vehicle = {
+            baseline_odometer: 5000,
+            current_odometer: 9000,
+            fuel_logs: [{ odometer: 7000 }],
+            maintenance_logs: [{ odometer: 6500 }],
+        };
+
+        expect(getVehicleRecordedOdometer(vehicle)).toBe(7000);
+    });
+});
+
+describe("getNextSyncedVehicleCurrentOdometer", () => {
+    it("rolls back to the highest remaining reading when the current odometer came from a deleted log", () => {
+        const vehicle = {
+            baseline_odometer: 5000,
+            current_odometer: 10000,
+            fuel_logs: [{ odometer: 9000 }],
+            maintenance_logs: [],
+        };
+
+        expect(
+            getNextSyncedVehicleCurrentOdometer(vehicle, { discardCurrentAtOrBelow: 10000 }),
+        ).toBe(9000);
+    });
+
+    it("preserves a higher manual current odometer when it exceeds the removed log reading", () => {
+        const vehicle = {
+            baseline_odometer: 5000,
+            current_odometer: 11000,
+            fuel_logs: [{ odometer: 9000 }],
+            maintenance_logs: [],
+        };
+
+        expect(
+            getNextSyncedVehicleCurrentOdometer(vehicle, { discardCurrentAtOrBelow: 10000 }),
+        ).toBe(11000);
     });
 });
 

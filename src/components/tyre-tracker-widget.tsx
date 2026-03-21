@@ -9,6 +9,14 @@ import { cn } from "@/lib/utils";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { ui } from "@/content/en/ui";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -17,12 +25,6 @@ import {
   Button,
   Input,
   Label,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,

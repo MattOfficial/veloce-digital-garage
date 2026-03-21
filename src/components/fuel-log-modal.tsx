@@ -16,28 +16,30 @@ import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+} from "@/components/ui/form";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@mattofficial/veloce-ui";
 
 const formSchema = z.object({
@@ -69,12 +71,16 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button className="rounded-full shadow-md transition-all active:scale-95 bg-primary/90 hover:bg-primary">
+        <Button
+          type="button"
+          size="sm"
+          className="rounded-full shadow-sm shadow-primary/20"
+        >
           <Plus className="h-4 w-4 mr-2" />
           {ui.fuel.modal.trigger}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
+      <DialogContent className="sm:max-w-112.5 max-h-[90vh] overflow-y-auto rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {isEV

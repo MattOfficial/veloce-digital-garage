@@ -13,6 +13,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PieChart,
   Pie,
@@ -48,10 +49,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@mattofficial/veloce-ui";
 
 const COLORS = [
@@ -237,7 +234,7 @@ export default function MaintenanceClient({
       </PageHeader>
 
       <Tabs defaultValue="overview" className="w-full space-y-6">
-        <TabsList className="grid w-[400px] grid-cols-3 rounded-full">
+        <TabsList className="grid w-full grid-cols-3 rounded-full md:w-[400px]">
           <TabsTrigger value="overview" className="rounded-full">
             {ui.maintenance.tabs.overview}
           </TabsTrigger>
@@ -460,7 +457,7 @@ export default function MaintenanceClient({
           )}
         </TabsContent>
 
-        <TabsContent value="invoices" className="space-y-6 mt-6">
+        <TabsContent value="invoices" className="mt-6 space-y-6">
           {/* Document Upload Widget */}
           <DocumentUploader
             vehicleId={selectedVehicle.id}
@@ -550,7 +547,7 @@ export default function MaintenanceClient({
           </MotionWrapper>
         </TabsContent>
 
-        <TabsContent value="trackers" className="space-y-8 mt-6">
+        <TabsContent value="trackers" className="mt-6 space-y-8">
           {/* The Permanent Tyre Tracker Block */}
           <MotionWrapper delay={0.1} className="relative z-20 mt-8 mb-6">
             <TyreTrackerWidget
