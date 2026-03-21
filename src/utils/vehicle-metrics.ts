@@ -64,13 +64,33 @@ export function getVehicleServiceInterval<T extends { service_type: string }>(re
         ?? null;
 }
 
-export function getVehicleCurrentOdometer(vehicle: VehicleForOdometer) {
+export function getVehicleRecordedOdometer(vehicle: VehicleForOdometer) {
     return Math.max(
         vehicle.baseline_odometer || 0,
-        vehicle.current_odometer || 0,
         getMaxNumber(vehicle.fuel_logs?.map((log) => log.odometer) || []) || 0,
         getMaxNumber(vehicle.maintenance_logs?.map((log) => log.odometer) || []) || 0,
     );
+}
+
+export function getVehicleCurrentOdometer(vehicle: VehicleForOdometer) {
+    return Math.max(getVehicleRecordedOdometer(vehicle), vehicle.current_odometer || 0);
+}
+
+export function getNextSyncedVehicleCurrentOdometer(
+    vehicle: VehicleForOdometer,
+    options?: { discardCurrentAtOrBelow?: number | null },
+) {
+    const recordedOdometer = getVehicleRecordedOdometer(vehicle);
+    const currentOdometer = vehicle.current_odometer || 0;
+
+    if (
+        options?.discardCurrentAtOrBelow != null
+        && currentOdometer <= options.discardCurrentAtOrBelow
+    ) {
+        return recordedOdometer;
+    }
+
+    return Math.max(recordedOdometer, currentOdometer);
 }
 
 export function getServiceReminderStatus(

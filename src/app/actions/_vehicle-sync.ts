@@ -1,6 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import type { Database } from "@/types/supabase";
-import { getVehicleCurrentOdometer, getVehicleServiceInterval, isRoutineServiceType } from "@/utils/vehicle-metrics";
+import {
+    getNextSyncedVehicleCurrentOdometer,
+    getVehicleCurrentOdometer,
+    getVehicleServiceInterval,
+    isRoutineServiceType,
+} from "@/utils/vehicle-metrics";
 
 type ActionSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 type VehicleOdometerSyncRow =
@@ -13,6 +18,7 @@ type ServiceIntervalRow = Pick<Database["public"]["Tables"]["service_reminders"]
 export async function syncVehicleCurrentOdometer(
     supabase: ActionSupabaseClient,
     vehicleId: string,
+    options?: { discardCurrentAtOrBelow?: number | null },
 ) {
     const { data: vehicle, error } = await supabase
         .from("vehicles")
@@ -27,7 +33,7 @@ export async function syncVehicleCurrentOdometer(
         return null;
     }
 
-    const nextOdometer = getVehicleCurrentOdometer(vehicleRow);
+    const nextOdometer = getNextSyncedVehicleCurrentOdometer(vehicleRow, options);
     const { error: updateError } = await supabase
         .from("vehicles")
         .update({ current_odometer: nextOdometer })

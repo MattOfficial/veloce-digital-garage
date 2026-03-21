@@ -223,7 +223,9 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
         return { success: false, error: error.message };
     }
 
-    await syncVehicleCurrentOdometer(supabase, payload.vehicle_id);
+    await syncVehicleCurrentOdometer(supabase, payload.vehicle_id, {
+        discardCurrentAtOrBelow: existingLog.odometer,
+    });
     revalidateFuelRelatedPaths(payload.vehicle_id);
     return { success: true };
 }
@@ -244,14 +246,31 @@ export async function deleteFuelLog(logId: string, vehicleId: string) {
 
     if (!vehicle) return { success: false, error: "Vehicle not found or access denied." };
 
-    const { error } = await supabase.from("fuel_logs").delete().eq("id", logId);
+    const { data: existingLog, error: existingLogError } = await supabase
+        .from("fuel_logs")
+        .select("id, odometer, vehicle_id")
+        .eq("id", logId)
+        .eq("vehicle_id", vehicleId)
+        .single();
+
+    if (existingLogError || !existingLog) {
+        return { success: false, error: "Fuel log not found." };
+    }
+
+    const { error } = await supabase
+        .from("fuel_logs")
+        .delete()
+        .eq("id", logId)
+        .eq("vehicle_id", vehicleId);
 
     if (error) {
         console.error("Error deleting fuel log:", error);
         return { success: false, error: error.message };
     }
 
-    await syncVehicleCurrentOdometer(supabase, vehicleId);
+    await syncVehicleCurrentOdometer(supabase, vehicleId, {
+        discardCurrentAtOrBelow: existingLog.odometer,
+    });
     revalidateFuelRelatedPaths(vehicleId);
     return { success: true };
 }
