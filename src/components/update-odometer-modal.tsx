@@ -10,13 +10,15 @@ import { useUserStore } from "@/store/user-store";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { ui } from "@/content/en/ui";
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Button,
   Input,
   Label,
 } from "@mattofficial/veloce-ui";
