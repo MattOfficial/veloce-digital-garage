@@ -41,7 +41,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 import {
   ChartConfig,
   ChartContainer,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { ui } from "@/content/en/ui";
-import { Avatar, AvatarFallback, AvatarImage } from "@mattofficial/veloce-ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@/lib/veloce-ui";
 
 interface AvatarUploadProps {
   currentUrl?: string | null;

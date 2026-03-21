@@ -17,7 +17,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 import { brand } from "@/content/en/brand";

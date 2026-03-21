@@ -19,7 +19,7 @@ import {
   DialogTrigger,
   Input,
   Label,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 type UpdateOdometerModalProps = {
   vehicleId: string;

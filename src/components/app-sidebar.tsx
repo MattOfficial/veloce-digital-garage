@@ -24,7 +24,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 const navigation = [
   { name: ui.sidebar.items.dashboard, href: "/dashboard", icon: Car },

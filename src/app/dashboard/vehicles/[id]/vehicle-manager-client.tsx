@@ -45,7 +45,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 export function VehicleManagerClient({
   vehicle: initialVehicle,

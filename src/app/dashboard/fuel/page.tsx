@@ -47,7 +47,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Button,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 export type FuelEfficiencyUnit = "km/L" | "L/100km" | "MPG (US)" | "MPG (UK)";
 const METRIC_OPTIONS: readonly FuelEfficiencyUnit[] = ui.fuel.metricOptions;

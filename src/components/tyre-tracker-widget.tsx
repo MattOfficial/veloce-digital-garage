@@ -32,7 +32,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 function parseDotCode(dotCode?: string): Date | null {
   if (!dotCode || dotCode.length !== 4) return null;

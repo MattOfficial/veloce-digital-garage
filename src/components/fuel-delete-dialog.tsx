@@ -8,14 +8,16 @@ import { toast } from "sonner";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { ui } from "@/content/en/ui";
 import {
-  Button,
-  Input,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@mattofficial/veloce-ui";
+} from "@/components/ui/dialog";
+import {
+  Button,
+  Input,
+} from "@/lib/veloce-ui";
 
 interface FuelDeleteDialogProps {
   logId: string;

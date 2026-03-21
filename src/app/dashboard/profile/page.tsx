@@ -62,7 +62,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 type ProfileDraft = {
   displayName: string;

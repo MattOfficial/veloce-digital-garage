@@ -3,7 +3,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppNavbar } from "@/components/app-navbar";
 import { VeloceCopilot } from "@/components/veloce-copilot";
-import { SidebarProvider } from "@mattofficial/veloce-ui";
+import { SidebarProvider } from "@/lib/veloce-ui";
 
 export default function DashboardLayout({
   children,

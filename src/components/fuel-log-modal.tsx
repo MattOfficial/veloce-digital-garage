@@ -15,27 +15,32 @@ import { VehicleWithLogs } from "@/types/database";
 import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Button,
   Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 const formSchema = z.object({
   date: z.string().nonempty({ message: "Date is required" }),
@@ -65,15 +70,17 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
         setOpen(o);
       }}
     >
-      <Button
-        type="button"
-        className="rounded-full shadow-md transition-all active:scale-95 bg-primary/90 hover:bg-primary"
-        onClick={() => setOpen(true)}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        {ui.fuel.modal.trigger}
-      </Button>
-      <DialogContent className="sm:max-w-112.5 rounded-[2rem]">
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          className="rounded-full shadow-sm shadow-primary/20"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {ui.fuel.modal.trigger}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-112.5 max-h-[90vh] overflow-y-auto rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {isEV

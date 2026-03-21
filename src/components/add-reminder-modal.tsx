@@ -18,7 +18,7 @@ import {
   Button,
   Label,
   Input,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 export function AddReminderModal({
   vehicleId,

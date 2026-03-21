@@ -44,7 +44,7 @@ import {
   Input,
   Label,
   Textarea,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Sparkles,

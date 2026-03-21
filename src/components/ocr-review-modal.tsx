@@ -17,7 +17,7 @@ import {
   Button,
   Label,
   Input,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 interface OcrReviewModalProps {
   vehicleId: string;

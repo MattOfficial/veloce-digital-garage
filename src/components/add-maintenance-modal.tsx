@@ -38,7 +38,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@mattofficial/veloce-ui";
+} from "@/lib/veloce-ui";
 
 interface AddMaintenanceModalProps {
   vehicleId: string;
