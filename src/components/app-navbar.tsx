@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
   SidebarTrigger,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 export function AppNavbar() {
   const { vehicles, selectedVehicleId, setSelectedVehicleId } =

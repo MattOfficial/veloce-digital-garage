@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { ui } from "@/content/en/ui";
-import { Input, Button } from "@/lib/veloce-ui";
+import { Input, Button } from "@mattofficial/veloce-ui";
 
 interface ImageUploadOrLinkProps {
   onImageSelected: (url: string) => void;

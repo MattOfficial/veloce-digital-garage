@@ -51,7 +51,7 @@ import {
   CardTitle,
   CardDescription,
   Button,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 const EXPENSE_COLORS = {
   fuel: "#f59e0b",

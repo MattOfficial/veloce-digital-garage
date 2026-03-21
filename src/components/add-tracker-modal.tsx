@@ -34,7 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
   Switch,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 const ICONS = [
   { name: "Sparkles", label: ui.trackers.iconLabels.Sparkles, icon: Sparkles },

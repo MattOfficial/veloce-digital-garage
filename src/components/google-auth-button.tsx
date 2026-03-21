@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { ui } from "@/content/en/ui";
-import { Button } from "@/lib/veloce-ui";
+import { Button } from "@mattofficial/veloce-ui";
 
 export function GoogleAuthButton({
   text = ui.auth.buttons.continueWithGoogle,

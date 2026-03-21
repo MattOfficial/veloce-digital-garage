@@ -17,7 +17,7 @@ import {
 import {
   Button,
   Input,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 interface FuelDeleteDialogProps {
   logId: string;

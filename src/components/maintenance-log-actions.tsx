@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 interface MaintenanceLogActionsProps {
   log: MaintenanceLog;

@@ -49,7 +49,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/lib/veloce-ui";
+} from "@mattofficial/veloce-ui";
 
 const COLORS = [
   "#3b82f6",

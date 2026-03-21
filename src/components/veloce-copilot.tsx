@@ -19,7 +19,7 @@ import {
     BarChart3,
     type LucideIcon,
 } from "lucide-react";
-import { Button, Input } from "@/lib/veloce-ui";
+import { Button, Input } from "@mattofficial/veloce-ui";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { toast } from "sonner";
 import { submitFuelLog } from "@/app/actions/fuel";
