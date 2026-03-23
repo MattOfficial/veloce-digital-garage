@@ -134,7 +134,6 @@ export function AddMaintenanceModal({
           trigger
         ) : (
           <Button
-            size="sm"
             className="rounded-full shadow-sm shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
