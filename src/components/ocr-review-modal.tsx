@@ -79,7 +79,7 @@ export function OcrReviewModal({
     setIsProcessing(true);
     setError(null);
     try {
-      const data = await extractDataFromInvoice(fileUrl);
+      const data = await extractDataFromInvoice(fileUrl, filePath);
       setOcrData(data);
     } catch (error: unknown) {
       setError(getErrorMessage(error, ui.maintenance.ocr.failedAnalyze));

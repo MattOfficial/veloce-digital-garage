@@ -5,7 +5,7 @@ import { decrypt } from "@/utils/crypto";
 import type { OcrExtractedData } from "@/types/ai";
 import { getErrorMessage } from "@/utils/errors";
 
-export async function extractDataFromInvoice(fileUrl: string) {
+export async function extractDataFromInvoice(fileUrl: string, filePath?: string | null) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,25 +15,74 @@ export async function extractDataFromInvoice(fileUrl: string) {
 
     const { data: userData } = await supabase
         .from("users")
-        .select("encrypted_llm_key")
+        .select("encrypted_llm_key, encrypted_openai_key, preferred_llm_provider")
         .eq("id", user.id)
         .single();
 
-    if (!userData?.encrypted_llm_key) {
-        throw new Error("Missing Gemini API Key. Please add it in your Profile Settings.");
+    const hasGemini = !!userData?.encrypted_llm_key;
+    const hasOpenAi = !!userData?.encrypted_openai_key;
+
+    if (!hasGemini && !hasOpenAi) {
+        throw new Error("Missing Vision-capable API Key. Please add an OpenAI or Gemini key in Profile Settings.");
+    }
+
+    let useProvider = "gemini";
+    let encryptedKey = userData?.encrypted_llm_key;
+
+    if (userData?.preferred_llm_provider === "openai" && hasOpenAi) {
+        useProvider = "openai";
+        encryptedKey = userData.encrypted_openai_key;
+    } else if (userData?.preferred_llm_provider === "gemini" && hasGemini) {
+        useProvider = "gemini";
+        encryptedKey = userData.encrypted_llm_key;
+    } else if (hasOpenAi) {
+        useProvider = "openai";
+        encryptedKey = userData.encrypted_openai_key;
+    } else {
+        useProvider = "gemini";
+        encryptedKey = userData.encrypted_llm_key;
     }
 
     let apiKey = "";
     try {
-        apiKey = decrypt(userData.encrypted_llm_key);
+        if (!encryptedKey) throw new Error("No Key");
+        apiKey = decrypt(encryptedKey);
     } catch {
         throw new Error("Failed to decrypt your API key. Please re-enter it in Profile Settings.");
     }
 
     try {
-        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+        let dataUri = fileUrl;
+        try {
+            if (filePath) {
+                const { data, error } = await supabase.storage.from('vehicle-documents').download(filePath);
+                if (error) throw error;
+                const arrayBuffer = await data.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                const mimeType = data.type || "image/jpeg";
+                dataUri = `data:${mimeType};base64,${base64}`;
+            } else {
+                const imageRes = await fetch(fileUrl);
+                if (imageRes.ok) {
+                    const arrayBuffer = await imageRes.arrayBuffer();
+                    const base64 = Buffer.from(arrayBuffer).toString('base64');
+                    const mimeType = imageRes.headers.get("content-type") || "image/jpeg";
+                    dataUri = `data:${mimeType};base64,${base64}`;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch image for base64 encoding", e);
+        }
 
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        const baseUrl = useProvider === "openai" 
+            ? "https://api.openai.com/v1/chat/completions"
+            : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+        const modelName = useProvider === "openai"
+            ? (process.env.OPENAI_MODEL || "gpt-4o-mini")
+            : (process.env.GEMINI_MODEL || "gemini-1.5-flash");
+
+        const response = await fetch(baseUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -62,12 +111,11 @@ export async function extractDataFromInvoice(fileUrl: string) {
                         content: [
                             {
                                 type: "image_url",
-                                image_url: { url: fileUrl },
+                                image_url: { url: dataUri },
                             },
                         ],
                     },
-                ],
-                max_tokens: 1000,
+                ]
             }),
         });
 

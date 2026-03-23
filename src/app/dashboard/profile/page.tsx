@@ -628,6 +628,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Gemini Key */}
+                {resolvedProfile.preferredProvider === "gemini" && (
                 <div className="space-y-2">
                   <Label
                     htmlFor="llm_key"
@@ -672,8 +673,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* OpenAI Key */}
+                {resolvedProfile.preferredProvider === "openai" && (
                 <div className="space-y-2">
                   <Label
                     htmlFor="openai_key"
@@ -718,8 +721,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Deepseek Key */}
+                {resolvedProfile.preferredProvider === "deepseek" && (
                 <div className="space-y-2">
                   <Label
                     htmlFor="deepseek_key"
@@ -764,6 +769,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 <p className="text-sm text-muted-foreground pt-2">
                   {ui.profile.bringYourOwnKeys}{" "}
