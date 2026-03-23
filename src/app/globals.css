@@ -140,4 +140,9 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  [data-slot="select-content"] {
+    background-color: oklch(0.12 0.01 260 / 0.95);
+    backdrop-filter: blur(12px);
+  }
 }
