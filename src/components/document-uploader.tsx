@@ -71,7 +71,7 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
         },
         maxFiles: 1,
         maxSize: 5242880, // 5MB
-        disabled: !profile.hasLlmKey
+        disabled: !(profile.hasLlmKey || profile.hasOpenAiKey)
     });
 
     return (
@@ -87,15 +87,21 @@ export function DocumentUploader({ vehicleId, onUploadSuccess }: DocumentUploade
                 <input {...getInputProps()} />
 
                 <div className="flex flex-col items-center justify-center space-y-4">
-                    {!profile.hasLlmKey ? (
+                    {!(profile.hasLlmKey || profile.hasOpenAiKey) ? (
                         <>
                             <div className="p-4 rounded-full bg-red-500/10 text-red-500">
                                 <Lock className="h-8 w-8" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold tracking-tight">{ui.uploads.documents.vaultLockedTitle}</h3>
+                                <h3 className="text-lg font-semibold tracking-tight">
+                                    {profile.hasDeepseekKey && !profile.hasLlmKey && !profile.hasOpenAiKey
+                                        ? "Vision Not Supported"
+                                        : ui.uploads.documents.vaultLockedTitle}
+                                </h3>
                                 <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                                    {ui.uploads.documents.vaultLockedDescription}
+                                    {profile.hasDeepseekKey && !profile.hasLlmKey && !profile.hasOpenAiKey
+                                        ? "DeepSeek does not currently support document analysis. Please add an OpenAI or Gemini key to use the AI Document Vault."
+                                        : ui.uploads.documents.vaultLockedDescription}
                                 </p>
                             </div>
                         </>
