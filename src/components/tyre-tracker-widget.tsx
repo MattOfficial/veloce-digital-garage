@@ -29,12 +29,14 @@ import {
   PopoverContent,
   PopoverTrigger,
   Calendar,
+} from "@mattofficial/veloce-ui";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@mattofficial/veloce-ui";
+} from "@/components/ui/select";
 
 function parseDotCode(dotCode?: string): Date | null {
   if (!dotCode || dotCode.length !== 4) return null;
