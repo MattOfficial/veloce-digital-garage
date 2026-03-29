@@ -13,7 +13,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mattofficial/veloce-ui";
 import {
   PieChart,
   Pie,

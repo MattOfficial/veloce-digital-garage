@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
-import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
@@ -11,13 +11,13 @@ function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
 }
 
 function DialogTrigger(
-  props: React.ComponentProps<typeof DialogPrimitive.Trigger>,
+  props: React.ComponentProps<typeof DialogPrimitive.Trigger>
 ) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function DialogPortal(
-  props: React.ComponentProps<typeof DialogPrimitive.Portal>,
+  props: React.ComponentProps<typeof DialogPrimitive.Portal>
 ) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
@@ -48,13 +48,15 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeButtonClassName,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  closeButtonClassName?: string;
 }) {
   return (
-    <DialogPortal>
-      <DialogOverlay />
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[2000] bg-black/65 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
@@ -70,21 +72,22 @@ function DialogContent({
         {...props}
       >
         {children}
-        {showCloseButton ? (
+        {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             className={cn(
               "absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground",
               "transition-opacity hover:bg-muted hover:text-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              closeButtonClassName,
             )}
           >
             <XIcon className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
-        ) : null}
+        )}
       </DialogPrimitive.Content>
-    </DialogPortal>
+    </DialogPrimitive.Portal>
   );
 }
 

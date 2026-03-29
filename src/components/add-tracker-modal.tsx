@@ -106,7 +106,7 @@ export function AddTrackerModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(newOpen) => {
+      onOpenChange={(newOpen: boolean) => {
         if (!newOpen) setMessage(null);
         setOpen(newOpen);
       }}

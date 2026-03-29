@@ -23,7 +23,7 @@ import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
 import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { PageHeader } from "@/components/page-header";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@mattofficial/veloce-ui";
 import {
   LineChart,
   Line,
@@ -336,7 +336,7 @@ export default function FuelPage() {
         <div className="flex justify-end">
           <Tabs
             value={activeAnalysisMode}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setPreferredAnalysisMode(value === "charge" ? "charge" : "fuel")
             }
           >

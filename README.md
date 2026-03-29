@@ -56,15 +56,24 @@ Current server providers:
 
 ## UI Package Dependency
 
-This project depends on `@mattofficial/veloce-ui`, a GitHub NPM package.
+This project uses `@mattofficial/veloce-ui` as a local package located at `packages/veloce-ui/`. The package source is embedded directly in this repository for faster iteration and direct editing.
 
-### Installation
+### Structure
 
-In case you face issues during `npm install`, you'll need to install it manually:
+- `packages/veloce-ui/src/components/` - UI components (Button, Card, Dialog, Chart, etc.)
+- `packages/veloce-ui/src/lib/` - Utilities (cn helper, etc.)
+- `src/components/ui/` - Local wrappers that re-export from veloce-ui
 
-1. Download the release: [@mattofficial/veloce-ui v1.0.4](https://github.com/MattOfficial/veloce-ui/releases/tag/v1.0.4)
-2. Extract the downloaded `.tgz` file
-3. Install: `npm install /path/to/veloce-ui-1.0.4.tgz`
+### Editing Components
+
+To modify a UI component, edit the files in `packages/veloce-ui/src/components/`. Changes take effect immediately in development mode.
+
+### Publishing (when needed)
+
+If you need to publish veloce-ui as a standalone npm package:
+1. Go to `packages/veloce-ui/`
+2. Run `npm run build`
+3. Publish from the `dist/` folder
 
 ## Environment Variables
 
@@ -90,8 +99,9 @@ Optional model overrides:
 2. Copy `.env.example` to `.env.local`.
 3. Apply the Supabase migrations with `npx supabase db push`.
 4. Run the app with `npm run dev`.
-5. Validate production readiness with `npm run lint`.
-6. Validate production readiness with `npm run build`.
+5. Validate with `npm run lint`.
+6. Validate tests and coverage with `npm run test:coverage`.
+7. Validate production readiness with `npm run build`.
 
 ## Database and Storage
 
@@ -130,8 +140,9 @@ Pre-commit:
 Pre-push:
 
 - Hook: `.husky/pre-push`
-- Commands: `npm run lint` then `npm run build`
-- Runs ESLint first and then the production Next build, blocking pushes if either check fails
+- Commands: `npm run lint` then `npm run test:coverage` then `npm run build`
+- Runs ESLint, then tests with coverage thresholds (80%), then production Next build
+- Blocks pushes if any check fails
 
 Placeholders in `.env.example` and docs are allowed by the secret scan.
 

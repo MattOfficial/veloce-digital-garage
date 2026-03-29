@@ -261,7 +261,8 @@ export function getVehicleMonthlyDistanceRollups(
     endDate: Date = new Date(),
 ): DistanceMonthlyRollup[] {
     return Array.from({ length: monthCount }, (_, index) => {
-        const monthDate = subMonths(endDate, monthCount - index - 1);
+        // Use day 1 to avoid month overflow issues (e.g., Mar 29 - 11 months = Apr 29, not Apr 1)
+        const monthDate = new Date(endDate.getFullYear(), endDate.getMonth() - index, 1);
         const monthStart = startOfMonth(monthDate);
         const monthEnd = isSameMonth(monthDate, endDate) ? endOfDay(endDate) : endOfMonth(monthDate);
         const summary = getVehicleDistanceSummary(vehicle, { start: monthStart, end: monthEnd });

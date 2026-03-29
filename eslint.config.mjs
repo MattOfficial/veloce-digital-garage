@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
       "next-env.d.ts",
       "**/dist/**",
       "**/node_modules/**",
+      "packages/veloce-ui/**",
     ],
   },
   ...nextVitals,

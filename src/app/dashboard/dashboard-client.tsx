@@ -221,8 +221,8 @@ export default function DashboardClient({
     { month: string; Fuel: number; Maintenance: number }
   >();
   for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
+    // Use day 1 to avoid month overflow issues (e.g., Mar 29 - 1 month = Mar 1, not Feb 29)
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthYear = d.toLocaleDateString("default", {
       month: "short",
       year: "2-digit",

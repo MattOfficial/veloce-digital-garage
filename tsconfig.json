@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/packages/veloce-ui/*": ["./packages/veloce-ui/src/*"],
+      "@mattofficial/veloce-ui": ["./packages/veloce-ui/src/index.ts"],
+      "@mattofficial/veloce-ui/*": ["./packages/veloce-ui/src/*"]
     }
   },
   "include": [
@@ -30,5 +33,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "packages/veloce-ui/e2e", "packages/veloce-ui/**/*.test.ts", "packages/veloce-ui/**/*.test.tsx", "packages/veloce-ui/**/*.stories.ts", "packages/veloce-ui/**/*.stories.tsx", "packages/veloce-ui/pages/**/*", "packages/veloce-ui/vite.config.ts", "packages/veloce-ui/playwright.config.ts", "packages/veloce-ui/tailwind.config.ts", "packages/veloce-ui/postcss.config.mjs", "packages/veloce-ui/eslint.config.mjs", "packages/veloce-ui/jest.config.js", "packages/veloce-ui/jest.setup.js", "packages/veloce-ui/tsconfig.build.json"]
 }

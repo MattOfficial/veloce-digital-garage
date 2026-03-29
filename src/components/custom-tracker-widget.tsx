@@ -174,7 +174,7 @@ export function CustomTrackerWidget({
         <div className="flex items-center gap-2">
           <Dialog
             open={openDialog}
-            onOpenChange={(o) => {
+            onOpenChange={(o: boolean) => {
               if (!o) setMessage(null);
               setOpenDialog(o);
             }}

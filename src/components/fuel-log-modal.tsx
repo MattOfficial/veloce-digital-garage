@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@mattofficial/veloce-ui";
 import {
   Button,
   Input,
@@ -66,7 +66,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => {
+      onOpenChange={(o: boolean) => {
         setOpen(o);
       }}
     >
@@ -211,7 +211,7 @@ function FuelLogForm({
       {isPHEV && (
         <Tabs
           value={energyType}
-          onValueChange={(value) =>
+          onValueChange={(value: string) =>
             setEnergyType(value === "charge" ? "charge" : "fuel")
           }
           className="w-full"
