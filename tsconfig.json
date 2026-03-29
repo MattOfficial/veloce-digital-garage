@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/packages/veloce-ui/*": ["./packages/veloce-ui/*"]
     }
   },
   "include": [
@@ -30,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "packages/veloce-ui/**/*.test.ts", "packages/veloce-ui/**/*.test.tsx", "packages/veloce-ui/**/*.stories.ts", "packages/veloce-ui/**/*.stories.tsx", "packages/veloce-ui/pages/**/*"]
 }

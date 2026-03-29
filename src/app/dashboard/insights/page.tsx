@@ -666,7 +666,7 @@ export default function InsightsPage() {
                     className="min-h-[320px] w-full"
                   >
                     <BarChart
-                      data={distanceMonthlyData}
+                      data={[...distanceMonthlyData].reverse()}
                       margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
                       <CartesianGrid
@@ -689,7 +689,7 @@ export default function InsightsPage() {
                       <ChartTooltip
                         content={
                           <ChartTooltipContent
-                            formatter={(value) =>
+                            formatter={(value: unknown) =>
                               `${formatDistance(Number(value))} ${distanceUnit}`
                             }
                           />
