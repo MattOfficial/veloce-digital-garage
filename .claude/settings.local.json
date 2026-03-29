@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
       "Bash(curl -s http://localhost:3001/chart-test)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cp:*)"
     ]
   }
 }

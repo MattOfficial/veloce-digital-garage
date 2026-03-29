@@ -15,7 +15,6 @@
   "dependencies": {
     "@google/genai": "^1.43.0",
     "@hookform/resolvers": "~3.9.0",
-    "@mattofficial/veloce-ui": "file:../veloce-ui/mattofficial-veloce-ui-1.0.1.tgz",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "class-variance-authority": "^0.7.1",

@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import {
   Card as VeloceCard,
   CardHeader as VeloceCardHeader,
@@ -9,7 +8,7 @@ import {
   CardAction as VeloceCardAction,
   CardDescription as VeloceCardDescription,
   CardContent as VeloceCardContent,
-} from "@/packages/veloce-ui/components/card"
+} from "@mattofficial/veloce-ui"
 
 export {
   VeloceCard as Card,

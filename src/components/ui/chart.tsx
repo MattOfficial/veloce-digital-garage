@@ -1,7 +1,6 @@
 "use client"
 
-import * as React from "react"
-import type { ChartConfig } from "@/packages/veloce-ui/components/chart"
+import type { ChartConfig } from "@mattofficial/veloce-ui"
 import {
   ChartContainer,
   ChartLegend,
@@ -9,7 +8,7 @@ import {
   ChartStyle,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/packages/veloce-ui/components/chart"
+} from "@mattofficial/veloce-ui"
 
 export type { ChartConfig }
 export {
