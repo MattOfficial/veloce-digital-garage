@@ -336,7 +336,7 @@ export default function FuelPage() {
         <div className="flex justify-end">
           <Tabs
             value={activeAnalysisMode}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setPreferredAnalysisMode(value === "charge" ? "charge" : "fuel")
             }
           >

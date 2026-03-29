@@ -345,7 +345,7 @@ export default function InsightsPage() {
                 </div>
                 <Tabs
                   value={activeAnalysisMode}
-                  onValueChange={(value) =>
+                  onValueChange={(value: string) =>
                     setPreferredAnalysisMode(
                       value === "charge" ? "charge" : "fuel",
                     )

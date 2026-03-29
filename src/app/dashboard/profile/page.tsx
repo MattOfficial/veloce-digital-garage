@@ -517,7 +517,7 @@ export default function ProfilePage() {
                   </Label>
                   <Select
                     value={resolvedProfile.currency}
-                    onValueChange={(value) =>
+                    onValueChange={(value: string) =>
                       updateProfileDraft("currency", value)
                     }
                   >

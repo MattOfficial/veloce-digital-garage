@@ -66,7 +66,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => {
+      onOpenChange={(o: boolean) => {
         setOpen(o);
       }}
     >
@@ -211,7 +211,7 @@ function FuelLogForm({
       {isPHEV && (
         <Tabs
           value={energyType}
-          onValueChange={(value) =>
+          onValueChange={(value: string) =>
             setEnergyType(value === "charge" ? "charge" : "fuel")
           }
           className="w-full"
