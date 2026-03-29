@@ -86,7 +86,7 @@ export function OcrReviewModal({
     } finally {
       setIsProcessing(false);
     }
-  }, [fileUrl]);
+  }, [fileUrl, filePath]);
 
   // Auto-run processing when modal opens if we have a URL but no data yet
   useEffect(() => {

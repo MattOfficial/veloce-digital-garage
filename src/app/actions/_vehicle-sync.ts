@@ -2,7 +2,6 @@ import { createClient } from "@/utils/supabase/server";
 import type { Database } from "@/types/supabase";
 import {
     getNextSyncedVehicleCurrentOdometer,
-    getVehicleCurrentOdometer,
     getVehicleServiceInterval,
     isRoutineServiceType,
 } from "@/utils/vehicle-metrics";
