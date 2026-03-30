@@ -22,7 +22,6 @@ import {
   Bot,
   Trophy,
   Route,
-  Palette,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { getUserBadges } from "@/app/actions/badges";
@@ -66,7 +65,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@mattofficial/veloce-ui";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 type ProfileDraft = {
   displayName: string;
@@ -805,36 +803,12 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Appearance Settings */}
-      <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Palette className="h-5 w-5 text-primary" />
-            {ui.profile.appearanceTitle}
-          </CardTitle>
-          <CardDescription className="text-base">
-            {ui.profile.appearanceDescription}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 max-w-md">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground uppercase text-xs tracking-wider font-semibold">
-                {ui.profile.appearanceThemeLabel}
-              </Label>
-              <p className="text-sm text-muted-foreground pb-2">
-                {ui.profile.appearanceThemeDescription}
-              </p>
-              <ThemeToggle />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Garage Card */}
       <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm mt-8">
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl">
+              <CardTitle className="text-xl font-semibold">
                 {ui.profile.garageTitle}
               </CardTitle>
               <CardDescription className="text-base">

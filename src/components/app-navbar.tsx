@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useVehicleStore } from "@/store/vehicle-store";
 import { ui } from "@/content/en/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ export function AppNavbar() {
       </div>
 
       <div className="flex items-center gap-4">
+        <ThemeToggle variant="compact" />
         <label className="text-sm font-medium hidden md:block text-muted-foreground">
           {ui.common.navigation.currentVehicle}
         </label>
