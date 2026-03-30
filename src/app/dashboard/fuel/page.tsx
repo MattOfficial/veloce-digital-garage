@@ -479,37 +479,38 @@ export default function FuelPage() {
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
-                          stroke="#ffffff20"
+                          stroke="var(--border)"
+                          opacity={0.4}
                         />
                         <XAxis
                           dataKey="date"
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <YAxis
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
                           contentStyle={{
                             borderRadius: "1rem",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            background: "rgba(17, 24, 39, 0.8)",
+                            border: "1px solid var(--border)",
+                            background: "var(--card)",
                             backdropFilter: "blur(10px)",
                           }}
                         />
                         <Line
                           type="monotone"
                           dataKey="efficiency"
-                          stroke="#10b981"
+                          stroke="var(--chart-2)"
                           strokeWidth={3}
                           dot={{
                             r: 4,
-                            fill: "#10b981",
+                            fill: "var(--chart-2)",
                             strokeWidth: 2,
-                            stroke: "#030712",
+                            stroke: "var(--card)",
                           }}
                           activeDot={{ r: 6 }}
                           name={efficiencyUnit}
@@ -541,32 +542,34 @@ export default function FuelPage() {
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
-                          stroke="#88888833"
+                          stroke="var(--border)"
+                          opacity={0.4}
                         />
                         <XAxis
                           dataKey="date"
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fontSize: 12 }}
+                          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <YAxis
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fontSize: 12 }}
+                          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
                           contentStyle={{
                             borderRadius: "1rem",
-                            border: "none",
-                            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                            border: "1px solid var(--border)",
+                            background: "var(--card)",
+                            backdropFilter: "blur(10px)",
                           }}
                         />
                         <Area
                           type="monotone"
                           dataKey="cost"
                           stackId="1"
-                          stroke="#f43f5e"
-                          fill="#f43f5e"
+                          stroke="var(--chart-5)"
+                          fill="var(--chart-5)"
                           fillOpacity={0.2}
                           strokeWidth={2}
                           name={`Cost (${profile.currency})`}
@@ -597,38 +600,39 @@ export default function FuelPage() {
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
-                        stroke="#ffffff20"
+                        stroke="var(--border)"
+                        opacity={0.4}
                       />
                       <XAxis
                         dataKey="date"
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         domain={["dataMin - 10", "dataMax + 10"]}
                       />
                       <Tooltip
                         contentStyle={{
                           borderRadius: "1rem",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          background: "rgba(17, 24, 39, 0.8)",
+                          border: "1px solid var(--border)",
+                          background: "var(--card)",
                           backdropFilter: "blur(10px)",
                         }}
                       />
                       <Line
                         type="monotone"
                         dataKey="range"
-                        stroke="#3b82f6"
+                        stroke="var(--chart-1)"
                         strokeWidth={3}
                         dot={{
                           r: 4,
-                          fill: "#3b82f6",
+                          fill: "var(--chart-1)",
                           strokeWidth: 2,
-                          stroke: "#030712",
+                          stroke: "var(--card)",
                         }}
                         activeDot={{ r: 6 }}
                         name={ui.fuel.modal.labels.estimatedRange(

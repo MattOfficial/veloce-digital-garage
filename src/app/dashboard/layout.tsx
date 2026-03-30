@@ -2,6 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppNavbar } from "@/components/app-navbar";
+import { AppFooter } from "@/components/app-footer";
 import { VeloceCopilot } from "@/components/veloce-copilot";
 import { SidebarProvider } from "@mattofficial/veloce-ui";
 
@@ -18,6 +19,7 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-auto bg-muted/40 p-4 md:p-6 lg:p-8">
           {children}
         </main>
+        <AppFooter />
         <VeloceCopilot />
       </div>
     </SidebarProvider>

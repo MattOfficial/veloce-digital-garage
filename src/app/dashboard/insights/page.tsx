@@ -445,13 +445,15 @@ export default function InsightsPage() {
                       <CartesianGrid
                         vertical={false}
                         strokeDasharray="3 3"
-                        opacity={0.1}
+                        stroke="var(--border)"
+                        opacity={0.4}
                       />
                       <XAxis
                         dataKey="month"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={10}
+                        tick={{ fill: "var(--muted-foreground)" }}
                       />
                       <YAxis
                         yAxisId="left"
@@ -459,6 +461,7 @@ export default function InsightsPage() {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
+                        tick={{ fill: "var(--muted-foreground)" }}
                         tickFormatter={(value) => `${currencySymbol}${value}`}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
@@ -672,18 +675,21 @@ export default function InsightsPage() {
                       <CartesianGrid
                         vertical={false}
                         strokeDasharray="3 3"
-                        opacity={0.1}
+                        stroke="var(--border)"
+                        opacity={0.4}
                       />
                       <XAxis
                         dataKey="label"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={10}
+                        tick={{ fill: "var(--muted-foreground)" }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
+                        tick={{ fill: "var(--muted-foreground)" }}
                         tickFormatter={(value) => `${value}`}
                       />
                       <ChartTooltip

@@ -2,7 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all hover:-translate-y-0.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -13,11 +13,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/80 text-white backdrop-blur-md hover:bg-destructive/90 focus-visible:ring-destructive/20 border border-destructive/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]",
         outline:
-          "border border-white/10 bg-white/5 backdrop-blur-md shadow-xs hover:bg-white/10 hover:text-accent-foreground",
+          "border border-input bg-background backdrop-blur-md shadow-xs hover:bg-accent hover:text-accent-foreground hover:border-accent",
         secondary:
-          "bg-secondary/40 backdrop-blur-md text-secondary-foreground hover:bg-secondary/60 border border-white/5",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-input",
         ghost:
-          "hover:bg-white/10 hover:text-accent-foreground",
+          "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

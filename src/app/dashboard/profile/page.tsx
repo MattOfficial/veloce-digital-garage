@@ -802,11 +802,13 @@ export default function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Garage Card */}
       <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm mt-8">
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl">
+              <CardTitle className="text-xl font-semibold">
                 {ui.profile.garageTitle}
               </CardTitle>
               <CardDescription className="text-base">

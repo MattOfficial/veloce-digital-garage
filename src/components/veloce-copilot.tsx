@@ -658,7 +658,7 @@ export function VeloceCopilot() {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center hover:scale-105 transition-transform z-50 group border border-white/10"
+                    className="fixed bottom-[60px] right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center hover:scale-105 transition-transform z-50 group border border-white/10"
                 >
                     <MessageSquare className="h-6 w-6 group-hover:scale-110 transition-transform" />
                 </button>
@@ -666,7 +666,7 @@ export function VeloceCopilot() {
 
             {/* Chat Panel */}
             {isOpen && (
-                <div className="fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] bg-background/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
+                <div className="fixed bottom-[60px] right-6 w-[380px] h-[600px] max-h-[85vh] bg-background/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
                         <div className="flex items-center gap-2">
