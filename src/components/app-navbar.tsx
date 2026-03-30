@@ -23,7 +23,9 @@ export function AppNavbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/60 backdrop-blur-md px-4 md:px-6 shadow-sm transition-all duration-300">
+    <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/80 backdrop-blur-md px-4 md:px-6 shadow-sm transition-all duration-300">
+      {/* Poppy gradient accent line */}
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400" />
       <div className="flex items-center gap-2">
         <SidebarTrigger className="-ml-1" />
         <div className="text-sm font-medium tracking-tight h-4 bg-muted animate-pulse w-32 rounded md:hidden" />

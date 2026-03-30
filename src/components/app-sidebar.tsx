@@ -58,9 +58,11 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center justify-center p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4 transition-all overflow-hidden w-full">
+        <div className="relative flex items-center justify-center p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4 transition-all overflow-hidden w-full">
+          {/* Poppy gradient accent strip */}
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 rounded-t-lg" />
           <div className="flex items-center gap-2 overflow-hidden w-full group-data-[collapsible=icon]:justify-center">
-            <Car className="h-6 w-6 text-primary shrink-0" />
+            <Car className="h-7 w-7 text-primary shrink-0" />
             <h1 className="text-xl font-bold italic text-primary truncate group-data-[collapsible=icon]:hidden">
               {brand.app.compactName}
             </h1>
@@ -69,7 +71,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden text-xs font-bold uppercase tracking-wider text-primary/70">
             {ui.sidebar.sectionTitle}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -80,7 +82,7 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.href}
                     tooltip={item.name}
-                    className="rounded-full transition-all duration-300 active:scale-95 hover:scale-[1.02] data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full mx-auto"
+                    className="rounded-xl transition-all duration-300 active:scale-95 hover:scale-[1.02] data-[active=true]:bg-gradient-to-r data-[active=true]:from-pink-400/20 data-[active=true]:to-purple-400/20 data-[active=true]:text-primary data-[active=true]:font-bold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-xl mx-auto"
                   >
                     <Link href={item.href} className="w-full flex items-center">
                       <item.icon className="h-4 w-4 shrink-0" />
