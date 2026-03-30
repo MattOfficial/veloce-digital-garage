@@ -181,34 +181,34 @@ export default function MaintenanceClient({
   const nextServicePill = (() => {
     if (!serviceInterval || !serviceIntervalStatus) {
       return {
-        className: "border-white/10 bg-white/5 text-muted-foreground",
+        className: "border-border bg-muted text-muted-foreground dark:border-white/10 dark:bg-white/5",
         label: ui.maintenance.reminders.emptyTitle,
       };
     }
 
     if (serviceIntervalStatus.status === "overdue") {
       return {
-        className: "border-red-500/25 bg-red-500/15 text-red-200",
+        className: "border-red-500/50 bg-red-500/20 text-red-700 dark:text-red-200 dark:border-red-500/25 dark:bg-red-500/15",
         label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusOverdue}`,
       };
     }
 
     if (serviceIntervalStatus.status === "due-soon") {
       return {
-        className: "border-amber-500/25 bg-amber-500/15 text-amber-100",
+        className: "border-amber-500/50 bg-amber-500/20 text-amber-700 dark:text-amber-100 dark:border-amber-500/25 dark:bg-amber-500/15",
         label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusDueSoon}`,
       };
     }
 
     if (serviceIntervalStatus.status === "needs-baseline") {
       return {
-        className: "border-white/10 bg-white/5 text-muted-foreground",
+        className: "border-border bg-muted text-muted-foreground dark:border-white/10 dark:bg-white/5",
         label: ui.maintenance.reminders.statusNeedsBaseline,
       };
     }
 
     return {
-      className: "border-emerald-500/25 bg-emerald-500/15 text-emerald-100",
+      className: "border-emerald-500/50 bg-emerald-500/20 text-emerald-700 dark:text-emerald-100 dark:border-emerald-500/25 dark:bg-emerald-500/15",
       label: `${ui.maintenance.reminders.titleList}: ${ui.maintenance.reminders.statusHealthy}`,
     };
   })();

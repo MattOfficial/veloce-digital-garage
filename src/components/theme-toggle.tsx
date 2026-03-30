@@ -16,7 +16,7 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
         return (
             <button
                 onClick={toggleTheme}
-                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-secondary border border-input hover:bg-accent transition-colors dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
                 aria-label="Toggle theme"
             >
                 {isDark ? (
