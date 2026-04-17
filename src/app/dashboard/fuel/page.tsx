@@ -17,6 +17,8 @@ import {
   Settings2,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
@@ -47,6 +49,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@mattofficial/veloce-ui";
 
 export type FuelEfficiencyUnit = "km/L" | "L/100km" | "MPG (US)" | "MPG (UK)";
@@ -155,6 +162,9 @@ export default function FuelPage() {
     date: string;
   } | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const selectedVehicle = vehicles.find(
     (vehicle) => vehicle.id === selectedVehicleId,
   );
@@ -191,6 +201,13 @@ export default function FuelPage() {
     [analytics.charge.logs, analytics.fuel.logs],
   );
   const hasLogs = allLogs.length > 0;
+
+  const totalPages = Math.max(1, Math.ceil(allLogs.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  
+  const paginatedLogs = useMemo(() => {
+    return allLogs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  }, [allLogs, safePage, pageSize]);
 
   if (!selectedVehicle) {
     return (
@@ -684,7 +701,7 @@ export default function FuelPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {allLogs.map((log) => {
+                  {paginatedLogs.map((log) => {
                     const efficiencyDisplay = getLogEfficiencyDisplay(log);
 
                     return (
@@ -752,6 +769,65 @@ export default function FuelPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t gap-4">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
+                <div className="flex items-center gap-2">
+                  <p>Rows per page</p>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue placeholder={pageSize.toString()} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50].map((size) => (
+                        <SelectItem key={size} value={size.toString()}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="hidden sm:block">
+                  Showing {(safePage - 1) * pageSize + 1} to {Math.min(safePage * pageSize, allLogs.length)} of {allLogs.length}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="sm:hidden text-sm text-muted-foreground">
+                  {safePage} / {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="h-8 px-2 lg:px-3 gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden lg:inline">Previous</span>
+                  </Button>
+                  <div className="hidden sm:block text-sm font-medium mx-2">
+                    Page {safePage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="h-8 px-2 lg:px-3 gap-1"
+                  >
+                    <span className="hidden lg:inline">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </Card>
         </>
