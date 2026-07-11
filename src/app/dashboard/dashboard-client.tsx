@@ -2,6 +2,7 @@
 
 import { useVehicleStore } from "@/store/vehicle-store";
 import { MotionWrapper } from "@/components/motion-wrapper";
+import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { PageHeader } from "@/components/page-header";
 import {
   ArrowRight,
@@ -394,9 +395,18 @@ export default function DashboardClient({
         </MotionWrapper>
       </div>
 
+      <MotionWrapper delay={0.5}>
+        <ActivityHeatmap
+          vehicles={[selectedVehicle]}
+          title={ui.dashboard.activityTitle}
+          description={ui.dashboard.activityDescription}
+          scale="fill"
+        />
+      </MotionWrapper>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         {/* 6-Month Expense History Chart */}
-        <MotionWrapper delay={0.5} className="lg:col-span-4">
+        <MotionWrapper delay={0.6} className="lg:col-span-4">
           <Card className="overflow-hidden h-full">
             <CardHeader className="border-b border-white/5">
               <CardTitle className="flex items-center">
@@ -467,7 +477,7 @@ export default function DashboardClient({
         </MotionWrapper>
 
         {/* Expense Distribution Pie Chart */}
-        <MotionWrapper delay={0.6} className="lg:col-span-3">
+        <MotionWrapper delay={0.7} className="lg:col-span-3">
           <Card className="h-full overflow-hidden">
             <CardHeader className="border-b border-white/5">
               <CardTitle>{ui.dashboard.expenseDistributionTitle}</CardTitle>
@@ -543,7 +553,7 @@ export default function DashboardClient({
 
       {/* Bottom Row - Recent Activity */}
       <div className="grid gap-6 md:grid-cols-2">
-        <MotionWrapper delay={0.7} className="md:col-span-2 lg:col-span-1">
+        <MotionWrapper delay={0.8} className="md:col-span-2 lg:col-span-1">
           <Card className="h-full overflow-hidden">
             <CardHeader className="border-b border-white/5">
               <CardTitle>{ui.dashboard.recentActivityTitle}</CardTitle>
@@ -669,7 +679,7 @@ export default function DashboardClient({
         </MotionWrapper>
 
         {/* Quick Actions Card */}
-        <MotionWrapper delay={0.8} className="md:col-span-2 lg:col-span-1">
+        <MotionWrapper delay={0.9} className="md:col-span-2 lg:col-span-1">
           <Card className="h-full overflow-hidden bg-gradient-to-br from-primary/10 to-transparent">
             <CardHeader>
               <CardTitle>{ui.dashboard.quickActionsTitle}</CardTitle>

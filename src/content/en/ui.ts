@@ -242,6 +242,23 @@ export const ui = {
       "SUSPENSION: STIFF",
     ],
   },
+  activityHeatmap: {
+    activeDays: (count: number) =>
+      `${count} active ${count === 1 ? "day" : "days"}`,
+    activities: (count: number) =>
+      `${count} ${count === 1 ? "activity" : "activities"}`,
+    fuelStops: (count: number) =>
+      `${count} fuel ${count === 1 ? "stop" : "stops"}`,
+    maintenancePayments: (count: number) =>
+      `${count} maintenance ${count === 1 ? "payment" : "payments"}`,
+    loading: "Loading activity…",
+    emptyTitle: "No activity yet",
+    emptyDescription:
+      "Fuel stops and maintenance payments will appear here.",
+    fuelLegend: "Fuel",
+    maintenanceLegend: "Maintenance",
+    intensityLegend: "More activity = stronger color",
+  },
   dashboard: {
     loading: "Loading dashboard...",
     noVehiclesFoundTitle: "No Vehicles Found",
@@ -281,6 +298,9 @@ export const ui = {
     quickActionsTitle: "Quick Actions",
     quickActionsDescription:
       "Add new records to your vehicle without leaving the dashboard.",
+    activityTitle: "Activity Rhythm",
+    activityDescription:
+      "Fuel stops and maintenance payments for this vehicle over the last 12 months.",
     logFillUp: "Log a Fill-up",
     addMaintenanceRecord: "Add Maintenance Record",
     expenseCategories: {
@@ -850,6 +870,9 @@ export const ui = {
       totalVehicles: number,
     ) =>
       `Based on available odometer logs from ${contributingVehicles} of ${totalVehicles} vehicles.`,
+    activityTitle: "Garage Activity",
+    activityDescription:
+      "A combined view of fuel stops and maintenance payments across every vehicle over the last 12 months.",
     detailsTitle: "Profile Details",
     detailsDescription: "Update your public facing information here.",
     appearanceTitle: "Appearance",
