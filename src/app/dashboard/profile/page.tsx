@@ -28,6 +28,7 @@ import { getUserBadges } from "@/app/actions/badges";
 import { BADGE_REGISTRY } from "@/lib/badges";
 import type { BadgeDefinition } from "@/lib/badges";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { ImageUploadOrLink } from "@/components/image-upload-or-link";
 import { updateProfile, deleteLlmKey } from "./actions";
 import { addVehicle, deleteVehicle } from "@/app/actions/vehicles";
@@ -459,6 +460,13 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <ActivityHeatmap
+        vehicles={vehicles}
+        title={ui.profile.activityTitle}
+        description={ui.profile.activityDescription}
+        isLoading={isVehiclesLoading}
+      />
 
       <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-6">
