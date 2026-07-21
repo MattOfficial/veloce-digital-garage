@@ -1,7 +1,14 @@
 "use client";
 
 import { useVehicleStore } from "@/store/vehicle-store";
-import { Car, Fuel, Wrench, BarChart2, LogOut } from "lucide-react";
+import {
+  BarChart2,
+  Car,
+  Fuel,
+  LayoutDashboard,
+  LogOut,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -27,7 +34,11 @@ import {
 } from "@mattofficial/veloce-ui";
 
 const navigation = [
-  { name: ui.sidebar.items.dashboard, href: "/dashboard", icon: Car },
+  {
+    name: ui.sidebar.items.dashboard,
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
   { name: ui.sidebar.items.fuelHistory, href: "/dashboard/fuel", icon: Fuel },
   {
     name: ui.sidebar.items.maintenance,
@@ -49,7 +60,17 @@ export function AppSidebar() {
   useEffect(() => {
     fetchProfile();
     fetchVehicles();
-  }, [pathname, fetchProfile, fetchVehicles]); // Re-fetch slightly on path change (e.g. returning from profile edit)
+  }, [fetchProfile, fetchVehicles]);
+
+  const isNavigationItemActive = (href: string) => {
+    if (href === "/dashboard") {
+      return (
+        pathname === href || pathname.startsWith("/dashboard/vehicles/")
+      );
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const displayName =
     profile.displayName || profile.email?.split("@")[0] || brand.app.shortName;
@@ -58,12 +79,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="relative flex items-center justify-center p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4 transition-all overflow-hidden w-full">
-          {/* Poppy gradient accent strip */}
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 rounded-t-lg" />
+        <div className="flex w-full items-center justify-center overflow-hidden border-b border-border/60 p-4 transition-all group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4">
           <div className="flex items-center gap-2 overflow-hidden w-full group-data-[collapsible=icon]:justify-center">
-            <Car className="h-7 w-7 text-primary shrink-0" />
-            <h1 className="text-xl font-bold italic text-primary truncate group-data-[collapsible=icon]:hidden">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Car className="h-4.5 w-4.5" />
+            </div>
+            <h1 className="truncate text-base font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
               {brand.app.compactName}
             </h1>
           </div>
@@ -71,7 +92,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden text-xs font-bold uppercase tracking-wider text-primary/70">
+          <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground group-data-[collapsible=icon]:hidden">
             {ui.sidebar.sectionTitle}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -80,9 +101,9 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={isNavigationItemActive(item.href)}
                     tooltip={item.name}
-                    className="rounded-xl transition-all duration-300 active:scale-95 hover:scale-[1.02] data-[active=true]:bg-gradient-to-r data-[active=true]:from-pink-400/20 data-[active=true]:to-purple-400/20 data-[active=true]:text-primary data-[active=true]:font-bold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-xl mx-auto"
+                    className="mx-auto rounded-xl transition-colors duration-150 hover:bg-muted/70 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl"
                   >
                     <Link href={item.href} className="w-full flex items-center">
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -101,7 +122,7 @@ export function AppSidebar() {
         <div className="flex flex-col gap-2 p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-4 border-t border-border/50">
           <Link
             href="/dashboard/profile"
-            className="flex items-center gap-3 w-full hover:bg-secondary/50 p-2 rounded-full transition-all duration-300 active:scale-95 hover:scale-[1.02] cursor-pointer mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+            className="mb-2 flex w-full cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors duration-150 hover:bg-secondary/50 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
           >
             <Avatar className="h-10 w-10 border border-border/50 shrink-0 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8">
               <AvatarImage
@@ -125,7 +146,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               type="submit"
               tooltip={ui.common.profile.logOut}
-              className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all duration-300 active:scale-95 hover:scale-[1.02] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 mx-auto"
+              className="mx-auto w-full justify-start rounded-xl text-muted-foreground transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:justify-center"
             >
               <LogOut className="h-4 w-4 shrink-0" />
               <span className="group-data-[collapsible=icon]:hidden">

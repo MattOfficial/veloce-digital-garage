@@ -15,10 +15,11 @@ import {
   getVehicleMonthlyDistanceRollups,
 } from "@/utils/distance-analytics";
 import {
-  calculateSmartNextRefill,
+  calculateSmartNextRefillFromHistory,
   getRefillDisplayString,
   getStatusClassName,
 } from "@/utils/cadence-predictions";
+import { getCurrencySymbol } from "@/utils/formatting";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -28,7 +29,6 @@ import {
   DollarSign,
   Gauge,
   Route,
-  TrendingDown,
   Zap,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
@@ -51,7 +51,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-export default function InsightsPage() {
+export default function TrendsPage() {
   const { vehicles, selectedVehicleId } = useVehicleStore();
   const { profile } = useUserStore();
   const [preferredAnalysisMode, setPreferredAnalysisMode] =
@@ -61,14 +61,7 @@ export default function InsightsPage() {
     (vehicle) => vehicle.id === selectedVehicleId,
   );
 
-  const currencySymbol =
-    profile.currency === "USD"
-      ? "$"
-      : profile.currency === "EUR"
-        ? "€"
-        : profile.currency === "GBP"
-          ? "£"
-          : "₹";
+  const currencySymbol = getCurrencySymbol(profile.currency);
   const distanceUnit = profile.distanceUnit;
 
   const chartConfig = useMemo(
@@ -103,8 +96,8 @@ export default function InsightsPage() {
 
   const {
     totalCost,
-    totalDistance,
-    runningCostPerDay,
+    trackedCalendarMonths,
+    averageMonthlySpend,
     avgDistancePerDay,
     monthlyData,
     analytics,
@@ -115,8 +108,8 @@ export default function InsightsPage() {
     if (!selectedVehicle) {
       return {
         totalCost: 0,
-        totalDistance: 0,
-        runningCostPerDay: 0,
+        trackedCalendarMonths: 0,
+        averageMonthlySpend: 0,
         avgDistancePerDay: 0,
         monthlyData: [] as Array<{
           month: string;
@@ -205,6 +198,24 @@ export default function InsightsPage() {
             ),
           )
         : 0;
+    const firstCostLog =
+      allLogs.find((log) => log.cost > 0) ?? allLogs[0] ?? null;
+    const firstCostDate = firstCostLog ? new Date(firstCostLog.date) : null;
+    const today = new Date();
+    const calendarMonths =
+      firstCostDate &&
+      Number.isFinite(firstCostDate.getTime()) &&
+      firstCostDate <= today
+        ? Math.max(
+            1,
+            (today.getFullYear() - firstCostDate.getFullYear()) * 12 +
+              today.getMonth() -
+              firstCostDate.getMonth() +
+              1,
+          )
+        : allLogs.length > 0
+          ? 1
+          : 0;
     const lifetimeDistance = getVehicleLifetimeDistanceSummary(selectedVehicle);
     const distance = lifetimeDistance.value ?? 0;
     const last30Days = getVehicleDistanceSummary(
@@ -222,8 +233,8 @@ export default function InsightsPage() {
 
     return {
       totalCost: cost,
-      totalDistance: distance,
-      runningCostPerDay: trackingDays > 0 ? cost / trackingDays : 0,
+      trackedCalendarMonths: calendarMonths,
+      averageMonthlySpend: calendarMonths > 0 ? cost / calendarMonths : 0,
       avgDistancePerDay: trackingDays > 0 ? distance / trackingDays : 0,
       monthlyData: Array.from(monthlyMap.values()),
       analytics: buildFuelAnalytics(
@@ -256,46 +267,22 @@ export default function InsightsPage() {
     selectedVehicle.powertrain === "rex";
   const defaultAnalysisMode: FuelAnalyticsMode =
     selectedVehicle.powertrain === "ev" ? "charge" : "fuel";
-  const hasFuelSegments = analytics.fuel.closed_segments.length > 0;
-  const hasChargeSegments = analytics.charge.closed_segments.length > 0;
+  const hasFuelLogs = analytics.fuel.logs.length > 0;
+  const hasChargeLogs = analytics.charge.logs.length > 0;
 
   const activeAnalysisMode: FuelAnalyticsMode = canToggleAnalysisMode
     ? preferredAnalysisMode === "fuel" &&
-      (hasFuelSegments || !hasChargeSegments)
+      (hasFuelLogs || !hasChargeLogs)
       ? "fuel"
       : "charge"
     : defaultAnalysisMode;
 
-  const cadenceSegments = analytics[activeAnalysisMode].closed_segments;
-  const hasCadenceData = cadenceSegments.length >= 2;
-  const cadenceStartDate = cadenceSegments[0]
-    ? new Date(cadenceSegments[0].closing_log_date)
-    : null;
-  const cadenceEndDate = cadenceSegments[cadenceSegments.length - 1]
-    ? new Date(cadenceSegments[cadenceSegments.length - 1].closing_log_date)
-    : null;
-  const cadenceDays =
-    cadenceStartDate && cadenceEndDate
-      ? Math.max(
-          1,
-          Math.floor(
-            (cadenceEndDate.getTime() - cadenceStartDate.getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        )
-      : 0;
-  const daysBetweenRefills = hasCadenceData
-    ? cadenceDays / (cadenceSegments.length - 1)
-    : 0;
-
-  // Calculate smart prediction using our new utility
-  const smartPrediction = calculateSmartNextRefill(
-    cadenceEndDate,
-    daysBetweenRefills,
+  const smartPrediction = calculateSmartNextRefillFromHistory(
+    analytics[activeAnalysisMode].logs.map((log) => log.date),
   );
+  const hasCadenceData = smartPrediction.status !== "insufficient-data";
+  const daysBetweenRefills = smartPrediction.intervalDays ?? 0;
 
-  const totalCostPerDistance =
-    totalDistance > 0 ? totalCost / totalDistance : 0;
   const numberFormat = new Intl.NumberFormat(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -311,7 +298,7 @@ export default function InsightsPage() {
   );
 
   return (
-    <MotionWrapper className="max-w-6xl mx-auto space-y-8 pb-10 px-4">
+    <MotionWrapper className="mx-auto max-w-6xl space-y-8 px-0 pb-10 sm:px-4">
       <PageHeader
         title={ui.insights.pageTitle}
         description={ui.insights.pageDescription(
@@ -340,7 +327,7 @@ export default function InsightsPage() {
                     {ui.insights.analysisModeTitle}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {ui.fuel.analyticsHelper}
+                    {ui.insights.analysisModeDescription}
                   </p>
                 </div>
                 <Tabs
@@ -354,15 +341,13 @@ export default function InsightsPage() {
                   <TabsList className="grid w-full grid-cols-2 rounded-xl md:w-[280px]">
                     <TabsTrigger
                       value="fuel"
-                      disabled={!hasFuelSegments && !analytics.fuel.logs.length}
+                      disabled={!hasFuelLogs}
                     >
                       {ui.insights.analysisMode.fuel}
                     </TabsTrigger>
                     <TabsTrigger
                       value="charge"
-                      disabled={
-                        !hasChargeSegments && !analytics.charge.logs.length
-                      }
+                      disabled={!hasChargeLogs}
                     >
                       {ui.insights.analysisMode.charge}
                     </TabsTrigger>
@@ -373,70 +358,68 @@ export default function InsightsPage() {
           )}
 
           <div className="grid gap-4 md:grid-cols-2 grid-auto-rows-[1fr] items-stretch">
-            <MotionWrapper delay={0.1} className="h-full">
-              <Card className="border-none shadow-md overflow-hidden bg-gradient-to-br from-indigo-500 to-blue-600 text-white relative h-full">
-                <div className="absolute top-0 right-0 p-4 opacity-20">
-                  <TrendingDown className="h-24 w-24 translate-x-4 -translate-y-4" />
+            <MotionWrapper delay={0.1} className="h-full min-w-0">
+              <Card className="relative h-full min-w-0 overflow-hidden rounded-3xl border-primary/20 bg-primary/10 shadow-sm">
+                <div className="pointer-events-none absolute top-0 right-0 p-4 text-primary opacity-15">
+                  <DollarSign className="h-24 w-24 translate-x-4 -translate-y-4" />
                 </div>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium opacity-90">
-                    {ui.insights.totalRunningCost}
+                  <CardTitle className="text-base font-medium">
+                    {ui.insights.trackedSpend}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-4xl font-black mb-1">
-                    {formatCurrency(totalCostPerDistance)}{" "}
-                    <span className="text-lg opacity-70 font-medium">
-                      / {distanceUnit}
-                    </span>
+                  <div className="mb-1 text-4xl font-semibold tracking-tight tabular-nums">
+                    {formatCurrency(totalCost)}
                   </div>
-                  <p className="text-sm opacity-80">
-                    Based on {formatCurrency(totalCost)} spent over{" "}
-                    {totalDistance.toLocaleString()} {distanceUnit}.
+                  <p className="text-sm text-muted-foreground">
+                    {ui.insights.trackedSpendDescription}
                   </p>
                 </CardContent>
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.2} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <MotionWrapper delay={0.2} className="h-full min-w-0">
+              <Card className="relative h-full min-w-0 overflow-hidden rounded-3xl shadow-sm">
+                <div className="pointer-events-none absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.insights.dailyOperatingCost}
+                    {ui.insights.averageMonthlySpend}
                   </CardTitle>
                   <div className="p-2 bg-emerald-500/10 rounded-full text-emerald-500">
                     <DollarSign className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-black text-foreground">
-                    {formatCurrency(runningCostPerDay)}{" "}
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold tracking-tight text-foreground tabular-nums sm:text-3xl">
+                    <span>{formatCurrency(averageMonthlySpend)}</span>
                     <span className="text-base font-medium text-muted-foreground">
-                      / day
+                      / month
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {ui.insights.dailyOperatingCostDescription}
+                    {ui.insights.averageMonthlySpendDescription(
+                      trackedCalendarMonths,
+                    )}
                   </p>
                 </CardContent>
               </Card>
             </MotionWrapper>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            <MotionWrapper delay={0.3} className="md:col-span-2">
-              <Card className="h-full overflow-hidden">
+          <div className="grid min-w-0 gap-6 md:grid-cols-3">
+            <MotionWrapper delay={0.3} className="min-w-0 md:col-span-2">
+              <Card className="h-full min-w-0 overflow-hidden rounded-3xl shadow-sm">
                 <CardHeader className="border-b border-white/5">
                   <CardTitle>{ui.insights.expenseBreakdownTitle}</CardTitle>
                   <CardDescription>
                     {ui.insights.expenseBreakdownDescription}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="min-w-0 overflow-hidden pt-6">
                   <ChartContainer
                     config={chartConfig}
-                    className="min-h-[350px] w-full"
+                    className="min-h-[350px] w-full min-w-0 max-w-full"
                   >
                     <BarChart
                       data={monthlyData}
@@ -492,8 +475,8 @@ export default function InsightsPage() {
               </Card>
             </MotionWrapper>
 
-            <MotionWrapper delay={0.4} className="h-full">
-              <Card className="h-full overflow-hidden flex flex-col">
+            <MotionWrapper delay={0.4} className="h-full min-w-0">
+              <Card className="flex h-full min-w-0 flex-col overflow-hidden rounded-3xl shadow-sm">
                 <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
@@ -502,7 +485,8 @@ export default function InsightsPage() {
                   <CardDescription>
                     {ui.insights.cadencePredictionsDescription(
                       activeAnalysisMode,
-                      cadenceDays,
+                      smartPrediction.sampleSize,
+                      smartPrediction.confidence,
                     )}
                   </CardDescription>
                 </CardHeader>

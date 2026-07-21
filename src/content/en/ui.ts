@@ -34,7 +34,7 @@ export const ui = {
       dashboard: "Dashboard",
       fuelHistory: "Fuel History",
       maintenance: "Maintenance",
-      insights: "Insights",
+      insights: "Trends",
     },
   },
   auth: {
@@ -310,7 +310,6 @@ export const ui = {
     },
   },
   fuel: {
-    metricOptions: ["km/L", "L/100km", "MPG (US)", "MPG (UK)"],
     chargeMetricUnits: {
       km: "km/kWh",
       miles: "mi/kWh",
@@ -332,22 +331,29 @@ export const ui = {
       charge: "Charge Analysis",
     },
     averageEfficiency: "Average Efficiency",
+    changeEfficiencyUnit: (unit: string) =>
+      `Change efficiency unit. Currently ${unit}.`,
     costPerDistance: (unit: string) => `Cost per ${unit.toUpperCase()}`,
     averageRunningCost: "Average running cost",
-    totalLogs: "Total Logs",
-    logSessionsRecorded: (mode: "fuel" | "charge") =>
-      mode === "charge" ? "Charge sessions recorded" : "Top-ups recorded",
+    latestUnitPrice: (mode: "fuel" | "charge") =>
+      mode === "charge" ? "Latest Energy Rate" : "Latest Fuel Price",
+    perUnit: (unit: string) => `per ${unit}`,
+    unitPriceUnavailable: "Add a priced session to track rate changes",
+    noPreviousUnitPrice: "First priced session",
+    unitPriceUpFromFreeSession: "Up from a free previous session",
+    unitPriceComparison: (changePercent: number) =>
+      `${changePercent > 0 ? "+" : ""}${changePercent.toFixed(1)}% vs previous session`,
     efficiencyTrendTitle: "Efficiency Trend",
     efficiencyTrendDescription: (mode: "fuel" | "charge") =>
       mode === "charge"
         ? "Charging efficiency over your closed charge sessions."
         : "Fuel efficiency over your closed top-up segments.",
-    costVsVolumeTitle: (mode: "fuel" | "charge") =>
-      mode === "charge" ? "Cost vs Energy" : "Cost vs Volume",
-    costVsVolumeDescription: (mode: "fuel" | "charge") =>
+    unitPriceTrendTitle: (mode: "fuel" | "charge") =>
+      mode === "charge" ? "Energy Rate Trend" : "Fuel Price Trend",
+    unitPriceTrendDescription: (mode: "fuel" | "charge") =>
       mode === "charge"
-        ? "Track the financial impact of each charging session."
-        : "Track the financial impact of each visit.",
+        ? "See how your cost per kWh changes between sessions."
+        : "See how your price per unit changes between visits.",
     batteryRangeTrendTitle: "Battery Range Trend",
     batteryRangeTrendDescription:
       "Track your EV's estimated battery range over time.",
@@ -451,39 +457,56 @@ export const ui = {
   },
   insights: {
     noVehicleSelectedTitle: "No Vehicle Selected",
-    noVehicleSelectedDescription: "Select a vehicle to view insights.",
+    noVehicleSelectedDescription: "Select a vehicle to view trends.",
     insufficientDataTitle: "Insufficient Data",
     insufficientDataDescription: (mode: "fuel" | "charge") =>
       mode === "charge"
-        ? "Please log at least two closed charge sessions to establish a baseline for cadence insights and cost projections."
-        : "Please log at least two closed fuel top-ups to establish a baseline for cadence insights and cost projections.",
-    pageTitle: "Insights",
+        ? "Log charges on at least two different days to establish a cadence baseline."
+        : "Log fuel top-ups on at least two different days to establish a cadence baseline.",
+    pageTitle: "Trends",
     pageDescription: (vehicleLabel: string) =>
-      `Running costs, distance trends, and cadence insights for your ${vehicleLabel}.`,
+      `Long-range cost, distance, and cadence trends for your ${vehicleLabel}.`,
     pageDescriptionShort: (vehicleLabel: string) =>
-      `See how your ${vehicleLabel} costs and drives over time.`,
+      `Explore how your ${vehicleLabel} costs and drives over time.`,
     tabs: {
-      runningCosts: "Running Costs",
+      runningCosts: "Costs",
       distance: "Distance",
     },
-    totalRunningCost: "Total Running Cost",
-    dailyOperatingCost: "Daily Operating Cost",
-    dailyOperatingCostDescription: "Average spent across all categories",
+    trackedSpend: "Tracked Spend",
+    trackedSpendDescription:
+      "Fuel, maintenance, and custom costs recorded for this vehicle",
+    averageMonthlySpend: "Monthly Cost Baseline",
+    averageMonthlySpendDescription: (months: number) =>
+      months > 0
+        ? `Average across ${months} tracked calendar ${months === 1 ? "month" : "months"}`
+        : "Add a cost record to establish a monthly baseline",
     averageDailyDistance: "Avg. Daily Distance",
     averageDailyDistanceDescription: "Typical distance covered per day",
     analysisModeTitle: "Cadence Mode",
+    analysisModeDescription:
+      "Cadence uses actual logged dates and treats multiple entries on the same day as one stop.",
     analysisMode: {
       fuel: "Fuel Cadence",
       charge: "Charge Cadence",
     },
     expenseBreakdownTitle: "Expense Breakdown",
     expenseBreakdownDescription:
-      "Monthly visualization of where your money is going",
+      "Recorded monthly spend split by fuel, maintenance, and custom costs",
     cadencePredictionsTitle: "Cadence Predictions",
-    cadencePredictionsDescription: (mode: "fuel" | "charge", days: number) =>
-      mode === "charge"
-        ? `Based on ${days} days of recorded charging cadence`
-        : `Based on ${days} days of recorded refueling cadence`,
+    cadencePredictionsDescription: (
+      mode: "fuel" | "charge",
+      intervals: number,
+      confidence: string,
+    ) => {
+      if (intervals === 0) {
+        return mode === "charge"
+          ? "Add another charging day to establish a cadence"
+          : "Add another refueling day to establish a cadence";
+      }
+
+      const activity = mode === "charge" ? "charging" : "refueling";
+      return `Median of ${intervals} recent ${activity} ${intervals === 1 ? "interval" : "intervals"} · ${confidence} confidence`;
+    },
     distanceSectionTitle: "Distance Driven",
     distanceSectionDescription:
       "Recent distance rollups and monthly driving history from odometer logs",

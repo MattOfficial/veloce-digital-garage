@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 export function MotionWrapper({
     children,
@@ -11,12 +11,18 @@ export function MotionWrapper({
     className?: string;
     delay?: number;
 }) {
+    const prefersReducedMotion = useReducedMotion();
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5, ease: [0.25, 0.8, 0.25, 1], delay }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 8 }}
+            transition={{
+                duration: prefersReducedMotion ? 0 : 0.28,
+                ease: [0.22, 1, 0.36, 1],
+                delay: prefersReducedMotion ? 0 : Math.min(delay, 0.35),
+            }}
             className={className}
         >
             {children}
