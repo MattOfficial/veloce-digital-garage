@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createClient } from '@/utils/supabase/client';
 import type { ProviderPreference } from '@/types/ai';
+import type { FuelEfficiencyUnit, FuelVolumeUnit } from '@/utils/efficiency-units';
 
 export type DistanceUnit = 'km' | 'miles';
 type UserProfile = {
@@ -20,8 +21,8 @@ interface UserState {
     isLoading: boolean;
     fetchProfile: () => Promise<void>;
     updateProfileOptimistic: (updates: Partial<UserProfile>) => void;
-    getVolumeUnit: () => string;
-    getFuelEconomyUnit: () => string;
+    getVolumeUnit: () => FuelVolumeUnit;
+    getFuelEconomyUnit: () => FuelEfficiencyUnit;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -93,6 +94,6 @@ export const useUserStore = create<UserState>((set, get) => ({
         const { profile } = get();
         if (profile.distanceUnit === 'km') return 'km/L';
         if (profile.currency === '£') return 'MPG (UK)';
-        return 'MPG';
+        return 'MPG (US)';
     }
 }));

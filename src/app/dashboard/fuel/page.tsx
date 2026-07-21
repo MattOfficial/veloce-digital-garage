@@ -9,16 +9,25 @@ import {
   type DerivedFuelLog,
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
+import {
+  FUEL_EFFICIENCY_UNITS,
+  convertFuelEfficiency,
+  getDefaultFuelEfficiencyUnit,
+  isFuelEfficiencyUnit,
+  type FuelEfficiencyUnit,
+} from "@/utils/efficiency-units";
+import { getUnitPriceSummary } from "@/utils/unit-price";
 
 import {
   Fuel,
   DollarSign,
   Activity,
-  Settings2,
+  BadgeDollarSign,
   Pencil,
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
@@ -46,7 +55,8 @@ import {
   CardDescription,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   Button,
   Select,
@@ -56,8 +66,7 @@ import {
   SelectValue,
 } from "@mattofficial/veloce-ui";
 
-export type FuelEfficiencyUnit = "km/L" | "L/100km" | "MPG (US)" | "MPG (UK)";
-const METRIC_OPTIONS: readonly FuelEfficiencyUnit[] = ui.fuel.metricOptions;
+const METRIC_OPTIONS = FUEL_EFFICIENCY_UNITS;
 
 function sortLogsDescending(
   left: {
@@ -87,46 +96,9 @@ function sortLogsDescending(
   return right.id.localeCompare(left.id);
 }
 
-function convertFuelEfficiency(
-  distance: number,
-  volume: number,
-  targetMetric: FuelEfficiencyUnit,
-  distanceUnit: "km" | "miles",
-  volumeUnit: string,
-): number {
-  if (distance <= 0 || volume <= 0) {
-    return 0;
-  }
-
-  let distanceKm = distance;
-  if (distanceUnit === "miles") {
-    distanceKm = distance * 1.60934;
-  }
-
-  let volumeLiters = volume;
-  if (volumeUnit === "Gallons") {
-    volumeLiters = volume * 3.78541;
-  } else if (volumeUnit.includes("UK")) {
-    volumeLiters = volume * 4.54609;
-  }
-
-  switch (targetMetric) {
-    case "km/L":
-      return distanceKm / volumeLiters;
-    case "L/100km":
-      return (volumeLiters / distanceKm) * 100;
-    case "MPG (US)":
-      return (distanceKm * 0.621371) / (volumeLiters * 0.264172);
-    case "MPG (UK)":
-      return (distanceKm * 0.621371) / (volumeLiters * 0.219969);
-    default:
-      return 0;
-  }
-}
-
-function convertChargeEfficiency(distance: number, energy: number): number {
+function convertChargeEfficiency(distance: number, energy: number): number | null {
   if (distance <= 0 || energy <= 0) {
-    return 0;
+    return null;
   }
 
   return distance / energy;
@@ -225,12 +197,10 @@ export default function FuelPage() {
   }
 
   const volumeUnit = getVolumeUnit();
-  const defaultMetric =
-    profile.distanceUnit === "km" && volumeUnit.includes("Liter")
-      ? "km/L"
-      : volumeUnit.includes("UK")
-        ? "MPG (UK)"
-        : "MPG (US)";
+  const defaultMetric = getDefaultFuelEfficiencyUnit(
+    profile.distanceUnit,
+    volumeUnit,
+  );
   const activeMetric = selectedMetric ?? defaultMetric;
   const chargeMetricUnit =
     profile.distanceUnit === "miles"
@@ -265,11 +235,9 @@ export default function FuelPage() {
   const efficiencyUnit =
     activeAnalysisMode === "charge" ? chargeMetricUnit : activeMetric;
 
-  const efficiencyTrendData = activeStream.closed_segments.map((segment) => ({
-    date: formatDateLabel(segment.closing_log_date),
-    rawDate: segment.closing_log_date,
-    efficiency: Number(
-      (activeAnalysisMode === "charge"
+  const efficiencyTrendData = activeStream.closed_segments.map((segment) => {
+    const efficiency =
+      activeAnalysisMode === "charge"
         ? convertChargeEfficiency(segment.distance, segment.volume)
         : convertFuelEfficiency(
             segment.distance,
@@ -277,17 +245,29 @@ export default function FuelPage() {
             activeMetric,
             profile.distanceUnit,
             volumeUnit,
-          )
-      ).toFixed(2),
-    ),
-  }));
+          );
 
-  const costVsVolumeData = activeStream.logs.map((log) => ({
-    date: formatDateLabel(log.date),
-    rawDate: log.date,
-    cost: Number(log.total_cost.toFixed(2)),
-    volume: Number(log.fuel_volume.toFixed(2)),
-  }));
+    return {
+      date: formatDateLabel(segment.closing_log_date),
+      rawDate: segment.closing_log_date,
+      efficiency:
+        efficiency == null ? null : Number(efficiency.toFixed(2)),
+    };
+  });
+
+  const unitPriceTrendData = activeStream.logs
+    .filter(
+      (log) =>
+        Number.isFinite(log.total_cost) &&
+        Number.isFinite(log.fuel_volume) &&
+        log.total_cost >= 0 &&
+        log.fuel_volume > 0,
+    )
+    .map((log) => ({
+      date: formatDateLabel(log.date),
+      rawDate: log.date,
+      rate: Number((log.total_cost / log.fuel_volume).toFixed(2)),
+    }));
 
   const rangeTrendData = analytics.charge.logs
     .filter((log) => log.estimated_range != null)
@@ -303,6 +283,21 @@ export default function FuelPage() {
   });
   const formatCurrency = (value: number) =>
     `${profile.currency || "$"}${numberFormat.format(value)}`;
+
+  const unitPriceSummary = getUnitPriceSummary(activeStream.logs);
+  const unitPriceTrendClass = unitPriceSummary.direction === "up"
+    ? "text-rose-600 dark:text-rose-400"
+    : unitPriceSummary.direction === "down"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground";
+  const unitPriceUnit =
+    activeAnalysisMode === "charge"
+      ? "kWh"
+      : volumeUnit === "Liters"
+        ? "L"
+        : volumeUnit === "Gallons (UK)"
+          ? "UK gal"
+          : "US gal";
 
   const getLogEfficiencyDisplay = (log: DerivedFuelLog) => {
     if (log.fill_type === "partial" || log.pending_full) {
@@ -330,6 +325,13 @@ export default function FuelPage() {
             volumeUnit,
           );
     const unit = log.energy_type === "charge" ? chargeMetricUnit : activeMetric;
+
+    if (value == null) {
+      return {
+        text: ui.fuel.efficiencyStates.unavailable,
+        className: "text-muted-foreground",
+      };
+    }
 
     return {
       text: `${value.toFixed(2)} ${unit}`,
@@ -387,40 +389,63 @@ export default function FuelPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-auto-rows-[1fr] items-stretch">
             <MotionWrapper delay={0.1} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
+                <CardHeader className="relative z-10 flex flex-row items-center justify-between px-5 pb-0">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.fuel.averageEfficiency}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-emerald-500" />
+                    <Activity
+                      aria-hidden="true"
+                      className="h-4 w-4 text-emerald-500"
+                    />
                     {activeAnalysisMode === "fuel" && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger className="focus:outline-none hover:bg-white/10 p-1 rounded-md transition-colors">
-                          <Settings2 className="h-4 w-4 text-muted-foreground hover:text-white" />
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 rounded-lg border border-border/60 bg-background/70 px-2.5 text-xs font-semibold shadow-sm"
+                            aria-label={ui.fuel.changeEfficiencyUnit(activeMetric)}
+                          >
+                            {activeMetric}
+                            <ChevronDown
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                            />
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
                           className="rounded-xl border border-white/10 bg-veloce-bg backdrop-blur-xl shadow-2xl"
                         >
-                          {METRIC_OPTIONS.map((metric) => (
-                            <DropdownMenuItem
-                              key={metric}
-                              onClick={() => setSelectedMetric(metric)}
-                              className={`cursor-pointer focus:bg-white/10 ${activeMetric === metric ? "font-bold bg-white/5" : ""}`}
-                            >
-                              {metric}
-                            </DropdownMenuItem>
-                          ))}
+                          <DropdownMenuRadioGroup
+                            value={activeMetric}
+                            onValueChange={(metric) => {
+                              if (isFuelEfficiencyUnit(metric)) {
+                                setSelectedMetric(metric);
+                              }
+                            }}
+                          >
+                            {METRIC_OPTIONS.map((metric) => (
+                              <DropdownMenuRadioItem
+                                key={metric}
+                                value={metric}
+                                className="cursor-pointer focus:bg-white/10"
+                              >
+                                {metric}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-emerald-500 shadow-emerald-500/20 drop-shadow-md">
-                    {averageEfficiency > 0
+                <CardContent className="px-5">
+                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+                    {averageEfficiency != null
                       ? averageEfficiency.toFixed(2)
                       : "--"}
                   </div>
@@ -432,16 +457,15 @@ export default function FuelPage() {
             </MotionWrapper>
 
             <MotionWrapper delay={0.2} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between px-5 pb-0">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {ui.fuel.costPerDistance(profile.distanceUnit)}
                   </CardTitle>
                   <DollarSign className="h-4 w-4 text-rose-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
+                <CardContent className="px-5">
+                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
                     {averageCostPerDistance > 0
                       ? formatCurrency(averageCostPerDistance)
                       : "--"}
@@ -457,21 +481,45 @@ export default function FuelPage() {
               delay={0.3}
               className="md:col-span-2 lg:col-span-1 h-full"
             >
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between px-5 pb-0">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.totalLogs}
+                    {ui.fuel.latestUnitPrice(activeAnalysisMode)}
                   </CardTitle>
-                  <Fuel className="h-4 w-4 text-blue-500" />
+                  <BadgeDollarSign className="h-4 w-4 text-blue-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-blue-500 shadow-blue-500/20 drop-shadow-md">
-                    {activeStream.logs.length}
+                <CardContent className="px-5">
+                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+                    {unitPriceSummary.latest == null
+                      ? "--"
+                      : formatCurrency(unitPriceSummary.latest)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.fuel.logSessionsRecorded(activeAnalysisMode)}
-                  </p>
+                  {unitPriceSummary.latest == null ? (
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">
+                      {ui.fuel.unitPriceUnavailable}
+                    </p>
+                  ) : (
+                    <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs font-medium">
+                      <span className="text-muted-foreground">
+                        {ui.fuel.perUnit(unitPriceUnit)}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="text-muted-foreground/60"
+                      >
+                        ·
+                      </span>
+                      <span className={unitPriceTrendClass}>
+                        {unitPriceSummary.previous == null
+                          ? ui.fuel.noPreviousUnitPrice
+                          : unitPriceSummary.changePercent == null
+                            ? ui.fuel.unitPriceUpFromFreeSession
+                            : ui.fuel.unitPriceComparison(
+                                unitPriceSummary.changePercent,
+                              )}
+                      </span>
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </MotionWrapper>
@@ -539,21 +587,21 @@ export default function FuelPage() {
               </MotionWrapper>
             )}
 
-            {costVsVolumeData.length > 0 && (
+            {unitPriceTrendData.length > 0 && (
               <MotionWrapper delay={0.5}>
-                <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-white/5">
+                <Card className="h-full overflow-hidden rounded-3xl shadow-sm">
+                  <CardHeader className="border-b border-border/70">
                     <CardTitle>
-                      {ui.fuel.costVsVolumeTitle(activeAnalysisMode)}
+                      {ui.fuel.unitPriceTrendTitle(activeAnalysisMode)}
                     </CardTitle>
                     <CardDescription>
-                      {ui.fuel.costVsVolumeDescription(activeAnalysisMode)}
+                      {ui.fuel.unitPriceTrendDescription(activeAnalysisMode)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
-                        data={costVsVolumeData}
+                        data={unitPriceTrendData}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
                         <CartesianGrid
@@ -583,13 +631,12 @@ export default function FuelPage() {
                         />
                         <Area
                           type="monotone"
-                          dataKey="cost"
-                          stackId="1"
+                          dataKey="rate"
                           stroke="var(--chart-5)"
                           fill="var(--chart-5)"
                           fillOpacity={0.2}
                           strokeWidth={2}
-                          name={`Cost (${profile.currency})`}
+                          name={`${profile.currency}/${unitPriceUnit}`}
                         />
                       </AreaChart>
                     </ResponsiveContainer>

@@ -23,16 +23,12 @@ export function AppNavbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/80 backdrop-blur-md px-4 md:px-6 shadow-sm transition-all duration-300">
-      {/* Poppy gradient accent line */}
-      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400" />
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-background/90 px-3 backdrop-blur-xl md:px-6">
+      <div className="flex min-w-0 items-center gap-2">
         <SidebarTrigger className="-ml-1" />
-        <div className="text-sm font-medium tracking-tight h-4 bg-muted animate-pulse w-32 rounded md:hidden" />
       </div>
 
-      <div className="flex items-center gap-4">
-        <ThemeToggle variant="compact" />
+      <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <label className="text-sm font-medium hidden md:block text-muted-foreground">
           {ui.common.navigation.currentVehicle}
         </label>
@@ -42,7 +38,7 @@ export function AppNavbar() {
             onValueChange={setSelectedVehicleId}
             disabled={vehicles.length === 0}
           >
-            <SelectTrigger className="w-45">
+            <SelectTrigger className="w-[min(11rem,58vw)] rounded-full md:w-48">
               <SelectValue placeholder={ui.common.navigation.selectVehicle} />
             </SelectTrigger>
             <SelectContent>
@@ -54,10 +50,11 @@ export function AppNavbar() {
             </SelectContent>
           </Select>
         ) : (
-          <div className="flex h-9 w-45 items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm text-muted-foreground shadow-xs">
+          <div className="flex h-9 w-[min(11rem,58vw)] items-center rounded-full border border-input bg-transparent px-3 py-2 text-sm text-muted-foreground md:w-48">
             {ui.common.navigation.selectVehicle}
           </div>
         )}
+        <ThemeToggle variant="compact" />
       </div>
     </header>
   );
