@@ -145,4 +145,30 @@ describe("getOwnershipCostSummary", () => {
       "2026-07",
     ]);
   });
+
+  it("ignores future-dated records in totals and monthly trends", () => {
+    const vehicle = makeVehicle({
+      fuel_logs: [
+        makeFuelLog(),
+        makeFuelLog({
+          id: "future-fuel",
+          date: "2026-07-28",
+          total_cost: 999,
+        }),
+      ],
+      maintenance_logs: [
+        makeMaintenanceLog({
+          id: "future-maintenance",
+          date: "2026-08-01",
+          cost: 500,
+        }),
+      ],
+    });
+
+    const result = getOwnershipCostSummary(vehicle, TODAY, 3);
+
+    expect(result.totalCost).toBe(100);
+    expect(result.currentPeriodCost).toBe(100);
+    expect(result.monthlyCosts.find((month) => month.key === "2026-07")?.total).toBe(100);
+  });
 });

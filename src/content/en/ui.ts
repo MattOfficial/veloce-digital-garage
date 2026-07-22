@@ -456,83 +456,217 @@ export const ui = {
     },
   },
   insights: {
-    noVehicleSelectedTitle: "No Vehicle Selected",
-    noVehicleSelectedDescription: "Select a vehicle to view trends.",
-    insufficientDataTitle: "Insufficient Data",
+    noVehicleSelectedTitle: "Choose a vehicle",
+    noVehicleSelectedDescription: "Choose a vehicle to see its trends.",
+    insufficientDataTitle: "A little more history needed",
     insufficientDataDescription: (mode: "fuel" | "charge") =>
       mode === "charge"
-        ? "Log charges on at least two different days to establish a cadence baseline."
-        : "Log fuel top-ups on at least two different days to establish a cadence baseline.",
+        ? "Log charges on two different days to estimate your usual timing."
+        : "Log fill-ups on two different days to estimate your usual timing.",
     pageTitle: "Trends",
     pageDescription: (vehicleLabel: string) =>
-      `Long-range cost, distance, and cadence trends for your ${vehicleLabel}.`,
+      `See how costs and driving have changed over time for your ${vehicleLabel}.`,
     pageDescriptionShort: (vehicleLabel: string) =>
-      `Explore how your ${vehicleLabel} costs and drives over time.`,
+      `See how your ${vehicleLabel} costs and driving change over time.`,
     tabs: {
       runningCosts: "Costs",
       distance: "Distance",
     },
-    trackedSpend: "Tracked Spend",
+    trackedSpend: "Total spent",
     trackedSpendDescription:
-      "Fuel, maintenance, and custom costs recorded for this vehicle",
-    averageMonthlySpend: "Monthly Cost Baseline",
+      "Everything you have logged for fuel, charging, maintenance, and extras",
+    averageMonthlySpend: "Your monthly average",
     averageMonthlySpendDescription: (months: number) =>
       months > 0
-        ? `Average across ${months} tracked calendar ${months === 1 ? "month" : "months"}`
-        : "Add a cost record to establish a monthly baseline",
-    averageDailyDistance: "Avg. Daily Distance",
-    averageDailyDistanceDescription: "Typical distance covered per day",
-    analysisModeTitle: "Cadence Mode",
-    analysisModeDescription:
-      "Cadence uses actual logged dates and treats multiple entries on the same day as one stop.",
-    analysisMode: {
-      fuel: "Fuel Cadence",
-      charge: "Charge Cadence",
+        ? `Based on the last ${months} calendar ${months === 1 ? "month" : "months"}`
+        : "Log a cost to start seeing your monthly average",
+    recentMonthlyBaselineDescription: (months: number) =>
+      `Based on your last ${months} ${months === 1 ? "month" : "months"}`,
+    costLastThirtyDays: "Spent in the last 30 days",
+    noPreviousPeriod: "Nothing to compare with from the previous 30 days",
+    periodTrend: (percent: number, direction: "higher" | "lower") =>
+      `${percent}% ${direction} than the previous 30 days`,
+    energyCostPerDistance: (mode: "fuel" | "charge", unit: string) =>
+      `${mode === "charge" ? "Charging" : "Fuel"} cost per ${unit}`,
+    energyCostPerDistanceDescription: (
+      mode: "fuel" | "charge",
+      segments: number,
+    ) =>
+      segments > 0
+        ? `Based on your last ${segments} complete ${mode === "charge" ? "charging" : "fill-up"} ${segments === 1 ? "period" : "periods"}`
+        : `Add another ${mode === "charge" ? "charge" : "fill-up"} with an odometer reading to calculate this`,
+    costTrendDescription:
+      "See how fuel, maintenance, and other costs added up each month.",
+    trailingTwelveMonths: "Last 12 months",
+    costHistoryRange: (months: number, firstMonth: string) =>
+      months >= 12 ? "Last 12 months" : `Since ${firstMonth}`,
+    noCostDataTitle: "No costs logged yet",
+    noCostDataDescription:
+      "Log fuel, charging, maintenance, or other costs to start seeing trends.",
+    costMix: {
+      title: "Where your money went",
+      fuel: "Fuel & charging",
+      maintenance: "Service & repairs",
+      other: "Other costs",
+      total: "Total",
+      description: (category: string, share: number) =>
+        `${category} made up the biggest share at ${share}% of your spending.`,
+      empty: "Your spending mix will appear here once you log some costs.",
     },
-    expenseBreakdownTitle: "Expense Breakdown",
+    everyDays: (days: number) => `About every ${days} days`,
+    peakCostMonth: "Most expensive month",
+    peakCostMonthDescription: (month: string, driver: string) =>
+      `${month} cost the most, mostly because of ${driver.toLowerCase()}.`,
+    energyCostTrendTitle: (mode: "fuel" | "charge") =>
+      `${mode === "charge" ? "Charging" : "Fuel"} cost over time`,
+    energyCostTrendDescription: (mode: "fuel" | "charge", unit: string) =>
+      `What each ${unit} cost across your recent complete ${mode === "charge" ? "charging periods" : "fill-ups"}.`,
+    energyCostTrendSeries: (unit: string) => `Cost per ${unit}`,
+    energyCostTrendEmpty: (mode: "fuel" | "charge") =>
+      `Add at least two complete ${mode === "charge" ? "charging periods" : "fill-ups"} with odometer readings to see this trend.`,
+    costMethodNote: (month: string) =>
+      `Showing records through ${month}. Future-dated entries are left out.`,
+    averageDailyDistance: "Your daily average",
+    averageDailyDistanceDescription: "How far you usually drive in a day",
+    analysisModeTitle: "Fuel or charging?",
+    analysisModeDescription:
+      "Choose which logs to use for the cost and timing cards below.",
+    analysisMode: {
+      fuel: "Fuel",
+      charge: "Charging",
+    },
+    expenseBreakdownTitle: "Spending over time",
     expenseBreakdownDescription:
-      "Recorded monthly spend split by fuel, maintenance, and custom costs",
-    cadencePredictionsTitle: "Cadence Predictions",
+      "Your fuel, maintenance, and other costs month by month",
+    cadencePredictionsTitle: (mode: "fuel" | "charge") =>
+      `Your ${mode === "charge" ? "charging" : "refueling"} rhythm`,
     cadencePredictionsDescription: (
       mode: "fuel" | "charge",
       intervals: number,
       confidence: string,
     ) => {
       if (intervals === 0) {
-        return mode === "charge"
-          ? "Add another charging day to establish a cadence"
-          : "Add another refueling day to establish a cadence";
+        return "Not enough history for an estimate yet.";
       }
 
-      const activity = mode === "charge" ? "charging" : "refueling";
-      return `Median of ${intervals} recent ${activity} ${intervals === 1 ? "interval" : "intervals"} · ${confidence} confidence`;
+      const activity = mode === "charge" ? "charges" : "fill-ups";
+      if (confidence === "high") {
+        return `Your recent ${activity} follow a clear pattern.`;
+      }
+      if (confidence === "medium") {
+        return `Your recent ${activity} give us a useful estimate.`;
+      }
+      return `This is an early estimate. More ${activity} will make it better.`;
     },
-    distanceSectionTitle: "Distance Driven",
+    distanceSectionTitle: "How far you have driven",
     distanceSectionDescription:
-      "Recent distance rollups and monthly driving history from odometer logs",
-    distanceLastThirtyDays: "Distance Last 30 Days",
-    distanceLastTwelveMonths: "Distance Last 12 Months",
-    monthlyDistanceHistoryTitle: "Monthly Distance History",
+      "Recent totals and monthly driving based on your odometer readings",
+    distanceLastThirtyDays: "Distance in the last 30 days",
+    distanceLastTwelveMonths: "Distance in the last 12 months",
+    monthlyDistanceHistoryTitle: "Distance by month",
     monthlyDistanceHistoryDescription:
-      "Trailing 12-month view of distance covered",
-    distanceInsufficientDataTitle: "Not Enough Distance Data",
+      "How your driving changed over the last 12 months",
+    distanceInsufficientDataTitle: "Not enough odometer data",
     distanceInsufficientDataDescription:
-      "Add odometer-bearing fuel or charge logs to unlock distance history.",
+      "Add odometer readings to fuel or charging logs to start seeing distance history.",
     basedOnAvailableOdometerLogs:
-      "Based on the odometer logs currently available",
+      "Based on the odometer readings you have logged",
+    distanceTrends: {
+      currentMonth: "So far this month",
+      estimatedThrough: (date: string) =>
+        `Estimated from your readings through ${date}`,
+      noCurrentCoverage: "Not enough readings to estimate this month yet",
+      typicalMonth: "What you usually drive",
+      medianAcross: (months: number) =>
+        months > 0
+          ? `Based on ${months} complete ${months === 1 ? "month" : "months"} with enough readings`
+          : "Add more readings to build your monthly average",
+      trailingTotal: (months: number) => `Distance over ${months} months`,
+      basedOnCoveredMonths: (months: number) =>
+        months > 0
+          ? `Enough readings for ${months} of these ${months === 1 ? "month" : "months"}`
+          : "Not enough readings in this range",
+      busiestMonth: "Month you drove most",
+      busiestMonthDescription: (month: string) =>
+        `${month} has the highest distance estimate in this view`,
+      notEnoughEvidence: "Not enough odometer readings yet",
+      chartTitle: "Your distance month by month",
+      chartDescription:
+        "Tap a month for a day-by-day view. Months without enough readings stay blank.",
+      estimatedBadge: "From odometer readings",
+      estimatedDistance: "Distance",
+      estimatedDailyDistance: "Daily distance",
+      rollingAverage: "Recent average",
+      rangeLabel: "Show this much history",
+      rangeOption: (months: number) =>
+        months === 6 ? "6 mo" : months === 12 ? "1 yr" : "2 yr",
+      monthPickerLabel: "Pick a month for details",
+      clickHint: "Tap any month for a day-by-day view.",
+      noChartDescription:
+        "Add odometer readings on at least two dates in fuel, charging, or maintenance logs. Months without enough data stay blank instead of showing zero.",
+      paceTitle: "How this month compares",
+      comparisonUnavailable:
+        "There is not enough history to compare this month yet.",
+      comparison: (
+        percent: number,
+        direction: "up" | "down" | "steady" | "unavailable",
+        basis: "full-month" | "month-to-date",
+      ) => {
+        const window = basis === "month-to-date" ? "this point last month" : "last month";
+        if (direction === "steady") return `About the same as ${window}.`;
+        return `About ${percent}% ${direction === "up" ? "more" : "less"} than ${window}.`;
+      },
+      openDailyView: "See the daily view",
+      coverageTitle: "How much we could estimate",
+      coverageDescription: (coveredDays: number, totalDays: number) =>
+        `Your readings let us estimate ${coveredDays} of ${totalDays} days in this view.`,
+      evidenceTitle: "Readings we used",
+      evidenceDescription: (fuelReadings: number, maintenanceReadings: number) =>
+        `${fuelReadings} fuel or charging ${fuelReadings === 1 ? "log" : "logs"}, plus ${maintenanceReadings} service ${maintenanceReadings === 1 ? "log" : "logs"}.`,
+      decreasingReadings: (count: number) =>
+        `We left out ${count} ${count === 1 ? "reading" : "readings"} because the odometer went backwards.`,
+      detailTitle: (month: string) => `${month} driving`,
+      detailDescription:
+        "We spread the distance between odometer readings across each day. These are estimates, not exact trips, and days without enough data stay blank.",
+      previousMonth: "Previous",
+      nextMonth: "Next",
+      totalDistance: "Distance this month",
+      previousPeriod: (basis: "full-month" | "month-to-date") =>
+        basis === "month-to-date" ? "Same time last month" : "Last month",
+      dailyAverage: "Daily average",
+      evidenceCoverage: "Days we could estimate",
+      dailyTitle: "Day-by-day distance",
+      dailyDescription:
+        "Each odometer change is spread evenly across the days between its two readings.",
+      noDailyTitle: "No daily estimate for this month",
+      noDailyDescription:
+        "There are not enough dated odometer readings around this month to estimate daily distance.",
+      peakEstimatedDay: "Highest daily estimate",
+      readingDays: "Odometer readings this month",
+      interpolationSpan: "Longest gap between readings",
+      days: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
+      methodTitle: "How we estimated it",
+      methodDescription:
+        "We combine dated odometer readings from fuel, charging, and service logs. If there is more than one reading on a date, we keep the highest. Future, invalid, and decreasing readings are left out.",
+      coverage: {
+        full: "All days estimated",
+        partial: (percent: number) => `${percent}% of days estimated`,
+        none: "No days estimated",
+      },
+    },
     refillFrequency: (mode: "fuel" | "charge") =>
-      mode === "charge" ? "Charging Frequency" : "Refueling Frequency",
+      mode === "charge" ? "Usual time between charges" : "Usual time between fill-ups",
     estimatedNextRefill: (mode: "fuel" | "charge") =>
-      mode === "charge" ? "Estimated Next Charge" : "Estimated Next Refuel",
+      mode === "charge" ? "Next likely charge" : "Next likely fill-up",
     frequencySummary: (mode: "fuel" | "charge", days: number, weeks: number) =>
       mode === "charge"
         ? `You typically plug in roughly every ${days} days, or about every ${weeks} weeks.`
         : `You typically visit a fuel station roughly every ${days} days, or about every ${weeks} weeks.`,
     nextRefillSummary: (mode: "fuel" | "charge") =>
       mode === "charge"
-        ? "Based on your current charging cadence, you will likely need another top-up around this date."
-        : "Based on your current driving cadence, you will likely need to refuel around this date.",
-    unknownDate: "Unknown",
+        ? "Based on your recent pattern, you will probably need another charge around this date."
+        : "Based on your recent pattern, you will probably need fuel around this date.",
+    unknownDate: "Not available",
   },
   maintenance: {
     pageTitle: "Maintenance",

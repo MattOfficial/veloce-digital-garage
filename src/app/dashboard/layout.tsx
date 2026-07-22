@@ -14,9 +14,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <div className="flex flex-col flex-1 h-screen w-full">
+      <div className="flex h-screen w-full min-w-0 flex-1 flex-col">
         <AppNavbar />
-        <main className="flex-1 overflow-auto bg-[radial-gradient(circle_at_top_right,var(--color-veloce-glow),transparent_32rem)] p-4 md:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top_right,var(--color-veloce-glow),transparent_32rem)] p-4 md:p-6 lg:p-8">
           {children}
         </main>
         <AppFooter />
