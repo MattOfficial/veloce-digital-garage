@@ -80,7 +80,12 @@ export function getOwnershipCostSummary(
   currentDate: Date = new Date(),
   monthCount = 6,
 ): OwnershipCostSummary {
-  const events = getCostEvents(vehicle);
+  const today = startOfDay(currentDate);
+  const currentPeriodEnd = addDays(today, 1);
+  const events = getCostEvents(vehicle).filter((event) => {
+    const date = parseLogDate(event.date);
+    return date != null && date < currentPeriodEnd;
+  });
   const totalFuelCost = events
     .filter((event) => event.category === "fuel")
     .reduce((total, event) => total + event.cost, 0);
@@ -97,9 +102,7 @@ export function getOwnershipCostSummary(
     getVehicleCurrentOdometer(vehicle) - vehicle.baseline_odometer,
   );
 
-  const today = startOfDay(currentDate);
   const currentPeriodStart = subDays(today, 29);
-  const currentPeriodEnd = addDays(today, 1);
   const previousPeriodStart = subDays(currentPeriodStart, 30);
   const currentPeriodCost = sumEventsInRange(
     events,

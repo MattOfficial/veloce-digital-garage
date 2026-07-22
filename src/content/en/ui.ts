@@ -480,14 +480,58 @@ export const ui = {
       months > 0
         ? `Average across ${months} tracked calendar ${months === 1 ? "month" : "months"}`
         : "Add a cost record to establish a monthly baseline",
+    recentMonthlyBaselineDescription: (months: number) =>
+      `Average across the latest ${months} tracked ${months === 1 ? "month" : "months"}`,
+    costLastThirtyDays: "Last 30 Days",
+    noPreviousPeriod: "No comparable spend in the previous 30 days",
+    periodTrend: (percent: number, direction: "higher" | "lower") =>
+      `${percent}% ${direction} than the previous 30 days`,
+    energyCostPerDistance: (mode: "fuel" | "charge", unit: string) =>
+      `${mode === "charge" ? "Charging" : "Fuel"} Cost / ${unit}`,
+    energyCostPerDistanceDescription: (
+      mode: "fuel" | "charge",
+      segments: number,
+    ) =>
+      segments > 0
+        ? `Weighted from ${segments} closed ${mode === "charge" ? "charging" : "refueling"} ${segments === 1 ? "interval" : "intervals"}`
+        : `Complete a full ${mode === "charge" ? "charging" : "refueling"} interval to unlock this metric`,
+    costTrendDescription:
+      "Twelve contiguous months of tracked spend, with the total trend overlaid",
+    trailingTwelveMonths: "Trailing 12 months",
+    noCostDataTitle: "No recorded costs yet",
+    noCostDataDescription:
+      "Fuel, charging, maintenance, and tracker costs will build this trend as you log them.",
+    costMix: {
+      title: "Cost Mix",
+      fuel: "Fuel & charging",
+      maintenance: "Maintenance",
+      other: "Other",
+      total: "Total trend",
+      description: (category: string, share: number) =>
+        `${category} is the largest recorded cost at ${share}% of spend.`,
+      empty: "Your recorded cost composition will appear here.",
+    },
+    everyDays: (days: number) => `Every ${days} days`,
+    peakCostMonth: "Peak Cost Month",
+    peakCostMonthDescription: (month: string, driver: string) =>
+      `${month} was the highest-spend month, led by ${driver.toLowerCase()}.`,
+    energyCostTrendTitle: (mode: "fuel" | "charge") =>
+      `${mode === "charge" ? "Charging" : "Fuel"} Cost Intensity`,
+    energyCostTrendDescription: (unit: string) =>
+      `Cost per ${unit} across the latest closed intervals`,
+    energyCostTrendSeries: "Cost per distance",
+    energyCostTrendEmpty: (mode: "fuel" | "charge") =>
+      `Complete at least two full ${mode === "charge" ? "charging" : "refueling"} intervals to reveal the trend.`,
+    costMethodNote: (month: string) =>
+      `Current period values are calculated through ${month}; future-dated records are excluded from rolling comparisons.`,
     averageDailyDistance: "Avg. Daily Distance",
     averageDailyDistanceDescription: "Typical distance covered per day",
-    analysisModeTitle: "Cadence Mode",
+    analysisModeTitle: "Energy Lens",
     analysisModeDescription:
-      "Cadence uses actual logged dates and treats multiple entries on the same day as one stop.",
+      "Switch cadence and energy-cost signals between fuel and charging records.",
     analysisMode: {
-      fuel: "Fuel Cadence",
-      charge: "Charge Cadence",
+      fuel: "Fuel",
+      charge: "Charging",
     },
     expenseBreakdownTitle: "Expense Breakdown",
     expenseBreakdownDescription:
@@ -520,6 +564,85 @@ export const ui = {
       "Add odometer-bearing fuel or charge logs to unlock distance history.",
     basedOnAvailableOdometerLogs:
       "Based on the odometer logs currently available",
+    distanceTrends: {
+      currentMonth: "This Month",
+      estimatedThrough: (date: string) => `Estimated through ${date}`,
+      noCurrentCoverage: "No supported odometer interval this month",
+      typicalMonth: "Typical Month",
+      medianAcross: (months: number) =>
+        months > 0
+          ? `Median across ${months} covered, completed ${months === 1 ? "month" : "months"}`
+          : "Complete another odometer interval to establish a baseline",
+      trailingTotal: (months: number) => `${months}-Month Est. Distance`,
+      basedOnCoveredMonths: (months: number) =>
+        months > 0
+          ? `Supported across ${months} ${months === 1 ? "month" : "months"} with coverage`
+          : "No supported months in this range",
+      busiestMonth: "Busiest Covered Month",
+      busiestMonthDescription: (month: string) =>
+        `${month} has the highest estimated distance in view`,
+      notEnoughEvidence: "Not enough dated odometer evidence",
+      chartTitle: "Monthly Distance Rhythm",
+      chartDescription:
+        "A null-aware monthly line with a three-month pace overlay. Select any month to inspect its estimated daily shape.",
+      estimatedBadge: "Odometer estimate",
+      estimatedDistance: "Estimated distance",
+      estimatedDailyDistance: "Estimated daily distance",
+      rollingAverage: "3-month pace",
+      rangeLabel: "Distance history range",
+      monthPickerLabel: "Choose a month to inspect",
+      clickHint: "Select a point or month to open its daily distance estimate.",
+      noChartDescription:
+        "Add at least two dated odometer readings through fuel, charging, or maintenance logs. Unknown months stay blank instead of being shown as zero.",
+      paceTitle: "Selected Month Pace",
+      comparisonUnavailable:
+        "A comparable previous period is not available for this month.",
+      comparison: (
+        percent: number,
+        direction: "up" | "down" | "steady" | "unavailable",
+        basis: "full-month" | "month-to-date",
+      ) => {
+        const window = basis === "month-to-date" ? "same point last month" : "previous month";
+        if (direction === "steady") return `Level with the ${window}.`;
+        return `${percent}% ${direction === "up" ? "above" : "below"} the ${window}.`;
+      },
+      openDailyView: "Open daily estimate",
+      coverageTitle: "Range Coverage",
+      coverageDescription: (coveredDays: number, totalDays: number) =>
+        `${coveredDays} of ${totalDays} calendar days sit between usable odometer readings.`,
+      evidenceTitle: "Odometer Evidence",
+      evidenceDescription: (fuelReadings: number, maintenanceReadings: number) =>
+        `${fuelReadings} fuel or charging records and ${maintenanceReadings} maintenance readings were evaluated.`,
+      decreasingReadings: (count: number) =>
+        `${count} decreasing odometer ${count === 1 ? "reading was" : "readings were"} excluded.`,
+      detailTitle: (month: string) => `${month} Distance Detail`,
+      detailDescription:
+        "Daily values are estimates distributed between dated odometer readings—not reconstructed trips. Missing evidence remains a visible gap.",
+      previousMonth: "Previous",
+      nextMonth: "Next",
+      totalDistance: "Estimated Total",
+      previousPeriod: "Previous Period",
+      dailyAverage: "Covered-Day Average",
+      evidenceCoverage: "Evidence Coverage",
+      dailyTitle: "Day-by-Day Estimate",
+      dailyDescription:
+        "The line allocates each odometer change evenly across the calendar days between its two readings.",
+      noDailyTitle: "No daily estimate available",
+      noDailyDescription:
+        "This month is not bracketed by enough dated odometer evidence to infer a daily shape.",
+      peakEstimatedDay: "Highest Estimated Day",
+      readingDays: "Readings Inside Month",
+      interpolationSpan: "Largest Estimate Span",
+      days: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
+      methodTitle: "How this estimate works",
+      methodDescription:
+        "Fuel, charging, and odometer-bearing maintenance records are merged by date. Same-day readings use the highest odometer, future or invalid readings are ignored, and odometer decreases are excluded from the trend.",
+      coverage: {
+        full: "Full interval coverage",
+        partial: (percent: number) => `${percent}% interval coverage`,
+        none: "No interval coverage",
+      },
+    },
     refillFrequency: (mode: "fuel" | "charge") =>
       mode === "charge" ? "Charging Frequency" : "Refueling Frequency",
     estimatedNextRefill: (mode: "fuel" | "charge") =>
