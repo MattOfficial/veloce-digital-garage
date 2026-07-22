@@ -13,10 +13,9 @@ import {
 import {
   Area,
   AreaChart,
-  Bar,
   CartesianGrid,
-  ComposedChart,
   Line,
+  LineChart,
   XAxis,
   YAxis,
 } from "recharts";
@@ -25,8 +24,6 @@ import { MotionWrapper } from "@/components/motion-wrapper";
 import {
   ChartConfig,
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -194,6 +191,14 @@ export function CostTrendsPanel({
     0,
   );
   const monthlyBaseline = recentSpend / trackedMonths;
+  const firstCostMonthIndex = costSummary.monthlyCosts.findIndex(
+    (month) => month.total > 0,
+  );
+  const visibleCostMonths =
+    firstCostMonthIndex >= 0
+      ? costSummary.monthlyCosts.slice(firstCostMonthIndex)
+      : costSummary.monthlyCosts;
+  const firstVisibleCostMonth = visibleCostMonths[0];
 
   const peakMonth = [...costSummary.monthlyCosts]
     .filter((month) => month.total > 0)
@@ -240,12 +245,12 @@ export function CostTrendsPanel({
     },
     total: {
       label: ui.insights.costMix.total,
-      color: "#e2e8f0",
+      color: "var(--foreground)",
     },
   } satisfies ChartConfig;
   const energyTrendConfig = {
     value: {
-      label: ui.insights.energyCostTrendSeries,
+      label: ui.insights.energyCostTrendSeries(distanceUnit),
       color: "#f59e0b",
     },
   } satisfies ChartConfig;
@@ -339,9 +344,9 @@ export function CostTrendsPanel({
         </MotionWrapper>
       </div>
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-12">
-        <MotionWrapper delay={0.25} className="min-w-0 xl:col-span-8">
-          <Card className="h-full min-w-0 overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
+      <div className="min-w-0 space-y-5">
+        <MotionWrapper delay={0.25} className="min-w-0">
+          <Card className="min-w-0 overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
             <CardHeader className="border-b border-border/50 pb-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -351,79 +356,126 @@ export function CostTrendsPanel({
                   </CardDescription>
                 </div>
                 <p className="text-xs font-medium text-muted-foreground">
-                  {ui.insights.trailingTwelveMonths}
+                  {ui.insights.costHistoryRange(
+                    visibleCostMonths.length,
+                    firstVisibleCostMonth
+                      ? format(
+                          parseISO(`${firstVisibleCostMonth.key}-01`),
+                          "MMM yyyy",
+                        )
+                      : "",
+                  )}
                 </p>
               </div>
             </CardHeader>
             <CardContent className="min-w-0 overflow-hidden px-2 pb-3 pt-6 sm:px-6">
-              {costSummary.monthlyCosts.some((month) => month.total > 0) ? (
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[320px] w-full min-w-0 max-w-full"
-                >
-                  <ComposedChart
-                    data={costSummary.monthlyCosts}
-                    margin={{ top: 16, right: 12, left: -12, bottom: 0 }}
+              {visibleCostMonths.some((month) => month.total > 0) ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 pb-2 text-xs text-muted-foreground sm:px-1">
+                    {[
+                      [ui.insights.costMix.fuel, "bg-amber-500"],
+                      [ui.insights.costMix.maintenance, "bg-sky-500"],
+                      [ui.insights.costMix.other, "bg-violet-500"],
+                      [ui.insights.costMix.total, "bg-foreground"],
+                    ].map(([label, color]) => (
+                      <span key={label} className="inline-flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${color}`} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[270px] w-full min-w-0 max-w-full sm:h-[310px]"
                   >
-                    <CartesianGrid
-                      vertical={false}
-                      stroke="var(--border)"
-                      strokeDasharray="3 5"
-                      opacity={0.45}
-                    />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      minTickGap={18}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      width={54}
-                      tickFormatter={(value) =>
-                        `${currencySymbol}${compactCurrency.format(Number(value))}`
-                      }
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value: unknown) =>
-                            formatCurrency(Number(value))
-                          }
-                        />
-                      }
-                    />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar
-                      dataKey="fuel"
-                      stackId="cost"
-                      fill="var(--color-fuel)"
-                      radius={[0, 0, 4, 4]}
-                    />
-                    <Bar
-                      dataKey="maintenance"
-                      stackId="cost"
-                      fill="var(--color-maintenance)"
-                    />
-                    <Bar
-                      dataKey="other"
-                      stackId="cost"
-                      fill="var(--color-other)"
-                      radius={[5, 5, 0, 0]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="var(--color-total)"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 5 }}
-                    />
-                  </ComposedChart>
-                </ChartContainer>
+                    <LineChart
+                      data={visibleCostMonths}
+                      margin={{ top: 16, right: 18, left: -12, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        vertical={false}
+                        stroke="var(--border)"
+                        strokeDasharray="3 5"
+                        opacity={0.45}
+                      />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        minTickGap={18}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={54}
+                        tickFormatter={(value) =>
+                          `${currencySymbol}${compactCurrency.format(Number(value))}`
+                        }
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value: unknown) =>
+                              formatCurrency(Number(value))
+                            }
+                          />
+                        }
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="fuel"
+                        stroke="var(--color-fuel)"
+                        strokeWidth={2.5}
+                        dot={{
+                          r: 3,
+                          strokeWidth: 0,
+                          fill: "var(--color-fuel)",
+                        }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="maintenance"
+                        stroke="var(--color-maintenance)"
+                        strokeWidth={2.5}
+                        dot={{
+                          r: 3,
+                          strokeWidth: 0,
+                          fill: "var(--color-maintenance)",
+                        }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="other"
+                        stroke="var(--color-other)"
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                        dot={{
+                          r: 2.5,
+                          strokeWidth: 0,
+                          fill: "var(--color-other)",
+                        }}
+                        activeDot={{ r: 4.5 }}
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="total"
+                        stroke="var(--color-total)"
+                        strokeWidth={3}
+                        dot={{
+                          r: 3.5,
+                          strokeWidth: 1.5,
+                          fill: "var(--background)",
+                          stroke: "var(--color-total)",
+                        }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                </>
               ) : (
                 <div className="grid min-h-[320px] place-items-center px-6 text-center">
                   <div>
@@ -439,7 +491,7 @@ export function CostTrendsPanel({
           </Card>
         </MotionWrapper>
 
-        <div className="grid min-w-0 gap-5 xl:col-span-4">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
           <MotionWrapper delay={0.3} className="min-w-0">
             <Card className="min-w-0 overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
               <CardHeader className="pb-2">
@@ -448,7 +500,10 @@ export function CostTrendsPanel({
                   {ui.insights.energyCostTrendTitle(activeAnalysisMode)}
                 </CardTitle>
                 <CardDescription>
-                  {ui.insights.energyCostTrendDescription(distanceUnit)}
+                  {ui.insights.energyCostTrendDescription(
+                    activeAnalysisMode,
+                    distanceUnit,
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="min-w-0 px-2 pb-2 sm:px-4">
@@ -539,7 +594,7 @@ export function CostTrendsPanel({
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Gauge className="h-4 w-4 text-amber-500" />
-                  {ui.insights.cadencePredictionsTitle}
+                  {ui.insights.cadencePredictionsTitle(activeAnalysisMode)}
                 </CardTitle>
                 <CardDescription>
                   {ui.insights.cadencePredictionsDescription(

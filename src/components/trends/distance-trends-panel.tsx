@@ -273,13 +273,18 @@ export function DistanceTrendsPanel({
     setDialogOpen(true);
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setSelectedMonthKey(null);
+  };
+
   const moveMonth = (offset: -1 | 1) => {
     const next = trends.months[selectedIndex + offset];
     if (next) setSelectedMonthKey(next.key);
   };
 
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="w-full max-w-full min-w-0 space-y-5 overflow-hidden">
       <MotionWrapper delay={0.05}>
         <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
           <div className="grid divide-y divide-border/50 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
@@ -360,7 +365,7 @@ export function DistanceTrendsPanel({
                     aria-pressed={rangeMonths === option}
                     onClick={() => setRangeMonths(option)}
                   >
-                    {option}M
+                    {ui.insights.distanceTrends.rangeOption(option)}
                   </button>
                 ))}
               </div>
@@ -369,11 +374,14 @@ export function DistanceTrendsPanel({
           <CardContent className="min-w-0 overflow-hidden px-2 pb-5 pt-6 sm:px-6">
             {monthsWithData.length > 0 ? (
               <>
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[300px] w-full min-w-0 max-w-full sm:h-[360px]"
-                >
-                  <AreaChart
+                <div className="w-full max-w-full min-w-0 overflow-x-auto overscroll-x-contain pb-2">
+                  <ChartContainer
+                    config={chartConfig}
+                    className={`h-[300px] w-full max-w-full sm:h-[360px] ${
+                      rangeMonths === 24 ? "min-w-[760px] lg:min-w-0" : "min-w-0"
+                    }`}
+                  >
+                    <AreaChart
                     data={chartData}
                     margin={{ top: 16, right: 12, left: -12, bottom: 0 }}
                     onClick={(state) => {
@@ -445,9 +453,11 @@ export function DistanceTrendsPanel({
                     />
                     <ReferenceLine
                       x={
-                        trends.months.find(
-                          (month) => month.key === effectiveMonthKey,
-                        )?.label
+                        selectedMonthKey
+                          ? trends.months.find(
+                              (month) => month.key === selectedMonthKey,
+                            )?.label
+                          : undefined
                       }
                       stroke="var(--foreground)"
                       strokeDasharray="3 4"
@@ -477,17 +487,21 @@ export function DistanceTrendsPanel({
                       dot={false}
                       connectNulls={false}
                     />
-                  </AreaChart>
-                </ChartContainer>
+                    </AreaChart>
+                  </ChartContainer>
+                </div>
 
-                <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1" aria-label={ui.insights.distanceTrends.monthPickerLabel}>
+                <div
+                  className="mt-3 flex w-full max-w-full min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain pb-1"
+                  aria-label={ui.insights.distanceTrends.monthPickerLabel}
+                >
                   {trends.months.map((month) => (
                     <button
                       key={month.key}
                       type="button"
-                      aria-pressed={month.key === effectiveMonthKey}
+                      aria-pressed={month.key === selectedMonthKey}
                       className={`min-h-11 shrink-0 rounded-xl border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                        month.key === effectiveMonthKey
+                        month.key === selectedMonthKey
                           ? "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300"
                           : "border-border/60 bg-background/50 text-muted-foreground hover:text-foreground"
                       }`}
@@ -544,7 +558,7 @@ export function DistanceTrendsPanel({
               <button
                 type="button"
                 className="mt-4 text-xs font-semibold text-teal-600 hover:text-teal-500 dark:text-teal-400"
-                onClick={() => setDialogOpen(true)}
+                onClick={() => openMonth(effectiveMonthKey)}
               >
                 {ui.insights.distanceTrends.openDailyView} →
               </button>
@@ -612,7 +626,7 @@ export function DistanceTrendsPanel({
         </MotionWrapper>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="min-w-0 gap-5 sm:max-w-4xl">
           <DialogHeader className="pr-10">
             <div className="flex flex-wrap items-center gap-2">
@@ -674,7 +688,9 @@ export function DistanceTrendsPanel({
             </div>
             <div className="rounded-2xl bg-muted/45 p-4">
               <p className="text-xs text-muted-foreground">
-                {ui.insights.distanceTrends.previousPeriod}
+                {ui.insights.distanceTrends.previousPeriod(
+                  trends.comparison.basis,
+                )}
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
                 {formatDistance(trends.comparison.previousDistance)}
