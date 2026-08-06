@@ -4,7 +4,8 @@ export type FuelAnalyticsMode = FuelLogEnergyType;
 
 export type DerivedFuelLog = FuelLog & {
     energy_type: FuelLogEnergyType;
-    fill_type: FuelLogFillType;
+    /** Null on charge rows: fill type is an ICE-only concept. */
+    fill_type: FuelLogFillType | null;
     contributes_to_efficiency: boolean;
     derived_efficiency: number | null;
     segment_distance: number | null;
@@ -65,6 +66,32 @@ function sortLogs(logs: FuelLog[]): FuelLog[] {
 
         return left.id.localeCompare(right.id);
     });
+}
+
+/**
+ * Charge sessions are recorded but never form efficiency segments. The full-tank
+ * method needs a repeatable reference point, and "full charge" is not one for a
+ * vehicle charged at home most nights — most of its energy is never logged at
+ * all. EV efficiency comes from state-of-charge snapshots instead; see
+ * `battery-health.ts` and docs/ev-redesign.md.
+ */
+function buildChargeStream(logs: FuelLog[]): FuelAnalyticsStream {
+    return {
+        energy_type: "charge",
+        logs: sortLogs(logs).map<DerivedFuelLog>((log) => ({
+            ...log,
+            energy_type: "charge",
+            fill_type: null,
+            contributes_to_efficiency: false,
+            derived_efficiency: null,
+            segment_distance: null,
+            segment_volume: null,
+            segment_cost: null,
+            segment_closed_at_log_id: null,
+            pending_full: false,
+        })),
+        closed_segments: [],
+    };
 }
 
 function buildStream(logs: FuelLog[], baselineOdometer: number, energyType: FuelAnalyticsMode): FuelAnalyticsStream {
@@ -155,6 +182,6 @@ export function buildFuelAnalytics(logs: FuelLogLike[], baselineOdometer: number
 
     return {
         fuel: buildStream(fuelLogs, baselineOdometer, "fuel"),
-        charge: buildStream(chargeLogs, baselineOdometer, "charge"),
+        charge: buildChargeStream(chargeLogs),
     };
 }

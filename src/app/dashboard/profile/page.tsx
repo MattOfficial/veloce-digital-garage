@@ -73,6 +73,10 @@ type ProfileDraft = {
   distanceUnit: "km" | "miles";
   avatarUrl: string | null;
   preferredProvider: ProviderPreference;
+  // Kept as strings so an empty field stays distinguishable from zero.
+  electricityTariffPerKwh: string;
+  petrolPriceReference: string;
+  iceReferenceEfficiency: string;
 };
 
 function createProfileDraft(
@@ -84,6 +88,9 @@ function createProfileDraft(
     distanceUnit: profile.distanceUnit || "km",
     avatarUrl: profile.avatarUrl || null,
     preferredProvider: profile.preferredProvider || "gemini",
+    electricityTariffPerKwh: profile.electricityTariffPerKwh?.toString() ?? "",
+    petrolPriceReference: profile.petrolPriceReference?.toString() ?? "",
+    iceReferenceEfficiency: profile.iceReferenceEfficiency?.toString() ?? "",
   };
 }
 
@@ -186,6 +193,15 @@ export default function ProfilePage() {
       formData.append("deepseek_key", deepseekKey);
     }
     formData.append("preferred_provider", resolvedProfile.preferredProvider);
+    formData.append(
+      "electricity_tariff_per_kwh",
+      resolvedProfile.electricityTariffPerKwh,
+    );
+    formData.append("petrol_price_reference", resolvedProfile.petrolPriceReference);
+    formData.append(
+      "ice_reference_efficiency",
+      resolvedProfile.iceReferenceEfficiency,
+    );
 
     const result = await updateProfile(formData);
 
@@ -583,6 +599,91 @@ export default function ProfilePage() {
                   </Select>
                   <p className="text-sm text-muted-foreground">
                     {ui.profile.distanceUnitDescription}
+                  </p>
+                </div>
+
+                {/* Home charging is never logged, so these three rates are what
+                    turn distance into a running cost and a petrol comparison. */}
+                <div className="space-y-2 pt-4">
+                  <Label
+                    htmlFor="electricity_tariff_per_kwh"
+                    className="text-muted-foreground uppercase text-xs tracking-wider font-semibold"
+                  >
+                    {ui.profile.electricityTariff(resolvedProfile.currency)}
+                  </Label>
+                  <Input
+                    id="electricity_tariff_per_kwh"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="max-w-md h-12 rounded-xl"
+                    placeholder={ui.profile.electricityTariffPlaceholder}
+                    value={resolvedProfile.electricityTariffPerKwh}
+                    onChange={(event) =>
+                      updateProfileDraft(
+                        "electricityTariffPerKwh",
+                        event.target.value,
+                      )
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {ui.profile.electricityTariffDescription}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-4">
+                  <Label
+                    htmlFor="petrol_price_reference"
+                    className="text-muted-foreground uppercase text-xs tracking-wider font-semibold"
+                  >
+                    {ui.profile.petrolPriceReference(resolvedProfile.currency)}
+                  </Label>
+                  <Input
+                    id="petrol_price_reference"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="max-w-md h-12 rounded-xl"
+                    placeholder={ui.profile.petrolPriceReferencePlaceholder}
+                    value={resolvedProfile.petrolPriceReference}
+                    onChange={(event) =>
+                      updateProfileDraft(
+                        "petrolPriceReference",
+                        event.target.value,
+                      )
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {ui.profile.petrolPriceReferenceDescription}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-4">
+                  <Label
+                    htmlFor="ice_reference_efficiency"
+                    className="text-muted-foreground uppercase text-xs tracking-wider font-semibold"
+                  >
+                    {ui.profile.iceReferenceEfficiency(
+                      resolvedProfile.distanceUnit,
+                    )}
+                  </Label>
+                  <Input
+                    id="ice_reference_efficiency"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="max-w-md h-12 rounded-xl"
+                    placeholder={ui.profile.iceReferenceEfficiencyPlaceholder}
+                    value={resolvedProfile.iceReferenceEfficiency}
+                    onChange={(event) =>
+                      updateProfileDraft(
+                        "iceReferenceEfficiency",
+                        event.target.value,
+                      )
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {ui.profile.iceReferenceEfficiencyDescription}
                   </p>
                 </div>
               </div>

@@ -4,7 +4,8 @@ import type {
     CopilotAnalyticsQuery,
     CopilotAnalyticsResult,
 } from "@/types/ai";
-import type { VehicleWithLogs } from "@/types/database";
+import { isElectricPowertrain, type VehicleWithLogs } from "@/types/database";
+import { summarizeBatteryHealth } from "@/utils/battery-health";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 type AnalyticsProfile = {
@@ -194,32 +195,67 @@ function getFuelEfficiencyResult(
 ): CopilotAnalyticsResult {
     let totalDistance = 0;
     let totalVolume = 0;
-    let unit: string | null = null;
+    // Electric efficiency comes from state-of-charge check-ins, not from charge
+    // sessions, so it accumulates separately.
+    let electricRange = 0;
+    let electricEnergy = 0;
 
     for (const vehicle of vehicles) {
+        if (isElectricPowertrain(vehicle.powertrain)) {
+            const usableBatteryKwh = vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh;
+            const health = summarizeBatteryHealth(vehicle.vehicle_snapshots ?? [], {
+                usableBatteryKwh,
+                baselineRangeKm: vehicle.baseline_range_km,
+            });
+
+            if (health.usableRangeKm != null && usableBatteryKwh != null && usableBatteryKwh > 0) {
+                electricRange += health.usableRangeKm;
+                electricEnergy += usableBatteryKwh;
+            }
+
+            continue;
+        }
+
         const analytics = buildFuelAnalytics(vehicle.fuel_logs ?? [], vehicle.baseline_odometer);
         const fuelSegments = analytics.fuel.closed_segments.filter(
             (segment) => segment.closing_log_date >= query.dateRange.start && segment.closing_log_date <= query.dateRange.end,
         );
-        const chargeSegments = analytics.charge.closed_segments.filter(
-            (segment) => segment.closing_log_date >= query.dateRange.start && segment.closing_log_date <= query.dateRange.end,
-        );
 
-        const segments = fuelSegments.length > 0 ? fuelSegments : chargeSegments;
-        if (segments.length === 0) {
+        if (fuelSegments.length === 0) {
             continue;
         }
 
-        const isCharge = fuelSegments.length === 0 && chargeSegments.length > 0;
-        unit = isCharge ? (profile.distanceUnit === "miles" ? "mi/kWh" : "km/kWh") : (profile.distanceUnit === "miles" ? "MPG" : "km/L");
-
-        totalDistance += segments.reduce((sum, segment) => sum + segment.distance, 0);
-        totalVolume += segments.reduce((sum, segment) => sum + segment.volume, 0);
+        totalDistance += fuelSegments.reduce((sum, segment) => sum + segment.distance, 0);
+        totalVolume += fuelSegments.reduce((sum, segment) => sum + segment.volume, 0);
     }
 
     const vehicleLabel = getVehicleLabel(vehicles);
-    const hasData = totalDistance > 0 && totalVolume > 0;
-    const efficiency = hasData ? totalDistance / totalVolume : null;
+    const hasLiquidData = totalDistance > 0 && totalVolume > 0;
+    const hasElectricData = electricRange > 0 && electricEnergy > 0;
+
+    if (!hasLiquidData && hasElectricData) {
+        const efficiency = electricRange / electricEnergy;
+        const unit = profile.distanceUnit === "miles" ? "mi/kWh" : "km/kWh";
+
+        return {
+            metric: query.metric,
+            scope: query.scope,
+            vehicleIds: vehicles.map((vehicle) => vehicle.id),
+            value: efficiency,
+            unit,
+            label: "Measured electric efficiency",
+            // Battery health is measured over a recent rolling window rather than
+            // the requested range, so the summary does not claim that range.
+            summary: `Your recent measured efficiency for ${vehicleLabel} is ${formatNumber(efficiency)} ${unit}, based on your battery check-ins.`,
+            dateRangeLabel: query.dateRange.label,
+            hasSufficientData: true,
+        };
+    }
+
+    const efficiency = hasLiquidData ? totalDistance / totalVolume : null;
+    const unit = hasLiquidData
+        ? (profile.distanceUnit === "miles" ? "MPG" : "km/L")
+        : null;
 
     return {
         metric: query.metric,
@@ -228,11 +264,11 @@ function getFuelEfficiencyResult(
         value: efficiency,
         unit,
         label: "Average fuel efficiency",
-        summary: hasData && efficiency != null
+        summary: hasLiquidData && efficiency != null
             ? `Your average efficiency for ${vehicleLabel} during ${query.dateRange.label} was ${formatNumber(efficiency)} ${unit}.`
-            : `I don’t have enough closed fuel or charge sessions to calculate efficiency for ${vehicleLabel} during ${query.dateRange.label}.`,
+            : `I don’t have enough closed fill-ups or battery check-ins to calculate efficiency for ${vehicleLabel} during ${query.dateRange.label}.`,
         dateRangeLabel: query.dateRange.label,
-        hasSufficientData: hasData,
+        hasSufficientData: hasLiquidData,
     };
 }
 

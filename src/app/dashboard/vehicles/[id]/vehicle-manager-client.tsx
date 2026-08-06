@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { VehicleWithLogs } from "@/types/database";
+import { isElectricPowertrain, VehicleWithLogs } from "@/types/database";
 import { useUserStore } from "@/store/user-store";
 import { updateVehicle } from "@/app/actions/vehicles";
 import { upsertVehicleServiceInterval } from "@/app/actions/reminders";
@@ -438,6 +438,116 @@ export function VehicleManagerClient({
                       />
                     </div>
                   </div>
+
+                  {/* Battery attributes drive every EV metric: usable capacity
+                      is the denominator for Wh/km, and the baseline range is
+                      the denominator for state of health. */}
+                  {isElectricPowertrain(vehicle.powertrain) && (
+                    <div className="space-y-4 pt-4 border-t border-border/50">
+                      <Label className="text-base font-semibold">
+                        {ui.vehicle.batterySectionTitle}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {ui.vehicle.batterySectionDescription}
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="battery_capacity_kwh">
+                            {ui.vehicle.batteryCapacity}
+                          </Label>
+                          <Input
+                            id="battery_capacity_kwh"
+                            name="battery_capacity_kwh"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={vehicle.battery_capacity_kwh ?? ""}
+                            placeholder={ui.vehicle.batteryCapacityPlaceholder}
+                            className="rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="usable_battery_kwh">
+                            {ui.vehicle.usableBattery}
+                          </Label>
+                          <Input
+                            id="usable_battery_kwh"
+                            name="usable_battery_kwh"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={vehicle.usable_battery_kwh ?? ""}
+                            placeholder={ui.vehicle.usableBatteryPlaceholder}
+                            className="rounded-xl"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {ui.vehicle.usableBatteryHelper}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="rated_range_km">
+                            {ui.vehicle.ratedRange(profile.distanceUnit)}
+                          </Label>
+                          <Input
+                            id="rated_range_km"
+                            name="rated_range_km"
+                            type="number"
+                            min="0"
+                            step="1"
+                            defaultValue={vehicle.rated_range_km ?? ""}
+                            placeholder={ui.vehicle.ratedRangePlaceholder}
+                            className="rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="baseline_range_km">
+                            {ui.vehicle.baselineRange(profile.distanceUnit)}
+                          </Label>
+                          <Input
+                            id="baseline_range_km"
+                            name="baseline_range_km"
+                            type="number"
+                            min="0"
+                            step="1"
+                            defaultValue={vehicle.baseline_range_km ?? ""}
+                            placeholder={ui.vehicle.baselineRangePlaceholder}
+                            className="rounded-xl"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {ui.vehicle.baselineRangeHelper}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="battery_warranty_years">
+                            {ui.vehicle.batteryWarrantyYears}
+                          </Label>
+                          <Input
+                            id="battery_warranty_years"
+                            name="battery_warranty_years"
+                            type="number"
+                            min="0"
+                            step="1"
+                            defaultValue={vehicle.battery_warranty_years ?? ""}
+                            className="rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="battery_warranty_km">
+                            {ui.vehicle.batteryWarrantyDistance(profile.distanceUnit)}
+                          </Label>
+                          <Input
+                            id="battery_warranty_km"
+                            name="battery_warranty_km"
+                            type="number"
+                            min="0"
+                            step="1"
+                            defaultValue={vehicle.battery_warranty_km ?? ""}
+                            className="rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="notes">{ui.vehicle.importantNotes}</Label>

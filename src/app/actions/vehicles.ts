@@ -132,13 +132,27 @@ export async function updateVehicle(id: string, formData: FormData) {
         }
     }
 
-    if (formData.has("battery_capacity_kwh")) {
-        const battStr = formData.get("battery_capacity_kwh")?.toString();
-        if (battStr) {
-            const batt = parseFloat(battStr);
-            if (!isNaN(batt)) updates.battery_capacity_kwh = batt;
+    // EV attributes. usable_battery_kwh is the denominator for Wh/km and
+    // baseline_range_km is the denominator for state of health, so both need to
+    // be clearable rather than merely settable.
+    const numericFields = [
+        "battery_capacity_kwh",
+        "usable_battery_kwh",
+        "rated_range_km",
+        "baseline_range_km",
+        "battery_warranty_years",
+        "battery_warranty_km",
+    ];
+
+    for (const field of numericFields) {
+        if (!formData.has(field)) continue;
+
+        const rawValue = formData.get(field)?.toString();
+        if (rawValue) {
+            const parsed = parseFloat(rawValue);
+            if (!isNaN(parsed)) updates[field] = parsed;
         } else {
-            updates.battery_capacity_kwh = null;
+            updates[field] = null;
         }
     }
 

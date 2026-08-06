@@ -1,7 +1,13 @@
 "use server";
 
 import { buildFuelAnalytics } from "@/utils/fuel-analytics";
-import type { FuelLog, FuelLogEnergyType, FuelLogFillType } from "@/types/database";
+import type {
+    ChargeSource,
+    FuelLog,
+    FuelLogEnergyType,
+    FuelLogFillType,
+} from "@/types/database";
+import { deriveEnergyFromSocDelta } from "@/utils/ev-energy-analytics";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
@@ -11,11 +17,17 @@ type FuelLogMutationPayload = {
     vehicle_id: string;
     date: string;
     odometer: number;
-    fuel_volume: number;
+    fuel_volume: number | null;
     total_cost: number;
     energy_type: FuelLogEnergyType;
-    fill_type: FuelLogFillType;
+    /** ICE only. Charge rows carry null: "full charge" is not a meaningful concept. */
+    fill_type: FuelLogFillType | null;
     estimated_range: number | null;
+    charge_source: ChargeSource | null;
+    start_soc: number | null;
+    end_soc: number | null;
+    charger_network: string | null;
+    location: string | null;
 };
 
 type FuelLogMutationResult = {
@@ -41,6 +53,22 @@ function normalizeFillType(value: FormDataEntryValue | null): FuelLogFillType {
     return value === "partial" ? "partial" : "full";
 }
 
+function normalizeChargeSource(value: FormDataEntryValue | null): ChargeSource {
+    if (value === "home" || value === "ac_public" || value === "dc_fast") {
+        return value;
+    }
+
+    return "other";
+}
+
+function parseOptionalText(value: FormDataEntryValue | null): string | null {
+    return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+function isValidSoc(value: number | null): boolean {
+    return value == null || (value >= 0 && value <= 100);
+}
+
 function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null {
     const vehicle_id = formData.get("vehicle_id");
     const date = formData.get("date");
@@ -48,17 +76,34 @@ function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null 
     const fuel_volume = parseNumericField(formData.get("fuel_volume"));
     const total_cost = parseNumericField(formData.get("total_cost"));
     const estimated_range = parseNumericField(formData.get("estimated_range"));
+    const energy_type = normalizeEnergyType(formData.get("energy_type"));
+    const isCharge = energy_type === "charge";
+
+    const start_soc = isCharge ? parseNumericField(formData.get("start_soc")) : null;
+    const end_soc = isCharge ? parseNumericField(formData.get("end_soc")) : null;
 
     if (
         typeof vehicle_id !== "string" ||
         typeof date !== "string" ||
-        odometer == null ||
-        fuel_volume == null ||
         total_cost == null ||
+        odometer == null ||
         odometer <= 0 ||
-        fuel_volume <= 0 ||
         total_cost < 0
     ) {
+        return null;
+    }
+
+    // A charge session may report only the SoC it added; kWh is derived from that
+    // later, once the vehicle's usable pack size is known.
+    if (fuel_volume != null && fuel_volume <= 0) {
+        return null;
+    }
+
+    if (!isCharge && fuel_volume == null) {
+        return null;
+    }
+
+    if (!isValidSoc(start_soc) || !isValidSoc(end_soc)) {
         return null;
     }
 
@@ -68,10 +113,30 @@ function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null 
         odometer,
         fuel_volume,
         total_cost,
-        energy_type: normalizeEnergyType(formData.get("energy_type")),
-        fill_type: normalizeFillType(formData.get("fill_type")),
+        energy_type,
+        fill_type: isCharge ? null : normalizeFillType(formData.get("fill_type")),
         estimated_range,
+        charge_source: isCharge ? normalizeChargeSource(formData.get("charge_source")) : null,
+        start_soc,
+        end_soc,
+        charger_network: isCharge ? parseOptionalText(formData.get("charger_network")) : null,
+        location: isCharge ? parseOptionalText(formData.get("location")) : null,
     };
+}
+
+/**
+ * Charge rows never carry a volume of null into the database: either the session
+ * reported kWh or we reconstruct it from the SoC delta and the pack size.
+ */
+function resolveChargeVolume(
+    payload: FuelLogMutationPayload,
+    usableBatteryKwh: number | null,
+): number | null {
+    if (payload.fuel_volume != null) {
+        return payload.fuel_volume;
+    }
+
+    return deriveEnergyFromSocDelta(payload.start_soc, payload.end_soc, usableBatteryKwh);
 }
 
 async function deriveCalculatedEfficiency(
@@ -80,7 +145,9 @@ async function deriveCalculatedEfficiency(
     baselineOdometer: number,
     candidateLog: FuelLog,
 ): Promise<number | null> {
-    if (candidateLog.fill_type !== "full") {
+    // The full-tank method applies to liquid fuel only. EV efficiency comes from
+    // SoC snapshots instead — see docs/ev-redesign.md.
+    if (candidateLog.energy_type === "charge" || candidateLog.fill_type !== "full") {
         return null;
     }
 
@@ -126,7 +193,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
 
     const { data: vehicle, error: vehicleError } = await supabase
         .from("vehicles")
-        .select("id, baseline_odometer")
+        .select("id, baseline_odometer, usable_battery_kwh")
         .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
@@ -135,11 +202,21 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         return { success: false, error: "Vehicle not found or access denied." };
     }
 
+    const fuel_volume = resolveChargeVolume(payload, vehicle.usable_battery_kwh);
+    if (fuel_volume == null) {
+        return {
+            success: false,
+            error: "Enter the energy delivered, or a start and end state of charge with the battery size set on the vehicle.",
+        };
+    }
+
     const candidateLog: FuelLog = {
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         calculated_efficiency: null,
+        is_estimated: false,
         ...payload,
+        fuel_volume,
     };
 
     const calculated_efficiency = await deriveCalculatedEfficiency(
@@ -151,6 +228,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
 
     const { error } = await supabase.from("fuel_logs").insert({
         ...payload,
+        fuel_volume,
         calculated_efficiency,
     });
 
@@ -181,12 +259,20 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
     // Verify the user owns this log via the vehicle
     const { data: vehicle } = await supabase
         .from("vehicles")
-        .select("id, user_id, baseline_odometer")
+        .select("id, user_id, baseline_odometer, usable_battery_kwh")
         .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
 
     if (!vehicle) return { success: false, error: "Vehicle not found or access denied." };
+
+    const fuel_volume = resolveChargeVolume(payload, vehicle.usable_battery_kwh);
+    if (fuel_volume == null) {
+        return {
+            success: false,
+            error: "Enter the energy delivered, or a start and end state of charge with the battery size set on the vehicle.",
+        };
+    }
 
     const { data: existingLog, error: existingLogError } = await supabase
         .from("fuel_logs")
@@ -201,6 +287,7 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
     const candidateLog: FuelLog = {
         ...(existingLog as unknown as FuelLog),
         ...payload,
+        fuel_volume,
         id: logId,
         created_at: existingLog.created_at ?? new Date().toISOString(),
         calculated_efficiency: null,
@@ -215,7 +302,7 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
 
     const { error } = await supabase
         .from("fuel_logs")
-        .update({ ...payload, calculated_efficiency })
+        .update({ ...payload, fuel_volume, calculated_efficiency })
         .eq("id", logId);
 
     if (error) {

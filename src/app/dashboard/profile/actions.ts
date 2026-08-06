@@ -5,6 +5,17 @@ import { revalidatePath } from "next/cache";
 import { encrypt } from "@/utils/crypto";
 import type { ProviderPreference } from "@/types/ai";
 import type { TablesUpdate } from "@/types/supabase";
+import { isEvEfficiencyUnit } from "@/utils/efficiency-units";
+
+/** Blank means "not set", which is distinct from zero for a price or a rate. */
+function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
+    if (typeof value !== "string" || value.trim() === "") {
+        return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
 
 export async function updateProfile(formData: FormData) {
     const displayName = formData.get("display_name") as string;
@@ -15,6 +26,10 @@ export async function updateProfile(formData: FormData) {
     const openAiKey = formData.get("openai_key") as string;
     const deepseekKey = formData.get("deepseek_key") as string;
     const preferredProvider = formData.get("preferred_provider") as ProviderPreference | null;
+    const electricityTariff = parseOptionalNumber(formData.get("electricity_tariff_per_kwh"));
+    const petrolPriceReference = parseOptionalNumber(formData.get("petrol_price_reference"));
+    const iceReferenceEfficiency = parseOptionalNumber(formData.get("ice_reference_efficiency"));
+    const evEfficiencyUnit = formData.get("ev_efficiency_unit") as string | null;
 
     const supabase = await createClient();
 
@@ -30,6 +45,13 @@ export async function updateProfile(formData: FormData) {
     updates.currency = currency || '₹';
     updates.distance_unit = distanceUnit || 'km';
     updates.preferred_llm_provider = preferredProvider || 'gemini';
+    updates.electricity_tariff_per_kwh = electricityTariff;
+    updates.petrol_price_reference = petrolPriceReference;
+    updates.ice_reference_efficiency = iceReferenceEfficiency;
+    updates.ev_efficiency_unit =
+        typeof evEfficiencyUnit === 'string' && isEvEfficiencyUnit(evEfficiencyUnit)
+            ? evEfficiencyUnit
+            : null;
 
     if (llmKey && llmKey.trim() !== '') {
         try {

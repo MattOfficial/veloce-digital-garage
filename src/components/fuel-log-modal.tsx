@@ -14,6 +14,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { VehicleWithLogs } from "@/types/database";
 import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
+import { CHARGE_SOURCES } from "@/utils/ev-energy-analytics";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 import {
   Form,
@@ -47,14 +48,29 @@ const formSchema = z.object({
   odometer: z.coerce
     .number()
     .positive({ message: "Must be a positive number" }),
+  // Optional because a charge session can report only the state of charge it
+  // added, from which kWh is derived server-side.
   fuel_volume: z.coerce
     .number()
-    .positive({ message: "Must be a positive number" }),
+    .positive({ message: "Must be a positive number" })
+    .optional(),
   total_cost: z.coerce
     .number()
     .min(0, { message: "Must be a positive number or zero" }),
   fill_type: z.enum(["full", "partial"]),
-  estimated_range: z.coerce.number().optional(),
+  charge_source: z.enum(["home", "ac_public", "dc_fast", "other"]),
+  start_soc: z.coerce
+    .number()
+    .min(0, { message: "Must be between 0 and 100" })
+    .max(100, { message: "Must be between 0 and 100" })
+    .optional(),
+  end_soc: z.coerce
+    .number()
+    .min(0, { message: "Must be between 0 and 100" })
+    .max(100, { message: "Must be between 0 and 100" })
+    .optional(),
+  charger_network: z.string().optional(),
+  location: z.string().optional(),
 });
 
 export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
@@ -74,44 +90,36 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
         <Button
           type="button"
           size="sm"
+          variant={isEV ? "outline" : "default"}
           className="rounded-full shadow-sm shadow-primary/20"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {ui.fuel.modal.trigger}
+          {isEV ? ui.ev.chargeModal.trigger : ui.fuel.modal.trigger}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-112.5 max-h-[90vh] overflow-y-auto rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {isEV
-              ? ui.fuel.modal.title.charge
+              ? ui.ev.chargeModal.title
               : isPHEV
                 ? ui.fuel.modal.title.hybrid
                 : ui.fuel.modal.title.fillUp}
           </DialogTitle>
           <DialogDescription>
-            {ui.fuel.modal.description(`${vehicle.make} ${vehicle.model}`)}
+            {isEV
+              ? ui.ev.chargeModal.description
+              : ui.fuel.modal.description(`${vehicle.make} ${vehicle.model}`)}
           </DialogDescription>
         </DialogHeader>
 
-        {isPHEV && (
-          <FuelLogForm
-            key={`${vehicle.id}-${open ? "open" : "closed"}`}
-            vehicle={vehicle}
-            isPHEV={isPHEV}
-            isEV={isEV}
-            onSuccess={() => setOpen(false)}
-          />
-        )}
-        {!isPHEV && (
-          <FuelLogForm
-            key={`${vehicle.id}-${open ? "open" : "closed"}`}
-            vehicle={vehicle}
-            isPHEV={isPHEV}
-            isEV={isEV}
-            onSuccess={() => setOpen(false)}
-          />
-        )}
+        <FuelLogForm
+          key={`${vehicle.id}-${open ? "open" : "closed"}`}
+          vehicle={vehicle}
+          isPHEV={isPHEV}
+          isEV={isEV}
+          onSuccess={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -142,35 +150,70 @@ function FuelLogForm({
   );
 
   const latestOdometer = getVehicleCurrentOdometer(vehicle);
+  const isCharge = energyType === "charge";
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
       odometer: latestOdometer,
-      fuel_volume: 0,
+      fuel_volume: undefined,
       total_cost: 0,
       fill_type: "full",
-      estimated_range: undefined,
+      charge_source: "dc_fast",
+      start_soc: undefined,
+      end_soc: undefined,
+      charger_network: "",
+      location: "",
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setMessage(null);
 
+    // A liquid fill has no other way to know the volume; a charge session can
+    // fall back to the state-of-charge delta.
+    const hasSocDelta =
+      values.start_soc != null &&
+      values.end_soc != null &&
+      values.end_soc > values.start_soc;
+
+    if (values.fuel_volume == null && (!isCharge || !hasSocDelta)) {
+      form.setError("fuel_volume", {
+        message: isCharge
+          ? "Enter the energy delivered, or both battery percentages."
+          : "Must be a positive number",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("vehicle_id", vehicle.id);
     formData.append("date", values.date);
     formData.append("odometer", values.odometer.toString());
-    formData.append("fuel_volume", values.fuel_volume.toString());
     formData.append("total_cost", values.total_cost.toString());
     formData.append("energy_type", energyType);
-    formData.append("fill_type", values.fill_type);
-    if (
-      values.estimated_range !== undefined &&
-      values.estimated_range !== null
-    ) {
-      formData.append("estimated_range", values.estimated_range.toString());
+
+    if (values.fuel_volume != null) {
+      formData.append("fuel_volume", values.fuel_volume.toString());
+    }
+
+    if (isCharge) {
+      formData.append("charge_source", values.charge_source);
+      if (values.start_soc != null) {
+        formData.append("start_soc", values.start_soc.toString());
+      }
+      if (values.end_soc != null) {
+        formData.append("end_soc", values.end_soc.toString());
+      }
+      if (values.charger_network) {
+        formData.append("charger_network", values.charger_network);
+      }
+      if (values.location) {
+        formData.append("location", values.location);
+      }
+    } else {
+      formData.append("fill_type", values.fill_type);
     }
 
     startTransition(async () => {
@@ -266,13 +309,13 @@ function FuelLogForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="fill_type"
-              render={({ field }) => {
-                const isCharge = energyType === "charge";
-
-                return (
+            {/* Fill type is an ICE concept: it exists because a petrol gauge is
+                only trustworthy at full. A charge session does not need it. */}
+            {!isCharge && (
+              <FormField
+                control={form.control}
+                name="fill_type"
+                render={({ field }) => (
                   <FormItem className="col-span-2">
                     <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
                     <Select
@@ -286,14 +329,10 @@ function FuelLogForm({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="full">
-                          {isCharge
-                            ? ui.fuel.modal.fillTypeOptions.fullCharge
-                            : ui.fuel.modal.fillTypeOptions.fullFuel}
+                          {ui.fuel.modal.fillTypeOptions.fullFuel}
                         </SelectItem>
                         <SelectItem value="partial">
-                          {isCharge
-                            ? ui.fuel.modal.fillTypeOptions.partialCharge
-                            : ui.fuel.modal.fillTypeOptions.partialFuel}
+                          {ui.fuel.modal.fillTypeOptions.partialFuel}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -302,9 +341,41 @@ function FuelLogForm({
                     </p>
                     <FormMessage />
                   </FormItem>
-                );
-              }}
-            />
+                )}
+              />
+            )}
+
+            {isCharge && (
+              <FormField
+                control={form.control}
+                name="charge_source"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>
+                      {ui.ev.chargeModal.labels.chargeSource}
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CHARGE_SOURCES.map((source) => (
+                          <SelectItem key={source} value={source}>
+                            {ui.ev.mix.sources[source]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -312,7 +383,7 @@ function FuelLogForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {energyType === "charge"
+                    {isCharge
                       ? ui.fuel.modal.labels.energy
                       : ui.fuel.modal.labels.volume(getVolumeUnit())}
                   </FormLabel>
@@ -322,11 +393,12 @@ function FuelLogForm({
                       step="0.01"
                       className="rounded-xl"
                       placeholder={
-                        energyType === "charge"
+                        isCharge
                           ? ui.fuel.modal.placeholders.energy
                           : ui.fuel.modal.placeholders.volume
                       }
                       {...field}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -356,34 +428,96 @@ function FuelLogForm({
               )}
             />
 
-            {energyType === "charge" && (
-              <FormField
-                control={form.control}
-                name="estimated_range"
-                render={({ field }) => (
-                  <FormItem className="col-span-2 sm:col-span-1">
-                    <FormLabel>
-                      {ui.fuel.modal.labels.estimatedRange(
-                        profile.distanceUnit,
-                      )}{" "}
-                      <span className="text-muted-foreground text-xs font-normal">
-                        {ui.fuel.modal.labels.estimatedRangeOptional}
-                      </span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        className="rounded-xl"
-                        placeholder={ui.fuel.modal.placeholders.range}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {isCharge && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="start_soc"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{ui.ev.chargeModal.labels.startSoc}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="100"
+                          className="rounded-xl"
+                          placeholder={ui.ev.chargeModal.placeholders.soc}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="end_soc"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{ui.ev.chargeModal.labels.endSoc}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="100"
+                          className="rounded-xl"
+                          placeholder={ui.ev.chargeModal.placeholders.soc}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <p className="col-span-2 text-xs text-muted-foreground">
+                  {ui.ev.chargeModal.labels.energyOptional}
+                </p>
+
+                <FormField
+                  control={form.control}
+                  name="charger_network"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{ui.ev.chargeModal.labels.network}</FormLabel>
+                      <FormControl>
+                        <Input
+                          className="rounded-xl"
+                          placeholder={ui.ev.chargeModal.placeholders.network}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{ui.ev.chargeModal.labels.location}</FormLabel>
+                      <FormControl>
+                        <Input
+                          className="rounded-xl"
+                          placeholder={ui.ev.chargeModal.placeholders.location}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
           </div>
 

@@ -9,6 +9,7 @@ type VehicleForOdometer = {
     current_odometer?: number | null;
     fuel_logs?: Array<{ odometer: number }>;
     maintenance_logs?: Array<{ odometer?: number | null }>;
+    vehicle_snapshots?: Array<{ odometer: number }>;
 };
 
 export type ReminderHealth = "healthy" | "due-soon" | "overdue" | "needs-baseline";
@@ -69,6 +70,7 @@ export function getVehicleRecordedOdometer(vehicle: VehicleForOdometer) {
         vehicle.baseline_odometer || 0,
         getMaxNumber(vehicle.fuel_logs?.map((log) => log.odometer) || []) || 0,
         getMaxNumber(vehicle.maintenance_logs?.map((log) => log.odometer) || []) || 0,
+        getMaxNumber(vehicle.vehicle_snapshots?.map((snapshot) => snapshot.odometer) || []) || 0,
     );
 }
 

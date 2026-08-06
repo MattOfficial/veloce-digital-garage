@@ -59,7 +59,13 @@ type FuelLog = {
   total_cost: number;
   estimated_range?: number | null;
   energy_type?: string;
-  fill_type: "full" | "partial";
+  /** Null on charge rows: fill type is an ICE-only concept. */
+  fill_type: "full" | "partial" | null;
+  charge_source?: string | null;
+  start_soc?: number | null;
+  end_soc?: number | null;
+  charger_network?: string | null;
+  location?: string | null;
 };
 
 interface FuelEditModalProps {
@@ -112,7 +118,7 @@ function FuelEditForm({
       odometer: log.odometer,
       fuel_volume: log.fuel_volume,
       total_cost: log.total_cost,
-      fill_type: log.fill_type,
+      fill_type: log.fill_type ?? "full",
       estimated_range: log.estimated_range ?? undefined,
     },
   });
@@ -125,7 +131,29 @@ function FuelEditForm({
     formData.append("odometer", values.odometer.toString());
     formData.append("fuel_volume", values.fuel_volume.toString());
     formData.append("total_cost", values.total_cost.toString());
-    formData.append("fill_type", values.fill_type);
+    // Without this the server would normalise every edited row back to "fuel".
+    formData.append("energy_type", isCharge ? "charge" : "fuel");
+
+    if (isCharge) {
+      // Charge-specific details are not editable here, so carry them through
+      // unchanged rather than letting the server reset them to defaults.
+      formData.append("charge_source", log.charge_source ?? "other");
+      if (log.start_soc != null) {
+        formData.append("start_soc", log.start_soc.toString());
+      }
+      if (log.end_soc != null) {
+        formData.append("end_soc", log.end_soc.toString());
+      }
+      if (log.charger_network) {
+        formData.append("charger_network", log.charger_network);
+      }
+      if (log.location) {
+        formData.append("location", log.location);
+      }
+    } else {
+      formData.append("fill_type", values.fill_type);
+    }
+
     if (values.estimated_range != null) {
       formData.append("estimated_range", values.estimated_range.toString());
     }
@@ -186,41 +214,40 @@ function FuelEditForm({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="fill_type"
-            render={({ field }) => (
-              <FormItem className="col-span-2">
-                <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="full">
-                      {isCharge
-                        ? ui.fuel.modal.fillTypeOptions.fullCharge
-                        : ui.fuel.modal.fillTypeOptions.fullFuel}
-                    </SelectItem>
-                    <SelectItem value="partial">
-                      {isCharge
-                        ? ui.fuel.modal.fillTypeOptions.partialCharge
-                        : ui.fuel.modal.fillTypeOptions.partialFuel}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {ui.fuel.modal.labels.partialFillHelper}
-                </p>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Fill type does not apply to charge sessions. */}
+          {!isCharge && (
+            <FormField
+              control={form.control}
+              name="fill_type"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="full">
+                        {ui.fuel.modal.fillTypeOptions.fullFuel}
+                      </SelectItem>
+                      <SelectItem value="partial">
+                        {ui.fuel.modal.fillTypeOptions.partialFuel}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {ui.fuel.modal.labels.partialFillHelper}
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}

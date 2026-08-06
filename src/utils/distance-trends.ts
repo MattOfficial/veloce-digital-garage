@@ -124,6 +124,7 @@ export interface DistanceMonthComparison {
 export interface DistanceTrendDataQuality {
   fuelObservations: number;
   maintenanceObservations: number;
+  snapshotObservations: number;
   baselineIncluded: boolean;
   validObservations: number;
   usableReadingDays: number;
@@ -146,7 +147,7 @@ export interface BuildVehicleDistanceTrendsOptions {
   selectedMonthKey?: string;
 }
 
-type ObservationSource = "fuel" | "maintenance" | "baseline";
+type ObservationSource = "fuel" | "maintenance" | "snapshot" | "baseline";
 
 interface RawOdometerObservation {
   dateKey: string;
@@ -254,10 +255,28 @@ function prepareDistanceData(
   let discardedInvalidObservations = 0;
   let fuelObservations = 0;
   let maintenanceObservations = 0;
+  let snapshotObservations = 0;
 
   for (const log of vehicle.fuel_logs ?? []) {
     fuelObservations += 1;
     if (!addObservation(observations, log.date, log.odometer, "fuel", endDate)) {
+      discardedInvalidObservations += 1;
+    }
+  }
+
+  // Under the SoC model an EV may have no charge logs at all, so snapshots are
+  // often its only odometer history.
+  for (const snapshot of vehicle.vehicle_snapshots ?? []) {
+    snapshotObservations += 1;
+    if (
+      !addObservation(
+        observations,
+        snapshot.date,
+        snapshot.odometer,
+        "snapshot",
+        endDate,
+      )
+    ) {
       discardedInvalidObservations += 1;
     }
   }
@@ -363,6 +382,7 @@ function prepareDistanceData(
     quality: {
       fuelObservations,
       maintenanceObservations,
+      snapshotObservations,
       baselineIncluded,
       validObservations: observations.length,
       usableReadingDays: readings.length,

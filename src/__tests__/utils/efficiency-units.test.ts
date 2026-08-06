@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  convertEvEfficiency,
   convertFuelEfficiency,
+  getDefaultEvEfficiencyUnit,
   getDefaultFuelEfficiencyUnit,
+  getEvEfficiencyPrecision,
+  isEvEfficiencyUnit,
   isFuelEfficiencyUnit,
+  isLowerBetterEvUnit,
 } from "@/utils/efficiency-units";
 
 describe("fuel efficiency units", () => {
@@ -53,5 +58,57 @@ describe("fuel efficiency units", () => {
   it("guards unit picker values", () => {
     expect(isFuelEfficiencyUnit("L/100km")).toBe(true);
     expect(isFuelEfficiencyUnit("MPG")).toBe(false);
+  });
+});
+
+describe("EV efficiency units", () => {
+  it("converts one segment into every supported display unit", () => {
+    // 100 km on 4 kWh.
+    expect(convertEvEfficiency(100, 4, "Wh/km", "km")).toBeCloseTo(40, 8);
+    expect(convertEvEfficiency(100, 4, "km/kWh", "km")).toBeCloseTo(25, 8);
+    expect(convertEvEfficiency(100, 4, "kWh/100km", "km")).toBeCloseTo(4, 8);
+    expect(convertEvEfficiency(100, 4, "mi/kWh", "km")).toBeCloseTo(
+      15.5342798,
+      6,
+    );
+  });
+
+  it("treats stored distance as the user's own unit", () => {
+    // 100 miles on 4 kWh is 25 mi/kWh, and a mile is longer than a kilometre so
+    // the Wh/km figure comes out lower.
+    expect(convertEvEfficiency(100, 4, "mi/kWh", "miles")).toBeCloseTo(25, 8);
+    expect(convertEvEfficiency(100, 4, "Wh/km", "miles")).toBeCloseTo(
+      24.8548477,
+      6,
+    );
+  });
+
+  it("returns null for segments that cannot yield an efficiency", () => {
+    expect(convertEvEfficiency(0, 4, "Wh/km", "km")).toBeNull();
+    expect(convertEvEfficiency(100, 0, "Wh/km", "km")).toBeNull();
+    expect(convertEvEfficiency(-100, 4, "Wh/km", "km")).toBeNull();
+    expect(convertEvEfficiency(Number.NaN, 4, "Wh/km", "km")).toBeNull();
+  });
+
+  it("defaults to the unit that matches the distance preference", () => {
+    expect(getDefaultEvEfficiencyUnit("km")).toBe("Wh/km");
+    expect(getDefaultEvEfficiencyUnit("miles")).toBe("mi/kWh");
+  });
+
+  it("knows which units improve as they fall", () => {
+    expect(isLowerBetterEvUnit("Wh/km")).toBe(true);
+    expect(isLowerBetterEvUnit("kWh/100km")).toBe(true);
+    expect(isLowerBetterEvUnit("km/kWh")).toBe(false);
+    expect(isLowerBetterEvUnit("mi/kWh")).toBe(false);
+  });
+
+  it("shows a decimal only where it carries meaning", () => {
+    expect(getEvEfficiencyPrecision("Wh/km")).toBe(0);
+    expect(getEvEfficiencyPrecision("km/kWh")).toBe(1);
+  });
+
+  it("guards unit picker values", () => {
+    expect(isEvEfficiencyUnit("Wh/km")).toBe(true);
+    expect(isEvEfficiencyUnit("km/L")).toBe(false);
   });
 });

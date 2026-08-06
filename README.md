@@ -14,6 +14,12 @@ Veloce is a Next.js vehicle ownership tracker for logging fuel, maintenance, cus
 - Vehicle detail manager at `/dashboard/vehicles/[id]`
 - Experimental telemetry demo at `/telemetry`
 
+## EV Tracking
+
+Electric vehicles do not use the fill-up model. Home charging is never logged — there is no pump and no receipt — so it is inferred from distance and measured efficiency, then costed at the user's electricity tariff. Only public charging sessions are logged as events.
+
+Efficiency and battery health come from **state-of-charge check-ins** (`vehicle_snapshots`): odometer plus battery percentage. Two check-ins with no charge between them give km per percent, and from that usable range, Wh/km and state of health. See [docs/ev-redesign.md](docs/ev-redesign.md).
+
 ## Important Scope Notes
 
 - Multi-provider Copilot is implemented for Gemini, OpenAI, and DeepSeek.
@@ -118,6 +124,7 @@ Key database tables:
 - `documents`
 - `service_reminders`
 - `user_badges`
+- `vehicle_snapshots`
 
 Storage buckets used by the app:
 
