@@ -14,6 +14,12 @@ function makeLog(overrides: Partial<FuelLog> = {}): FuelLog {
         energy_type: "fuel",
         fill_type: "full",
         estimated_range: null,
+        charge_source: null,
+        start_soc: null,
+        end_soc: null,
+        is_estimated: false,
+        charger_network: null,
+        location: null,
         created_at: "2024-01-01T10:00:00Z",
         ...overrides,
     };
@@ -146,14 +152,31 @@ describe("buildFuelAnalytics", () => {
         expect(fullLog?.segment_closed_at_log_id).toBe("f1");
     });
 
-    it("charge stream computes efficiency independently from fuel stream", () => {
+    // Charge sessions are recorded but never form efficiency segments: an EV is
+    // charged at home most nights and that energy is never logged, so tank-style
+    // segments would be built on incomplete data. EV efficiency comes from
+    // state-of-charge snapshots instead — see battery-health.ts.
+    it("records charge logs without deriving efficiency from them", () => {
         const logs = [
-            makeLog({ id: "c1", energy_type: "charge", odometer: 1200, fuel_volume: 20, fill_type: "full" }),
+            makeLog({ id: "c1", energy_type: "charge", odometer: 1200, fuel_volume: 20, fill_type: null }),
         ];
 
         const result = buildFuelAnalytics(logs, 1000);
-        expect(result.charge.closed_segments).toHaveLength(1);
-        expect(result.charge.closed_segments[0].derived_efficiency).toBeCloseTo(10, 3); // 200km / 20kWh
+        expect(result.charge.logs).toHaveLength(1);
+        expect(result.charge.closed_segments).toHaveLength(0);
+        expect(result.charge.logs[0].contributes_to_efficiency).toBe(false);
+        expect(result.charge.logs[0].derived_efficiency).toBeNull();
+        expect(result.charge.logs[0].fill_type).toBeNull();
         expect(result.fuel.closed_segments).toHaveLength(0);
+    });
+
+    it("does not mark charge logs as pending a full top-up", () => {
+        const logs = [
+            makeLog({ id: "c1", energy_type: "charge", odometer: 1200, fill_type: null }),
+            makeLog({ id: "c2", energy_type: "charge", odometer: 1300, fill_type: null }),
+        ];
+
+        const result = buildFuelAnalytics(logs, 1000);
+        expect(result.charge.logs.every((log) => !log.pending_full)).toBe(true);
     });
 });

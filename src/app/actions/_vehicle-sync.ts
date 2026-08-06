@@ -11,6 +11,7 @@ type VehicleOdometerSyncRow =
     Pick<Database["public"]["Tables"]["vehicles"]["Row"], "baseline_odometer" | "current_odometer"> & {
         fuel_logs: Array<Pick<Database["public"]["Tables"]["fuel_logs"]["Row"], "odometer">>;
         maintenance_logs: Array<Pick<Database["public"]["Tables"]["maintenance_logs"]["Row"], "odometer">>;
+        vehicle_snapshots: Array<Pick<Database["public"]["Tables"]["vehicle_snapshots"]["Row"], "odometer">>;
     };
 type ServiceIntervalRow = Pick<Database["public"]["Tables"]["service_reminders"]["Row"], "id" | "service_type">;
 
@@ -21,7 +22,9 @@ export async function syncVehicleCurrentOdometer(
 ) {
     const { data: vehicle, error } = await supabase
         .from("vehicles")
-        .select("baseline_odometer, current_odometer, fuel_logs(odometer), maintenance_logs(odometer)")
+        .select(
+            "baseline_odometer, current_odometer, fuel_logs(odometer), maintenance_logs(odometer), vehicle_snapshots(odometer)",
+        )
         .eq("id", vehicleId);
 
     const vehicleRow = ((vehicle as unknown as VehicleOdometerSyncRow[]) ?? [])[0];

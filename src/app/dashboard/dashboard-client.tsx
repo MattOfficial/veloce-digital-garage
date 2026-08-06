@@ -55,10 +55,18 @@ import {
   getStatusClassName,
   type RefillStatus,
 } from "@/utils/cadence-predictions";
+import {
+  estimateDaysOfRangeLeft,
+  getLatestSocSnapshot,
+  summarizeBatteryHealth,
+} from "@/utils/battery-health";
 import { createTrailingDayRange, getVehicleDistanceSummary } from "@/utils/distance-analytics";
 import {
+  convertEvEfficiency,
   convertFuelEfficiency,
+  getDefaultEvEfficiencyUnit,
   getDefaultFuelEfficiencyUnit,
+  getEvEfficiencyPrecision,
 } from "@/utils/efficiency-units";
 import { buildFuelAnalytics, type FuelAnalyticsMode } from "@/utils/fuel-analytics";
 import { formatMoney, getCurrencySymbol } from "@/utils/formatting";
@@ -233,6 +241,38 @@ export default function DashboardClient({
       ? "charge"
       : "fuel";
   const activeStream = analytics[analysisMode];
+
+  // An EV's efficiency and readiness come from state-of-charge check-ins, not
+  // from charge sessions — most of its energy is never logged at all.
+  const isEv = selectedVehicle.powertrain === "ev";
+  const batteryHealth = summarizeBatteryHealth(
+    selectedVehicle.vehicle_snapshots ?? [],
+    {
+      usableBatteryKwh:
+        selectedVehicle.usable_battery_kwh ?? selectedVehicle.battery_capacity_kwh,
+      baselineRangeKm: selectedVehicle.baseline_range_km,
+    },
+  );
+  const evEfficiencyUnit = getDefaultEvEfficiencyUnit(distanceUnit);
+  const evEfficiency =
+    batteryHealth.whPerKm != null
+      ? convertEvEfficiency(
+          1,
+          batteryHealth.whPerKm / 1000,
+          evEfficiencyUnit,
+          distanceUnit,
+        )
+      : null;
+  const latestSocSnapshot = getLatestSocSnapshot(
+    selectedVehicle.vehicle_snapshots ?? [],
+  );
+  const evDaysOfRangeLeft = estimateDaysOfRangeLeft(
+    latestSocSnapshot?.soc_percent ?? null,
+    batteryHealth.kmPerPercent,
+    distanceLast30Days.value != null && distanceLast30Days.value > 0
+      ? distanceLast30Days.value / 30
+      : null,
+  );
 
   const totalEfficiencyDistance = activeStream.closed_segments.reduce(
     (sum, segment) => sum + segment.distance,
@@ -515,7 +555,11 @@ export default function DashboardClient({
               <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5">
                 <div>
                   <CardTitle className="text-base">Efficiency pulse</CardTitle>
-                  <CardDescription>Weighted from closed sessions</CardDescription>
+                  <CardDescription>
+                    {isEv
+                      ? "Measured from battery check-ins"
+                      : "Weighted from closed sessions"}
+                  </CardDescription>
                 </div>
                 <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
                   <Gauge className="h-4 w-4" />
@@ -525,13 +569,21 @@ export default function DashboardClient({
                 <div className="flex items-end justify-between gap-4">
                   <div>
                     <p className="text-3xl font-semibold tracking-tight tabular-nums">
-                      {averageEfficiency == null
-                        ? ui.common.emptyValue
-                        : averageEfficiency.toFixed(2)}
+                      {isEv
+                        ? evEfficiency == null
+                          ? ui.common.emptyValue
+                          : evEfficiency.toFixed(
+                              getEvEfficiencyPrecision(evEfficiencyUnit),
+                            )
+                        : averageEfficiency == null
+                          ? ui.common.emptyValue
+                          : averageEfficiency.toFixed(2)}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{efficiencyUnit}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {isEv ? evEfficiencyUnit : efficiencyUnit}
+                    </p>
                   </div>
-                  {efficiencyDirection != null && (
+                  {!isEv && efficiencyDirection != null && (
                     <div
                       className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         efficiencyDirection >= 0
@@ -557,28 +609,56 @@ export default function DashboardClient({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      {analysisMode === "charge" ? "Next charge" : "Next refuel"}
+                      {isEv
+                        ? "Range left"
+                        : analysisMode === "charge"
+                          ? "Next charge"
+                          : "Next refuel"}
                     </p>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${getPredictionTone(prediction.status)}`}
                     >
-                      {prediction.confidence === "none"
-                        ? "Learning"
-                        : `${prediction.confidence} confidence`}
+                      {isEv
+                        ? batteryHealth.confidence === "none"
+                          ? "Learning"
+                          : `${batteryHealth.confidence} confidence`
+                        : prediction.confidence === "none"
+                          ? "Learning"
+                          : `${prediction.confidence} confidence`}
                     </span>
                   </div>
-                  <PredictionStatusIcon
-                    status={prediction.status}
-                    className={`mt-5 h-5 w-5 ${getStatusClassName(prediction.status)}`}
-                  />
-                  <p className={`mt-2 text-sm font-semibold leading-snug ${getStatusClassName(prediction.status)}`}>
-                    {getRefillDisplayString(prediction, analysisMode)}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {prediction.intervalDays
-                      ? `Typical cadence: ${prediction.intervalDays} days`
-                      : "Two dated sessions unlock a forecast"}
-                  </p>
+                  {/* Charging is nightly, so "when is the next one due" is not a
+                      useful question for an EV. How much riding is left is. */}
+                  {isEv ? (
+                    <>
+                      <Zap className="mt-5 h-5 w-5 text-teal-500" />
+                      <p className="mt-2 text-sm font-semibold leading-snug">
+                        {evDaysOfRangeLeft != null
+                          ? ui.ev.rangeLeft.daysRemaining(evDaysOfRangeLeft)
+                          : ui.ev.rangeLeft.unavailable}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {latestSocSnapshot?.soc_percent != null
+                          ? ui.ev.rangeLeft.atSoc(latestSocSnapshot.soc_percent)
+                          : ui.ev.health.emptyTitle}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <PredictionStatusIcon
+                        status={prediction.status}
+                        className={`mt-5 h-5 w-5 ${getStatusClassName(prediction.status)}`}
+                      />
+                      <p className={`mt-2 text-sm font-semibold leading-snug ${getStatusClassName(prediction.status)}`}>
+                        {getRefillDisplayString(prediction, analysisMode)}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {prediction.intervalDays
+                          ? `Typical cadence: ${prediction.intervalDays} days`
+                          : "Two dated sessions unlock a forecast"}
+                      </p>
+                    </>
+                  )}
                 </Link>
 
                 <Link

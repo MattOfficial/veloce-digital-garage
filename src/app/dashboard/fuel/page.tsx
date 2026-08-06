@@ -23,12 +23,14 @@ import {
   DollarSign,
   Activity,
   BadgeDollarSign,
+  BatteryCharging,
   Pencil,
   Trash2,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
+import { EnergyBatteryPanel } from "@/components/ev/energy-battery-panel";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
@@ -338,6 +340,24 @@ export default function FuelPage() {
       className: "text-emerald-600 dark:text-emerald-400 font-semibold",
     };
   };
+
+  // A pure EV gets a different page entirely. Tank segments and the full-tank
+  // method do not apply to a vehicle that is charged at home most nights —
+  // see docs/ev-redesign.md.
+  if (selectedPowertrain === "ev") {
+    return (
+      <MotionWrapper className="max-w-6xl mx-auto space-y-6">
+        <PageHeader
+          title={ui.ev.pageTitle}
+          description={ui.ev.pageDescription(
+            `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`,
+          )}
+          icon={BatteryCharging}
+        />
+        <EnergyBatteryPanel vehicle={selectedVehicle} />
+      </MotionWrapper>
+    );
+  }
 
   return (
     <MotionWrapper className="max-w-6xl mx-auto space-y-6">
@@ -765,11 +785,19 @@ export default function FuelPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${log.fill_type === "full" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/10 text-amber-600 dark:text-amber-300"}`}
-                          >
-                            {ui.fuel.fillTypes[log.fill_type]}
-                          </span>
+                          {/* Charge rows have no fill type — the concept is
+                              ICE-only. */}
+                          {log.fill_type == null ? (
+                            <span className="text-muted-foreground">
+                              {ui.common.emptyValue}
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${log.fill_type === "full" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/10 text-amber-600 dark:text-amber-300"}`}
+                            >
+                              {ui.fuel.fillTypes[log.fill_type]}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           {log.odometer.toLocaleString()}{" "}

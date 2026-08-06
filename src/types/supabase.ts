@@ -148,40 +148,58 @@ export type Database = {
       fuel_logs: {
         Row: {
           calculated_efficiency: number | null
+          charge_source: "home" | "ac_public" | "dc_fast" | "other" | null
+          charger_network: string | null
           created_at: string | null
           date: string
+          end_soc: number | null
           energy_type: "fuel" | "charge" | null
           estimated_range: number | null
-          fill_type: "full" | "partial"
+          fill_type: "full" | "partial" | null
           fuel_volume: number
           id: string
+          is_estimated: boolean
+          location: string | null
           odometer: number
+          start_soc: number | null
           total_cost: number
           vehicle_id: string
         }
         Insert: {
           calculated_efficiency?: number | null
+          charge_source?: "home" | "ac_public" | "dc_fast" | "other" | null
+          charger_network?: string | null
           created_at?: string | null
           date: string
+          end_soc?: number | null
           energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
-          fill_type?: "full" | "partial"
+          fill_type?: "full" | "partial" | null
           fuel_volume: number
           id?: string
+          is_estimated?: boolean
+          location?: string | null
           odometer: number
+          start_soc?: number | null
           total_cost: number
           vehicle_id: string
         }
         Update: {
           calculated_efficiency?: number | null
+          charge_source?: "home" | "ac_public" | "dc_fast" | "other" | null
+          charger_network?: string | null
           created_at?: string | null
           date?: string
+          end_soc?: number | null
           energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
-          fill_type?: "full" | "partial"
+          fill_type?: "full" | "partial" | null
           fuel_volume?: number
           id?: string
+          is_estimated?: boolean
+          location?: string | null
           odometer?: number
+          start_soc?: number | null
           total_cost?: number
           vehicle_id?: string
         }
@@ -332,7 +350,11 @@ export type Database = {
           encrypted_deepseek_key: string | null
           encrypted_llm_key: string | null
           encrypted_openai_key: string | null
+          electricity_tariff_per_kwh: number | null
+          ev_efficiency_unit: string | null
+          ice_reference_efficiency: number | null
           id: string
+          petrol_price_reference: number | null
           preferred_llm_provider: string | null
         }
         Insert: {
@@ -344,7 +366,11 @@ export type Database = {
           encrypted_deepseek_key?: string | null
           encrypted_llm_key?: string | null
           encrypted_openai_key?: string | null
+          electricity_tariff_per_kwh?: number | null
+          ev_efficiency_unit?: string | null
+          ice_reference_efficiency?: number | null
           id: string
+          petrol_price_reference?: number | null
           preferred_llm_provider?: string | null
         }
         Update: {
@@ -356,15 +382,66 @@ export type Database = {
           encrypted_deepseek_key?: string | null
           encrypted_llm_key?: string | null
           encrypted_openai_key?: string | null
+          electricity_tariff_per_kwh?: number | null
+          ev_efficiency_unit?: string | null
+          ice_reference_efficiency?: number | null
           id?: string
+          petrol_price_reference?: number | null
           preferred_llm_provider?: string | null
         }
         Relationships: []
       }
+      vehicle_snapshots: {
+        Row: {
+          created_at: string | null
+          date: string
+          displayed_range: number | null
+          id: string
+          notes: string | null
+          odometer: number
+          soc_percent: number | null
+          source: "manual" | "ocr" | "api"
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          displayed_range?: number | null
+          id?: string
+          notes?: string | null
+          odometer: number
+          soc_percent?: number | null
+          source?: "manual" | "ocr" | "api"
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          displayed_range?: number | null
+          id?: string
+          notes?: string | null
+          odometer?: number
+          soc_percent?: number | null
+          source?: "manual" | "ocr" | "api"
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_snapshots_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           baseline_odometer: number
+          baseline_range_km: number | null
           battery_capacity_kwh: number | null
+          battery_warranty_km: number | null
+          battery_warranty_years: number | null
           color: string | null
           created_at: string | null
           current_odometer: number | null
@@ -377,8 +454,10 @@ export type Database = {
           model: string
           notes: string | null
           powertrain: string | null
+          rated_range_km: number | null
           transmission: string | null
           tyre_info: Json | null
+          usable_battery_kwh: number | null
           user_id: string
           vehicle_type: string | null
           vin: string | null
@@ -386,7 +465,10 @@ export type Database = {
         }
         Insert: {
           baseline_odometer: number
+          baseline_range_km?: number | null
           battery_capacity_kwh?: number | null
+          battery_warranty_km?: number | null
+          battery_warranty_years?: number | null
           color?: string | null
           created_at?: string | null
           current_odometer?: number | null
@@ -399,8 +481,10 @@ export type Database = {
           model: string
           notes?: string | null
           powertrain?: string | null
+          rated_range_km?: number | null
           transmission?: string | null
           tyre_info?: Json | null
+          usable_battery_kwh?: number | null
           user_id: string
           vehicle_type?: string | null
           vin?: string | null
@@ -408,7 +492,10 @@ export type Database = {
         }
         Update: {
           baseline_odometer?: number
+          baseline_range_km?: number | null
           battery_capacity_kwh?: number | null
+          battery_warranty_km?: number | null
+          battery_warranty_years?: number | null
           color?: string | null
           created_at?: string | null
           current_odometer?: number | null
@@ -421,8 +508,10 @@ export type Database = {
           model?: string
           notes?: string | null
           powertrain?: string | null
+          rated_range_km?: number | null
           transmission?: string | null
           tyre_info?: Json | null
+          usable_battery_kwh?: number | null
           user_id?: string
           vehicle_type?: string | null
           vin?: string | null

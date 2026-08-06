@@ -10,7 +10,7 @@ import {
     subMonths,
 } from "date-fns";
 
-import type { FuelLog, VehicleWithLogs } from "@/types/database";
+import type { VehicleWithLogs } from "@/types/database";
 
 export type DistanceCoverage = "none" | "partial" | "full";
 
@@ -39,7 +39,10 @@ export type DistanceMonthlyRollup = {
     coverage: DistanceCoverage;
 };
 
-type OdometerReading = FuelLog & {
+type OdometerReading = {
+    id: string;
+    date: string;
+    odometer: number;
     timestamp: number;
     createdAtSortKey: string;
 };
@@ -65,11 +68,22 @@ function getLogTimestamp(date: string): number {
     return parseISO(date).getTime();
 }
 
+/**
+ * EVs stop logging home charges under the SoC model, so fuel logs alone would
+ * leave them with no odometer history. Snapshots are the other reading source.
+ */
 function getSortedOdometerReadings(vehicle: VehicleWithLogs): OdometerReading[] {
-    return [...(vehicle.fuel_logs ?? [])]
+    const readings = [
+        ...(vehicle.fuel_logs ?? []),
+        ...(vehicle.vehicle_snapshots ?? []),
+    ];
+
+    return readings
         .filter((log) => Number.isFinite(log.odometer))
         .map((log) => ({
-            ...log,
+            id: log.id,
+            date: log.date,
+            odometer: log.odometer,
             timestamp: getLogTimestamp(log.date),
             createdAtSortKey: log.created_at ?? "",
         }))

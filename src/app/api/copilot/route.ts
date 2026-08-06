@@ -241,7 +241,7 @@ export async function POST(req: Request) {
 
         const { data: garageData, error: garageError } = await supabase
             .from("vehicles")
-            .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*), service_reminders(*)")
+            .select("*, fuel_logs(*), maintenance_logs(*), custom_logs(*), service_reminders(*), vehicle_snapshots(*)")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false });
 

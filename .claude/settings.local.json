@@ -7,7 +7,25 @@
       "Bash(npm ls:*)",
       "Bash(curl -s http://localhost:3001/chart-test)",
       "Bash(npx tsc:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "WebSearch",
+      "WebFetch(domain:anbuchelva.github.io)",
+      "Bash(sed -i 's/\\\\.select\\(\"\\\\*, fuel_logs\\(\\\\*\\), maintenance_logs\\(\\\\*\\), custom_logs\\(\\\\*\\), service_reminders\\(\\\\*\\)\"\\)/.select\\(\"*, fuel_logs\\(*\\), maintenance_logs\\(*\\), custom_logs\\(*\\), service_reminders\\(*\\), vehicle_snapshots\\(*\\)\"\\)/' src/app/api/copilot/route.ts src/app/dashboard/vehicles/\\\\[id\\\\]/page.tsx && grep -rn \"vehicle_snapshots\" src/app/api/copilot/route.ts \"src/app/dashboard/vehicles/[id]/page.tsx\")",
+      "Bash(bunx tsc *)",
+      "PowerShell(bunx tsc --noEmit 2>&1)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(Get-Command node,npm,bun -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-Path node_modules; Get-ChildItem \"$env:APPDATA\\\\npm\",\"$env:USERPROFILE\\\\.bun\\\\bin\" -ErrorAction SilentlyContinue | Select-Object -First 10 Name)",
+      "PowerShell($paths = @\\(\"C:\\\\Program Files\\\\nodejs\\\\node.exe\", \"C:\\\\Program Files \\(x86\\)\\\\nodejs\\\\node.exe\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\node.exe\", \"$env:USERPROFILE\\\\.bun\\\\bin\\\\bun.exe\", \"$env:LOCALAPPDATA\\\\fnm_multishells\", \"$env:APPDATA\\\\nvm\"\\); foreach \\($p in $paths\\) { \"$p -> $\\(Test-Path $p\\)\" })",
+      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" --version)",
+      "PowerShell(& \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" --version)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; npm install --no-package-lock --no-audit --no-fund 2>&1 | Select-Object -Last 15)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; npx tsc --noEmit 2>&1 | Select-Object -First 50)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; npm run test 2>&1 | Select-Object -Last 60)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; npm run lint 2>&1 | Select-Object -Last 30)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; git stash push -- src packages 2>&1 | Out-Null; npx eslint 2>&1 | Select-Object -Last 6; git stash pop 2>&1 | Select-Object -Last 3)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; npm run test:coverage 2>&1 | Select-Object -Last 35)",
+      "PowerShell($env:PATH = \"C:\\\\Users\\\\matru\\\\Code\\\\veloce-digital-garage\\\\node_modules\\\\.bin;C:\\\\Program Files\\\\nodejs;$env:PATH\"; if \\(Test-Path .env.local\\) { \"env.local present\" } else { \"no .env.local\" }; npm run build 2>&1 | Select-Object -Last 40)"
     ]
   }
 }

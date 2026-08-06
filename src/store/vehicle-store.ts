@@ -33,17 +33,29 @@ export const useVehicleStore = create<VehicleStore>()(
                 const { data: { user } } = await supabase.auth.getUser();
 
                 if (user) {
-                    const { data } = await supabase
+                    const { data, error } = await supabase
                         .from("vehicles")
                         .select(`
                             *,
                             fuel_logs (*),
                             maintenance_logs (*),
                             custom_logs (*),
-                            service_reminders (*)
+                            service_reminders (*),
+                            vehicle_snapshots (*)
                         `)
                         .eq("user_id", user.id)
                         .order('created_at', { ascending: false });
+
+                    // Without this a failed query is indistinguishable from an
+                    // empty garage, and the whole dashboard just renders blank.
+                    if (error) {
+                        console.error(
+                            `Error fetching vehicles: ${error.message}`,
+                            { code: error.code, details: error.details, hint: error.hint },
+                        );
+                        set({ isLoading: false });
+                        return;
+                    }
 
                     const fetchedVehicles = (data as unknown as VehicleWithLogs[]) || [];
 

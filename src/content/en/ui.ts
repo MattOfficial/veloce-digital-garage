@@ -455,6 +455,154 @@ export const ui = {
       deleting: "Deleting...",
     },
   },
+  ev: {
+    pageTitle: "Energy & Battery",
+    pageDescription: (vehicleLabel: string) =>
+      `Battery health and running costs for your ${vehicleLabel}.`,
+    checkIn: {
+      trigger: "Update Battery",
+      title: "Battery Check-In",
+      description: (vehicleLabel: string) =>
+        `Record the odometer and battery level on your ${vehicleLabel}.`,
+      helper:
+        "Two check-ins with no charge between them are all we need to work out your real range. No kWh, no receipts.",
+      labels: {
+        date: "Date",
+        odometer: (unit: string) => `Odometer (${unit})`,
+        soc: "Battery Level (%)",
+        displayedRange: (unit: string) => `Range Shown (${unit})`,
+        optional: "(Optional)",
+      },
+      placeholders: {
+        odometer: "e.g. 4120",
+        soc: "e.g. 62",
+        displayedRange: "e.g. 85",
+      },
+      messages: {
+        saved: "Check-in saved.",
+        failed: "Failed to save the check-in.",
+        unexpected: "An unexpected error occurred.",
+      },
+      submit: {
+        save: "Save Check-In",
+        saving: "Saving...",
+      },
+    },
+    health: {
+      title: "Battery Health",
+      description: "Usable range at a full charge, compared with when tracking started.",
+      stateOfHealth: "State of Health",
+      usableRange: (unit: string) => `Usable Range (${unit})`,
+      perPercent: (unit: string) => `${unit} per 1%`,
+      baselineRange: (unit: string) => `Baseline (${unit})`,
+      degradationPerYear: "Degradation / year",
+      yearsToThreshold: (threshold: number) => `Years to ${threshold}%`,
+      trendTitle: "Usable Range Trend",
+      trendDescription: "Median usable range measured each month.",
+      confidenceLabel: "Confidence",
+      confidence: {
+        none: "No data",
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+      },
+      baselineSource: {
+        configured: "Baseline set on the vehicle",
+        "earliest-segments": "Baseline inferred from your earliest check-ins",
+        unavailable: "No baseline yet",
+      },
+      emptyTitle: "Not enough check-ins yet",
+      emptyDescription:
+        "Record the odometer and battery level a few times and the range trend will appear here. Check-ins where the battery went up are ignored.",
+      segmentsUsed: (count: number) =>
+        `${count} usable ${count === 1 ? "reading" : "readings"}`,
+    },
+    energy: {
+      title: "Running Cost",
+      efficiency: "Efficiency",
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      monthlyCost: "Last 30 days",
+      energyUsed: "Energy Used",
+      inferredHome: "Home charging (estimated)",
+      loggedPublic: "Public charging (logged)",
+      basisLabel: "Basis",
+      basis: {
+        measured: "Measured from logged sessions",
+        "partially-inferred":
+          "Public sessions measured, home charging estimated from distance and efficiency",
+        inferred: "Estimated from distance, efficiency and your tariff",
+        unavailable: "Not enough data",
+      },
+      estimateBadge: "Estimated",
+      missingTariff:
+        "Set your electricity tariff in your profile to see home charging costs.",
+      missingEfficiency:
+        "Record a few battery check-ins to unlock energy and cost estimates.",
+    },
+    savings: {
+      title: "Savings vs Petrol",
+      description: "What the same distance would have cost on petrol.",
+      saved: "Saved",
+      equivalentCost: "Petrol equivalent",
+      perDistance: (unit: string) => `Saved per ${unit}`,
+      missingReference:
+        "Set a reference petrol price and economy in your profile to see savings.",
+    },
+    mix: {
+      title: "Charging Mix",
+      description: "Where your energy came from.",
+      sources: {
+        home: "Home",
+        ac_public: "Public AC",
+        dc_fast: "DC Fast",
+        other: "Other",
+      },
+      dcFastShare: "DC fast share",
+      empty: "No charging data yet.",
+    },
+    care: {
+      title: "Battery Care",
+      description: "How your charging habits affect long-term pack health.",
+      score: "Care Score",
+      deepDischarges: "Deep discharges (under 20%)",
+      fullCharges: "Charges to 100%",
+      dcFastShare: "DC fast charging",
+      bands: {
+        excellent: "Excellent",
+        good: "Good",
+        fair: "Fair",
+        poor: "Needs attention",
+        "insufficient-data": "Not enough data",
+      },
+    },
+    rangeLeft: {
+      title: "Range Left",
+      daysRemaining: (days: number) =>
+        `About ${days.toFixed(days < 10 ? 1 : 0)} ${days < 2 ? "day" : "days"} of riding left`,
+      unavailable: "Record a check-in to estimate remaining range.",
+      atSoc: (soc: number) => `At ${soc.toFixed(0)}% charge`,
+    },
+    chargeModal: {
+      trigger: "Log Public Charge",
+      title: "Log Public Charge",
+      description:
+        "Home charging is worked out automatically. Only log sessions you paid for.",
+      labels: {
+        chargeSource: "Charger Type",
+        startSoc: "Start %",
+        endSoc: "End %",
+        network: "Network",
+        location: "Location",
+        energyOptional:
+          "Leave energy blank to derive it from the battery percentages.",
+      },
+      placeholders: {
+        network: "e.g. Ather Grid",
+        location: "e.g. Indiranagar",
+        soc: "e.g. 20",
+      },
+    },
+  },
   insights: {
     noVehicleSelectedTitle: "Choose a vehicle",
     noVehicleSelectedDescription: "Choose a vehicle to see its trends.",
@@ -978,6 +1126,23 @@ export const ui = {
     engineTypePlaceholder: "e.g. 2.0L Inline-4 Turbo",
     transmission: "Transmission",
     transmissionPlaceholder: "e.g. 8-Speed Automatic",
+    batterySectionTitle: "Battery",
+    batterySectionDescription:
+      "These figures turn your battery check-ins into energy, cost and health numbers.",
+    batteryCapacity: "Rated Capacity (kWh)",
+    batteryCapacityPlaceholder: "e.g. 3.7",
+    usableBattery: "Usable Capacity (kWh)",
+    usableBatteryPlaceholder: "e.g. 3.7",
+    usableBatteryHelper:
+      "What the pack actually delivers between 100% and 0%. Used to work out energy per distance.",
+    ratedRange: (unit: string) => `Rated Range (${unit})`,
+    ratedRangePlaceholder: "e.g. 150",
+    baselineRange: (unit: string) => `Baseline Range (${unit})`,
+    baselineRangePlaceholder: "e.g. 110",
+    baselineRangeHelper:
+      "Real usable range when the vehicle was new. Leave blank to infer it from your earliest check-ins.",
+    batteryWarrantyYears: "Battery Warranty (years)",
+    batteryWarrantyDistance: (unit: string) => `Battery Warranty (${unit})`,
     modelYear: "Model Year",
     importantNotes: "Important Notes",
     notesPlaceholder:
@@ -1053,6 +1218,21 @@ export const ui = {
       kilometers: "Kilometers (km)",
       miles: "Miles",
     },
+    electricityTariff: (currency: string) =>
+      `Electricity Tariff (${currency} per unit)`,
+    electricityTariffPlaceholder: "e.g. 8.00",
+    electricityTariffDescription:
+      "Used to estimate home charging cost. Home charging is never logged, so it is worked out from distance and measured efficiency.",
+    petrolPriceReference: (currency: string) =>
+      `Reference Petrol Price (${currency})`,
+    petrolPriceReferencePlaceholder: "e.g. 105.00",
+    petrolPriceReferenceDescription:
+      "Used to show what the same distance would have cost on petrol.",
+    iceReferenceEfficiency: (unit: string) =>
+      `Reference Petrol Economy (${unit}/L)`,
+    iceReferenceEfficiencyPlaceholder: "e.g. 45",
+    iceReferenceEfficiencyDescription:
+      "The economy of the petrol vehicle you are comparing against.",
     saveSuccess: "Profile updated successfully!",
     avatarUploaded: "Image uploaded! Don't forget to save.",
     clearStorageConfirm:
