@@ -583,24 +583,109 @@ export const ui = {
       atSoc: (soc: number) => `At ${soc.toFixed(0)}% charge`,
     },
     chargeModal: {
-      trigger: "Log Public Charge",
-      title: "Log Public Charge",
+      trigger: "Log Charge",
+      title: "Log a Charge",
+      editTitle: "Edit Charge",
       description:
-        "Home charging is worked out automatically. Only log sessions you paid for.",
+        "Every charge counts, at home or on the road. Pick how you were billed.",
+      editDescription: "Update this charging session.",
+      pricingModes: {
+        per_kwh: "Per unit",
+        per_minute: "Per minute",
+        flat: "Flat",
+        free: "Free",
+      },
+      pricingModeHelp: {
+        per_kwh:
+          "Meter or charger reported the units. Home charging and most DC chargers work this way.",
+        per_minute:
+          "Billed by the clock — Ather Grid, for example. We work out the units from the battery percentages.",
+        flat: "One price for the whole session, whatever it delivered.",
+        free: "Free to use. Still worth logging: it keeps your efficiency and battery figures honest.",
+      },
       labels: {
-        chargeSource: "Charger Type",
-        startSoc: "Start %",
-        endSoc: "End %",
+        chargeSource: "Where",
+        pricingMode: "Billed",
+        units: "Units consumed (kWh)",
+        ratePerKwh: (currency: string) => `Cost per unit (${currency}/kWh)`,
+        durationMinutes: "Minutes charged",
+        ratePerMinute: (currency: string) => `Cost per minute (${currency})`,
+        sessionPrice: (currency: string) => `Session price (${currency})`,
+        startSoc: "Battery at start (%)",
+        endSoc: "Battery at end (%)",
+        chargedToFull: "Charged to 100%",
+        chargedToFullHelper:
+          "Without percentages this is the only reference point we have for efficiency.",
         network: "Network",
         location: "Location",
-        energyOptional:
-          "Leave energy blank to derive it from the battery percentages.",
+        extras: "Session fee, idle time and tax",
+        sessionFee: (currency: string) => `Session fee (${currency})`,
+        idleMinutes: "Idle minutes",
+        idleRate: (currency: string) => `Idle rate (${currency}/min)`,
+        taxPercent: "Tax (%)",
+        overrideCost: "Enter the amount myself",
+        overrideCostHelper:
+          "Use this whenever the receipt disagrees with the maths. What you paid always wins.",
+        totalCost: (currency: string) => `Amount paid (${currency})`,
       },
       placeholders: {
         network: "e.g. Ather Grid",
         location: "e.g. Indiranagar",
         soc: "e.g. 20",
+        units: "e.g. 3.4",
+        rate: "e.g. 8",
+        minutes: "e.g. 45",
+        tax: "e.g. 18",
       },
+      summary: {
+        title: "This session",
+        total: "Total",
+        energy: "Energy",
+        effectiveRate: (currency: string) => `Effective ${currency}/kWh`,
+        derivedFromSoc: "Worked out from the battery percentages",
+        needsBatterySize:
+          "Set the usable battery size on this vehicle and we can work out the units from the percentages.",
+        needsSoc: "Add the start and end percentages to get the units for this session.",
+      },
+      errors: {
+        missingEnergy:
+          "Enter the units consumed, or both battery percentages so we can work them out.",
+        socOrder: "The end percentage has to be above the start.",
+      },
+      messages: {
+        saved: "Charge logged.",
+        editSaved: "Charge updated.",
+        failed: "Failed to save the charge.",
+      },
+    },
+    efficiency: {
+      title: "Charging Efficiency",
+      description: "Distance covered per unit you paid for.",
+      perKwh: (unit: string) => `${unit}/kWh`,
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      method: {
+        "soc-corrected": "From your battery percentages",
+        "full-charge-anchor": "Between full charges",
+      },
+      methodMixed: "From a mix of full charges and battery percentages",
+      segmentsUsed: (count: number) =>
+        `${count} complete ${count === 1 ? "stretch" : "stretches"} of riding`,
+      unanchored: (count: number) =>
+        `${count} ${count === 1 ? "session has" : "sessions have"} no reference point. Add the battery percentages, or mark a session as charged to 100%.`,
+      empty:
+        "Log two charges with the battery percentages and your real efficiency appears here.",
+    },
+    capacity: {
+      title: "Pack Capacity",
+      description:
+        "Measured whenever you charge from low to full. This is the one thing a 100% charge is worth doing.",
+      latest: "Latest",
+      baseline: "First measured",
+      stateOfHealth: "Against first measurement",
+      empty:
+        "Charge from under 50% all the way to full and we can size your battery.",
+      lossNote:
+        "Measured at the meter, so it includes charging losses and reads a little high. The trend is what matters.",
     },
   },
   insights: {

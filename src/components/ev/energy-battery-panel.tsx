@@ -13,6 +13,7 @@ import {
 import {
   BatteryCharging,
   BatteryWarning,
+  Gauge,
   HeartPulse,
   PiggyBank,
   Plug,
@@ -101,6 +102,7 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
     () =>
       buildEvEnergySummary(vehicle, {
         whPerKm: health.whPerKm,
+        usableBatteryKwh: vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh,
         tariffPerKwh: profile.electricityTariffPerKwh,
         petrolPricePerUnit: profile.petrolPriceReference,
         iceReferenceEfficiency: profile.iceReferenceEfficiency,
@@ -264,6 +266,70 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
       </MotionWrapper>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Efficiency measured against energy actually paid for, which is a
+            different number from the pack-level figure above: the meter bills
+            for charging losses too. */}
+        <MotionWrapper>
+          <Card className="h-full rounded-[2rem]">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Gauge className="h-5 w-5 text-primary" />
+                    {ui.ev.efficiency.title}
+                  </CardTitle>
+                  <CardDescription>{ui.ev.efficiency.description}</CardDescription>
+                </div>
+                <p className="text-right text-xs text-muted-foreground">
+                  {ui.ev.efficiency.segmentsUsed(energy.efficiency.usableSegmentCount)}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {energy.efficiency.distancePerKwh != null ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <StatTile
+                      label={ui.ev.efficiency.perKwh(distanceUnit)}
+                      value={energy.efficiency.distancePerKwh.toFixed(1)}
+                      hint={
+                        energy.efficiency.method != null
+                          ? ui.ev.efficiency.method[energy.efficiency.method]
+                          : ui.ev.efficiency.methodMixed
+                      }
+                    />
+                    <StatTile
+                      label={ui.ev.efficiency.costPerDistance(distanceUnit)}
+                      value={
+                        energy.efficiency.costPerDistance != null
+                          ? formatMoney(
+                              energy.efficiency.costPerDistance,
+                              profile.currency,
+                              { maximumFractionDigits: 2 },
+                            )
+                          : ui.vehicle.emptyValue
+                      }
+                      hint={ui.ev.health.confidence[energy.efficiency.confidence]}
+                    />
+                  </div>
+
+                  {energy.efficiency.unanchoredSessionCount > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {ui.ev.efficiency.unanchored(
+                        energy.efficiency.unanchoredSessionCount,
+                      )}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {ui.ev.efficiency.empty}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </MotionWrapper>
+
         <MotionWrapper>
           <Card className="h-full rounded-[2rem]">
             <CardHeader>
@@ -475,6 +541,52 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                   </span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </MotionWrapper>
+
+        {/* The one payoff for charging all the way to full. Efficiency never
+            needs it; sizing the pack does. */}
+        <MotionWrapper>
+          <Card className="h-full rounded-[2rem]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BatteryWarning className="h-5 w-5 text-primary" />
+                {ui.ev.capacity.title}
+              </CardTitle>
+              <CardDescription>{ui.ev.capacity.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {energy.capacity.latestApparentKwh != null ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <StatTile
+                      label={ui.ev.capacity.latest}
+                      value={`${energy.capacity.latestApparentKwh.toFixed(2)} kWh`}
+                      hint={
+                        energy.capacity.baselineApparentKwh != null
+                          ? `${ui.ev.capacity.baseline}: ${energy.capacity.baselineApparentKwh.toFixed(2)} kWh`
+                          : null
+                      }
+                    />
+                    <StatTile
+                      label={ui.ev.capacity.stateOfHealth}
+                      value={
+                        energy.capacity.stateOfHealthPercent != null
+                          ? `${energy.capacity.stateOfHealthPercent.toFixed(1)}%`
+                          : ui.vehicle.emptyValue
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {ui.ev.capacity.lossNote}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {ui.ev.capacity.empty}
+                </p>
+              )}
             </CardContent>
           </Card>
         </MotionWrapper>

@@ -6,6 +6,25 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### UI — a charge form that knows how you were billed (2026-08-08)
+
+- New `src/components/ev/charge-session-form.tsx`. Pricing-mode tabs (per unit / per minute /
+  flat / free) show only the fields that mode needs, with session fee, idle time and tax
+  behind a disclosure. A live summary prices the session using the same functions the server
+  does, so the preview is the figure that gets saved.
+- "Enter the amount myself" overrides the calculated total. That switch is what makes an
+  unmodellable tariff loggable — the receipt always wins over the arithmetic.
+- Home charging gets a first-class form instead of being inferred, with the profile
+  electricity tariff prefilled as the per-unit rate.
+- "Charged to 100%" appears only when no end percentage was given, which is exactly when it
+  is the sole reference point efficiency can use.
+- Editing a charge now opens the same form. The old edit modal silently carried charge fields
+  through untouched, so a wrong tariff could never be corrected.
+- `fuel-log-modal.tsx` splits into a liquid form and the charge form rather than one form
+  with `isCharge` branches through every field.
+- The EV panel gains a Charging Efficiency card (distance per kWh paid for, with the method
+  and confidence stated) and a Pack Capacity card.
+
 ### Analytics — efficiency from charge-to-charge segments (2026-08-08)
 
 - Rewrote `ev-energy-analytics.ts` around logged sessions. `buildChargeSegments` walks the

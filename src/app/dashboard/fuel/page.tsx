@@ -911,6 +911,7 @@ export default function FuelPage() {
       {editingLog && (
         <FuelEditModal
           log={editingLog}
+          vehicle={selectedVehicle}
           open={Boolean(editingLog)}
           onOpenChange={(open) => {
             if (!open) {
