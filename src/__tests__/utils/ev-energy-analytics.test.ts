@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { FuelLog, VehicleSnapshot, VehicleWithLogs } from "@/types/database";
 import {
+  buildChargeSegments,
   buildEvEnergySummary,
   buildEvLifetimeEnergySummary,
-  deriveEnergyFromSocDelta,
+  summarizeChargeEfficiency,
+  summarizePackCapacity,
 } from "@/utils/ev-energy-analytics";
 import * as factories from "@/__tests__/factories";
 
@@ -61,272 +63,531 @@ function makeRidingHistory(): VehicleSnapshot[] {
   ];
 }
 
+describe("buildChargeSegments", () => {
+  it("attributes energy by the state of charge the driving consumed", () => {
+    // Session 2 replaced 50% but the ride had used 70%, so 1.4x its energy is
+    // what that 100 km actually cost.
+    const segments = buildChargeSegments([
+      makeChargeLog({
+        id: "c1",
+        date: "2026-07-01",
+        odometer: 1000,
+        start_soc: 20,
+        end_soc: 100,
+        fuel_volume: 3.2,
+        total_cost: 25.6,
+      }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-06",
+        odometer: 1100,
+        start_soc: 30,
+        end_soc: 80,
+        fuel_volume: 2,
+        total_cost: 16,
+      }),
+    ]);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].method).toBe("soc-corrected");
+    expect(segments[0].distance).toBe(100);
+    expect(segments[0].energyKwh).toBeCloseTo(2.8, 5);
+    expect(segments[0].cost).toBeCloseTo(22.4, 5);
+    expect(segments[0].distancePerKwh).toBeCloseTo(35.714, 3);
+    expect(segments[0].usable).toBe(true);
+  });
+
+  it("collapses to the full-tank method when both sessions end at 100%", () => {
+    // The whole argument for not requiring a full charge: it is the special
+    // case where the correction ratio is exactly 1.
+    const segments = buildChargeSegments([
+      makeChargeLog({ id: "c1", date: "2026-07-01", odometer: 1000, start_soc: 20, end_soc: 100 }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-08",
+        odometer: 1150,
+        start_soc: 25,
+        end_soc: 100,
+        fuel_volume: 3,
+        total_cost: 24,
+      }),
+    ]);
+
+    expect(segments[0].energyKwh).toBeCloseTo(3, 10);
+    expect(segments[0].distancePerKwh).toBeCloseTo(150 / 3, 10);
+  });
+
+  it("falls back to full-charge anchors when no percentages were logged", () => {
+    // Classic full-tank method: the partial in the middle accumulates into the
+    // segment that the second full charge closes.
+    const noSoc = { start_soc: null, end_soc: null } as const;
+    const segments = buildChargeSegments([
+      makeChargeLog({
+        id: "c1",
+        date: "2026-07-01",
+        odometer: 1000,
+        charged_to_full: true,
+        fuel_volume: 3,
+        total_cost: 24,
+        ...noSoc,
+      }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-05",
+        odometer: 1100,
+        charged_to_full: false,
+        fuel_volume: 1,
+        total_cost: 8,
+        ...noSoc,
+      }),
+      makeChargeLog({
+        id: "c3",
+        date: "2026-07-11",
+        odometer: 1250,
+        charged_to_full: true,
+        fuel_volume: 2.5,
+        total_cost: 20,
+        ...noSoc,
+      }),
+    ]);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].method).toBe("full-charge-anchor");
+    expect(segments[0].startLogId).toBe("c1");
+    expect(segments[0].endLogId).toBe("c3");
+    expect(segments[0].distance).toBe(250);
+    // The opening session's own energy went in before the driving started.
+    expect(segments[0].energyKwh).toBeCloseTo(3.5, 5);
+    expect(segments[0].cost).toBeCloseTo(28, 5);
+  });
+
+  it("produces nothing when there is neither a percentage nor a full charge", () => {
+    const segments = buildChargeSegments([
+      makeChargeLog({
+        id: "c1",
+        date: "2026-07-01",
+        odometer: 1000,
+        start_soc: null,
+        end_soc: null,
+        charged_to_full: false,
+      }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-05",
+        odometer: 1100,
+        start_soc: null,
+        end_soc: null,
+        charged_to_full: false,
+      }),
+    ]);
+
+    expect(segments).toHaveLength(0);
+  });
+
+  it("refuses to credit a session with implausibly more driving than it replaced", () => {
+    // 75% used against 5% added means a charge went unlogged in between.
+    const segments = buildChargeSegments([
+      makeChargeLog({ id: "c1", date: "2026-07-01", odometer: 1000, start_soc: 20, end_soc: 80 }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-20",
+        odometer: 1900,
+        start_soc: 5,
+        end_soc: 10,
+        charged_to_full: false,
+      }),
+    ]);
+
+    expect(segments).toHaveLength(0);
+  });
+
+  it("marks a segment unusable when the odometer did not move", () => {
+    const segments = buildChargeSegments([
+      makeChargeLog({ id: "c1", date: "2026-07-01", odometer: 1000, start_soc: 20, end_soc: 100 }),
+      makeChargeLog({ id: "c2", date: "2026-07-02", odometer: 1000, start_soc: 90, end_soc: 100 }),
+    ]);
+
+    expect(segments[0].usable).toBe(false);
+    expect(segments[0].rejection).toBe("no-distance");
+  });
+
+  it("rejects a segment whose efficiency is far off the rest", () => {
+    const base = [1000, 1100, 1200, 1300].map((odometer, index) =>
+      makeChargeLog({
+        id: `c${index}`,
+        date: `2026-07-0${index + 1}`,
+        odometer,
+        start_soc: 20,
+        end_soc: 100,
+        fuel_volume: 3,
+        total_cost: 24,
+      }),
+    );
+
+    // A 900 km jump on the same charge could only come from an unlogged session.
+    const withOutlier = [
+      ...base,
+      makeChargeLog({
+        id: "c-outlier",
+        date: "2026-07-09",
+        odometer: 2200,
+        start_soc: 20,
+        end_soc: 100,
+        fuel_volume: 3,
+        total_cost: 24,
+      }),
+    ];
+
+    const segments = buildChargeSegments(withOutlier);
+    const outlier = segments.find((segment) => segment.endLogId === "c-outlier");
+
+    expect(outlier?.usable).toBe(false);
+    expect(outlier?.rejection).toBe("outlier");
+    expect(segments.filter((segment) => segment.usable)).toHaveLength(3);
+  });
+
+  it("ignores liquid fuel rows", () => {
+    const segments = buildChargeSegments([
+      factories.makeFuelLog({ id: "f1", odometer: 1000 }),
+      factories.makeFuelLog({ id: "f2", odometer: 1100 }),
+    ]);
+
+    expect(segments).toHaveLength(0);
+  });
+});
+
+describe("summarizeChargeEfficiency", () => {
+  function evenlySpacedSessions(count: number): FuelLog[] {
+    return Array.from({ length: count }, (_, index) =>
+      makeChargeLog({
+        id: `c${index}`,
+        date: `2026-07-${String(index * 2 + 1).padStart(2, "0")}`,
+        odometer: 1000 + index * 100,
+        start_soc: 20,
+        end_soc: 100,
+        fuel_volume: 3,
+        total_cost: 24,
+      }),
+    );
+  }
+
+  it("reports the median rate across usable segments", () => {
+    const summary = summarizeChargeEfficiency(evenlySpacedSessions(4));
+
+    expect(summary.usableSegmentCount).toBe(3);
+    expect(summary.distancePerKwh).toBeCloseTo(100 / 3, 5);
+    expect(summary.costPerDistance).toBeCloseTo(0.24, 5);
+    expect(summary.method).toBe("soc-corrected");
+  });
+
+  it("withholds a figure until there are enough segments", () => {
+    const summary = summarizeChargeEfficiency(evenlySpacedSessions(2));
+
+    expect(summary.usableSegmentCount).toBe(1);
+    expect(summary.distancePerKwh).toBeNull();
+    expect(summary.confidence).toBe("low");
+  });
+
+  it("has no confidence and no rate with nothing logged", () => {
+    const summary = summarizeChargeEfficiency([]);
+
+    expect(summary.confidence).toBe("none");
+    expect(summary.distancePerKwh).toBeNull();
+    expect(summary.unanchoredSessionCount).toBe(0);
+  });
+
+  it("reaches high confidence on a long, consistent history", () => {
+    const summary = summarizeChargeEfficiency(evenlySpacedSessions(8));
+
+    expect(summary.confidence).toBe("high");
+    expect(summary.consistencyScore).toBeGreaterThan(60);
+  });
+
+  it("counts sessions that never anchored a segment", () => {
+    const summary = summarizeChargeEfficiency([
+      makeChargeLog({
+        id: "c1",
+        date: "2026-07-01",
+        odometer: 1000,
+        start_soc: null,
+        end_soc: null,
+        charged_to_full: false,
+      }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-05",
+        odometer: 1100,
+        start_soc: null,
+        end_soc: null,
+        charged_to_full: false,
+      }),
+      makeChargeLog({
+        id: "c3",
+        date: "2026-07-09",
+        odometer: 1200,
+        start_soc: null,
+        end_soc: null,
+        charged_to_full: false,
+      }),
+    ]);
+
+    expect(summary.unanchoredSessionCount).toBe(2);
+  });
+});
+
+describe("summarizePackCapacity", () => {
+  it("tracks apparent pack size across full charges", () => {
+    const summary = summarizePackCapacity([
+      makeChargeLog({
+        id: "c1",
+        date: "2026-01-05",
+        start_soc: 10,
+        end_soc: 100,
+        fuel_volume: 3.6,
+      }),
+      makeChargeLog({
+        id: "c2",
+        date: "2026-07-05",
+        start_soc: 10,
+        end_soc: 100,
+        fuel_volume: 3.42,
+      }),
+    ]);
+
+    expect(summary.measurements).toHaveLength(2);
+    expect(summary.baselineApparentKwh).toBeCloseTo(4, 5);
+    expect(summary.latestApparentKwh).toBeCloseTo(3.8, 5);
+    expect(summary.stateOfHealthPercent).toBeCloseTo(95, 5);
+  });
+
+  it("holds back state of health until there is something to compare", () => {
+    const summary = summarizePackCapacity([
+      makeChargeLog({ id: "c1", start_soc: 10, end_soc: 100, fuel_volume: 3.6 }),
+    ]);
+
+    expect(summary.latestApparentKwh).toBeCloseTo(4, 5);
+    expect(summary.stateOfHealthPercent).toBeNull();
+  });
+
+  it("has nothing to say without a full charge", () => {
+    const summary = summarizePackCapacity([makeChargeLog({ start_soc: 20, end_soc: 80 })]);
+
+    expect(summary.measurements).toHaveLength(0);
+    expect(summary.latestApparentKwh).toBeNull();
+  });
+});
+
 describe("buildEvEnergySummary", () => {
-  it("infers home charging as the energy that logged sessions do not explain", () => {
+  it("totals what was logged and does not top it up with a guess", () => {
     const vehicle = makeVehicle({
       vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog()],
+      fuel_logs: [
+        makeChargeLog({ id: "c1", date: "2026-07-05", odometer: 1150, fuel_volume: 2, total_cost: 30 }),
+        makeChargeLog({ id: "c2", date: "2026-07-20", odometer: 1450, fuel_volume: 3, total_cost: 45 }),
+      ],
     });
 
     const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
+      whPerKm: 30,
       tariffPerKwh: 8,
       currentDate: CURRENT_DATE,
     });
 
-    // 600 km at 40 Wh/km is 24 kWh; 6 kWh of that was bought at a fast charger.
+    expect(summary.period.sessionCount).toBe(2);
+    expect(summary.period.loggedEnergyKwh).toBeCloseTo(5, 5);
+    expect(summary.period.loggedCost).toBeCloseTo(75, 5);
+    // The old model would have added distance x Wh/km on top of this.
+    expect(summary.period.inferredEnergyKwh).toBeNull();
+    expect(summary.period.totalEnergyKwh).toBeCloseTo(5, 5);
+    expect(summary.period.totalCost).toBeCloseTo(75, 5);
+    expect(summary.period.basis).toBe("measured");
+  });
+
+  it("falls back to inference only when nothing at all was logged", () => {
+    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
+
+    const summary = buildEvEnergySummary(vehicle, {
+      whPerKm: 30,
+      tariffPerKwh: 8,
+      currentDate: CURRENT_DATE,
+    });
+
     expect(summary.period.distance).toBe(600);
-    expect(summary.period.loggedEnergyKwh).toBe(6);
-    expect(summary.period.inferredHomeEnergyKwh).toBeCloseTo(18, 6);
-    expect(summary.period.inferredHomeCost).toBeCloseTo(144, 6);
-    expect(summary.period.totalEnergyKwh).toBeCloseTo(24, 6);
-    expect(summary.period.totalCost).toBeCloseTo(234, 6);
-    expect(summary.period.costPerDistance).toBeCloseTo(0.39, 6);
-    expect(summary.period.basis).toBe("partially-inferred");
-  });
-
-  it("never infers negative home energy when logged sessions exceed the estimate", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog({ fuel_volume: 100 })],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
-    expect(summary.period.inferredHomeEnergyKwh).toBe(0);
-    expect(summary.period.basis).toBe("measured");
-  });
-
-  it("reports a fully inferred basis when nothing was logged", () => {
-    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
+    expect(summary.period.inferredEnergyKwh).toBeCloseTo(18, 5);
+    expect(summary.period.inferredCost).toBeCloseTo(144, 5);
     expect(summary.period.basis).toBe("inferred");
-    expect(summary.period.inferredHomeEnergyKwh).toBeCloseTo(24, 6);
-    expect(summary.period.loggedEnergyKwh).toBe(0);
   });
 
-  it("falls back to logged sessions alone when efficiency is unknown", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog()],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
-    expect(summary.period.inferredHomeEnergyKwh).toBeNull();
-    expect(summary.period.totalEnergyKwh).toBe(6);
-    expect(summary.period.totalCost).toBe(90);
-    expect(summary.period.basis).toBe("measured");
-  });
-
-  it("leaves home cost unknown without a tariff", () => {
+  it("has no cost basis at all without efficiency or sessions", () => {
     const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
 
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      currentDate: CURRENT_DATE,
-    });
+    const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
 
-    expect(summary.period.inferredHomeEnergyKwh).toBeCloseTo(24, 6);
-    expect(summary.period.inferredHomeCost).toBeNull();
+    expect(summary.period.basis).toBe("unavailable");
     expect(summary.period.totalCost).toBeNull();
     expect(summary.period.costPerDistance).toBeNull();
   });
 
-  it("splits the charging mix between inferred home energy and logged sessions", () => {
+  it("divides logged cost by distance for the running cost", () => {
     const vehicle = makeVehicle({
       vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog()],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
-    const home = summary.mix.entries.find((entry) => entry.source === "home");
-    const dcFast = summary.mix.entries.find((entry) => entry.source === "dc_fast");
-
-    expect(home?.energyKwh).toBeCloseTo(18, 6);
-    expect(home?.share).toBeCloseTo(0.75, 6);
-    expect(home?.isEstimated).toBe(true);
-    expect(home?.sessionCount).toBe(0);
-    expect(dcFast?.share).toBeCloseTo(0.25, 6);
-    expect(dcFast?.sessionCount).toBe(1);
-    expect(summary.mix.dcFastShare).toBeCloseTo(0.25, 6);
-  });
-
-  it("compares the running cost against the petrol equivalent", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog()],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      petrolPricePerUnit: 105,
-      iceReferenceEfficiency: 45,
-      currentDate: CURRENT_DATE,
-    });
-
-    // 600 km at 45 km/L is 13.33 L, at 105 a litre.
-    expect(summary.savings.equivalentIceCost).toBeCloseTo(1400, 6);
-    expect(summary.savings.savings).toBeCloseTo(1166, 6);
-    expect(summary.savings.savingsPerDistance).toBeCloseTo(1.9433, 3);
-  });
-
-  it("leaves savings unknown without a petrol reference", () => {
-    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
-    expect(summary.savings.equivalentIceCost).toBeNull();
-    expect(summary.savings.savings).toBeNull();
-  });
-
-  it("scores battery care from discharge depth, full charges and fast charging", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog()],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      tariffPerKwh: 8,
-      currentDate: CURRENT_DATE,
-    });
-
-    expect(summary.care.deepDischargeCount).toBe(1);
-    expect(summary.care.fullChargeCount).toBe(0);
-    // One deep discharge in six readings, plus a quarter of energy from DC fast.
-    expect(summary.care.score).toBeCloseTo(88.75, 2);
-    expect(summary.care.band).toBe("excellent");
-  });
-
-  it("counts a session that ends at a full charge", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog({ end_soc: 100 })],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      whPerKm: 40,
-      currentDate: CURRENT_DATE,
-    });
-
-    expect(summary.care.fullChargeCount).toBe(1);
-  });
-
-  it("withholds a care score until there are enough observations", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: [
-        makeSnapshot({ id: "s0", date: "2026-07-01", odometer: 1000, soc_percent: 90 }),
-        makeSnapshot({ id: "s1", date: "2026-07-20", odometer: 1200, soc_percent: 40 }),
+      fuel_logs: [
+        makeChargeLog({ id: "c1", date: "2026-07-05", odometer: 1150, fuel_volume: 4, total_cost: 120 }),
       ],
     });
 
     const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
 
-    expect(summary.care.score).toBeNull();
-    expect(summary.care.band).toBe("insufficient-data");
+    expect(summary.period.costPerDistance).toBeCloseTo(120 / 600, 5);
   });
 
-  it("treats a charge row with no source as other", () => {
+  it("splits the charging mix by source and shares out the energy", () => {
     const vehicle = makeVehicle({
       vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog({ charge_source: null })],
+      fuel_logs: [
+        makeChargeLog({
+          id: "c1",
+          date: "2026-07-05",
+          odometer: 1150,
+          charge_source: "home",
+          fuel_volume: 6,
+          total_cost: 48,
+        }),
+        makeChargeLog({
+          id: "c2",
+          date: "2026-07-20",
+          odometer: 1450,
+          charge_source: "dc_fast",
+          fuel_volume: 2,
+          total_cost: 40,
+        }),
+      ],
     });
 
     const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
-    const other = summary.mix.entries.find((entry) => entry.source === "other");
+    const home = summary.mix.entries.find((entry) => entry.source === "home");
 
-    expect(other?.sessionCount).toBe(1);
-    expect(other?.energyKwh).toBe(6);
+    expect(summary.mix.totalEnergyKwh).toBeCloseTo(8, 5);
+    expect(home?.share).toBeCloseTo(0.75, 5);
+    expect(home?.isEstimated).toBe(false);
+    expect(summary.mix.dcFastShare).toBeCloseTo(0.25, 5);
   });
 
-  it("ignores liquid fuel rows on a plug-in hybrid", () => {
+  it("labels inferred home energy as an estimate in the mix", () => {
+    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
+
+    const summary = buildEvEnergySummary(vehicle, {
+      whPerKm: 30,
+      tariffPerKwh: 8,
+      currentDate: CURRENT_DATE,
+    });
+    const home = summary.mix.entries.find((entry) => entry.source === "home");
+
+    expect(home?.isEstimated).toBe(true);
+    expect(home?.sessionCount).toBe(0);
+  });
+
+  it("compares the running cost with the petrol equivalent", () => {
     const vehicle = makeVehicle({
-      powertrain: "phev",
       vehicle_snapshots: makeRidingHistory(),
       fuel_logs: [
-        makeChargeLog(),
+        makeChargeLog({ id: "c1", date: "2026-07-05", odometer: 1150, fuel_volume: 6, total_cost: 48 }),
+      ],
+    });
+
+    const summary = buildEvEnergySummary(vehicle, {
+      petrolPricePerUnit: 105,
+      iceReferenceEfficiency: 45,
+      currentDate: CURRENT_DATE,
+    });
+
+    // 600 km at 45 km/L costs 13.33 L x 105.
+    expect(summary.savings.equivalentIceCost).toBeCloseTo(1400, 0);
+    expect(summary.savings.savings).toBeCloseTo(1352, 0);
+  });
+
+  it("has no savings figure without a petrol reference", () => {
+    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
+    const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
+
+    expect(summary.savings.savings).toBeNull();
+  });
+
+  it("counts a full charge logged without percentages towards battery care", () => {
+    const vehicle = makeVehicle({
+      vehicle_snapshots: makeRidingHistory(),
+      fuel_logs: [
         makeChargeLog({
-          id: "fuel-1",
-          energy_type: "fuel",
-          fill_type: "full",
-          charge_source: null,
-          fuel_volume: 12,
-          total_cost: 1200,
+          id: "c1",
+          date: "2026-07-05",
+          odometer: 1150,
+          start_soc: null,
+          end_soc: null,
+          charged_to_full: true,
+        }),
+        makeChargeLog({
+          id: "c2",
+          date: "2026-07-20",
+          odometer: 1450,
+          start_soc: null,
+          end_soc: null,
+          charged_to_full: false,
         }),
       ],
     });
 
     const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
 
-    expect(summary.period.loggedEnergyKwh).toBe(6);
-    expect(summary.period.loggedCost).toBe(90);
+    expect(summary.care.fullChargeCount).toBe(1);
+    expect(summary.care.deepDischargeCount).toBe(1);
+    expect(summary.care.score).not.toBeNull();
   });
 
-  it("excludes sessions outside the period", () => {
+  it("withholds a care score until there are enough observations", () => {
     const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog({ date: "2026-05-02" })],
+      vehicle_snapshots: [makeSnapshot({ soc_percent: 50 })],
     });
 
     const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
 
-    expect(summary.period.loggedEnergyKwh).toBe(0);
+    expect(summary.care.band).toBe("insufficient-data");
+    expect(summary.care.score).toBeNull();
+  });
+
+  it("reads efficiency from the whole history, not just the window", () => {
+    // A segment that opened before the window still describes this vehicle.
+    const vehicle = makeVehicle({
+      vehicle_snapshots: makeRidingHistory(),
+      fuel_logs: [
+        makeChargeLog({ id: "c1", date: "2026-03-01", odometer: 500, start_soc: 20, end_soc: 100 }),
+        makeChargeLog({ id: "c2", date: "2026-04-01", odometer: 600, start_soc: 20, end_soc: 100 }),
+        makeChargeLog({ id: "c3", date: "2026-05-01", odometer: 700, start_soc: 20, end_soc: 100 }),
+      ],
+    });
+
+    const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
+
+    expect(summary.period.sessionCount).toBe(0);
+    expect(summary.efficiency.usableSegmentCount).toBe(2);
+    expect(summary.efficiency.distancePerKwh).toBeCloseTo(100 / 6, 5);
   });
 });
 
 describe("buildEvLifetimeEnergySummary", () => {
-  it("uses lifetime distance and every logged session", () => {
+  it("totals every session ever logged", () => {
     const vehicle = makeVehicle({
       vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [makeChargeLog({ date: "2026-05-02" }), makeChargeLog()],
+      fuel_logs: [
+        makeChargeLog({ id: "c1", date: "2026-01-05", odometer: 200, fuel_volume: 3, total_cost: 24 }),
+        makeChargeLog({ id: "c2", date: "2026-07-20", odometer: 1450, fuel_volume: 2, total_cost: 40 }),
+      ],
     });
 
-    const summary = buildEvLifetimeEnergySummary(vehicle, {
-      whPerKm: 40,
-      currentDate: CURRENT_DATE,
-    });
+    const summary = buildEvLifetimeEnergySummary(vehicle, { currentDate: CURRENT_DATE });
 
-    expect(summary.period.distance).toBe(600);
-    expect(summary.period.loggedEnergyKwh).toBe(12);
     expect(summary.period.days).toBeNull();
     expect(summary.period.startDate).toBeNull();
-  });
-});
-
-describe("deriveEnergyFromSocDelta", () => {
-  it("converts a state-of-charge gain into kWh", () => {
-    expect(deriveEnergyFromSocDelta(20, 80, 3.7)).toBeCloseTo(2.22, 6);
-  });
-
-  it("returns null when the delta or pack size is unusable", () => {
-    expect(deriveEnergyFromSocDelta(null, 80, 3.7)).toBeNull();
-    expect(deriveEnergyFromSocDelta(20, null, 3.7)).toBeNull();
-    expect(deriveEnergyFromSocDelta(20, 80, null)).toBeNull();
-    expect(deriveEnergyFromSocDelta(80, 20, 3.7)).toBeNull();
-    expect(deriveEnergyFromSocDelta(50, 50, 3.7)).toBeNull();
+    expect(summary.period.loggedEnergyKwh).toBeCloseTo(5, 5);
+    expect(summary.period.loggedCost).toBeCloseTo(64, 5);
   });
 });

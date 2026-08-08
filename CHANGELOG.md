@@ -6,6 +6,26 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Analytics — efficiency from charge-to-charge segments (2026-08-08)
+
+- Rewrote `ev-energy-analytics.ts` around logged sessions. `buildChargeSegments` walks the
+  charge history and attributes each session's energy to the driving that preceded it,
+  rescaled by `socUsed / socAdded`. No full charge required; when both ends happen to sit at
+  100% the ratio is 1 and it is the full-tank method exactly.
+- Sessions logged without percentages fall back to full-charge anchors, accumulating partial
+  sessions in between. With neither reference point a segment simply produces no efficiency,
+  and the sessions are counted as unanchored rather than guessed at.
+- Segments are outlier-filtered on median absolute deviation, and a session credited with
+  more than 4x the charge it delivered is refused outright — both catch an unlogged session
+  sitting inside a segment.
+- `summarizePackCapacity` turns full charges into a state-of-health figure in kWh.
+- Inferred home charging is now cold-start only: the moment one session exists for a period,
+  topping the totals up with `distance x Wh/km` would corrupt a number the owner can check
+  against their electricity bill.
+- Battery care counts a full charge logged via `charged_to_full`, not just via `end_soc`.
+- New `src/utils/statistics.ts` holds median, MAD, outlier bounds, consistency and
+  least-squares slope, which `battery-health.ts` had its own copies of.
+
 ### Schema — charge sessions carry a real tariff (2026-08-08)
 
 - Migration `20260808000000_charge_pricing_modes.sql` adds `pricing_mode`, `rate_per_unit`,

@@ -302,15 +302,15 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     {ui.ev.energy.inferredHome}
-                    {energy.period.inferredHomeEnergyKwh != null ? (
+                    {energy.period.inferredEnergyKwh != null ? (
                       <EstimateBadge />
                     ) : null}
                   </span>
                   <span className="font-medium">
-                    {energy.period.inferredHomeEnergyKwh != null
-                      ? `${energy.period.inferredHomeEnergyKwh.toFixed(1)} kWh${
-                          energy.period.inferredHomeCost != null
-                            ? ` · ${formatMoney(energy.period.inferredHomeCost, profile.currency)}`
+                    {energy.period.inferredEnergyKwh != null
+                      ? `${energy.period.inferredEnergyKwh.toFixed(1)} kWh${
+                          energy.period.inferredCost != null
+                            ? ` · ${formatMoney(energy.period.inferredCost, profile.currency)}`
                             : ""
                         }`
                       : ui.vehicle.emptyValue}
