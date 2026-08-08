@@ -3,18 +3,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useVehicleStore } from "@/store/vehicle-store";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
-import { toast } from "sonner";
 
-import { Plus, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { VehicleWithLogs } from "@/types/database";
-import type { BadgeDefinition } from "@/lib/badges";
 import { ui } from "@/content/en/ui";
 import { ChargeSessionForm } from "@/components/ev/charge-session-form";
+import { SubmitButton } from "@/components/submit-button";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 import {
   Form,
@@ -144,14 +142,8 @@ function FuelLogForm({
   vehicle: VehicleWithLogs;
   onSuccess: () => void;
 }) {
-  const router = useRouter();
-  const { fetchVehicles } = useVehicleStore();
   const { profile, getVolumeUnit } = useUserStore();
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { run, isPending, error } = useVehicleMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -165,8 +157,6 @@ function FuelLogForm({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setMessage(null);
-
     const formData = new FormData();
     formData.append("vehicle_id", vehicle.id);
     formData.append("date", values.date);
@@ -176,36 +166,10 @@ function FuelLogForm({
     formData.append("energy_type", "fuel");
     formData.append("fill_type", values.fill_type);
 
-    startTransition(async () => {
-      try {
-        const result = await submitFuelLog(formData);
-        if (result.success) {
-          setMessage({ type: "success", text: ui.fuel.modal.messages.saved });
-          if ("newBadges" in result && result.newBadges?.length) {
-            result.newBadges.forEach((badge: BadgeDefinition) =>
-              setTimeout(
-                () =>
-                  toast.success(`🏆 Unlocked: ${badge.name}!`, {
-                    description: badge.description,
-                  }),
-                500,
-              ),
-            );
-          }
-          await fetchVehicles();
-          router.refresh();
-          setTimeout(() => {
-            onSuccess();
-          }, 1000);
-        } else {
-          setMessage({
-            type: "error",
-            text: result.error || ui.fuel.modal.messages.failed,
-          });
-        }
-      } catch {
-        setMessage({ type: "error", text: ui.fuel.modal.messages.unexpected });
-      }
+    run(() => submitFuelLog(formData), {
+      successMessage: ui.fuel.modal.messages.saved,
+      failureMessage: ui.fuel.modal.messages.failed,
+      onSuccess,
     });
   }
 
@@ -330,26 +294,15 @@ function FuelLogForm({
           />
         </div>
 
-        {message && (
-          <div
-            className={`p-4 rounded-xl text-sm font-medium ${message.type === "success" ? "bg-emerald-500/15 text-emerald-600" : "bg-destructive/15 text-destructive"}`}
-          >
-            {message.text}
+        {error && (
+          <div className="rounded-xl bg-destructive/15 p-4 text-sm font-medium text-destructive">
+            {error}
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="w-full rounded-full h-11 text-base font-semibold"
-          disabled={isPending}
-        >
-          {isPending ? (
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          ) : null}
-          {isPending
-            ? ui.fuel.modal.submit.saving
-            : ui.fuel.modal.submit.save}
-        </Button>
+        <SubmitButton isPending={isPending}>
+          {ui.fuel.modal.submit.save}
+        </SubmitButton>
       </form>
     </Form>
   );

@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
-import { BatteryCharging, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { BatteryCharging } from "lucide-react";
 
 import { submitVehicleSnapshot } from "@/app/actions/snapshots";
 import { useUserStore } from "@/store/user-store";
-import { useVehicleStore } from "@/store/vehicle-store";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
+import { SubmitButton } from "@/components/submit-button";
 import { ui } from "@/content/en/ui";
 import type { VehicleWithLogs } from "@/types/database";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
@@ -95,11 +94,8 @@ function BatteryCheckInForm({
   vehicle: VehicleWithLogs;
   onSuccess: () => void;
 }) {
-  const router = useRouter();
   const { profile } = useUserStore();
-  const { fetchVehicles } = useVehicleStore();
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { run, isPending, error } = useVehicleMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -112,8 +108,6 @@ function BatteryCheckInForm({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setError(null);
-
     const formData = new FormData();
     formData.append("vehicle_id", vehicle.id);
     formData.append("date", values.date);
@@ -125,22 +119,10 @@ function BatteryCheckInForm({
       formData.append("displayed_range", values.displayed_range.toString());
     }
 
-    startTransition(async () => {
-      try {
-        const result = await submitVehicleSnapshot(formData);
-
-        if (!result.success) {
-          setError(result.error ?? ui.ev.checkIn.messages.failed);
-          return;
-        }
-
-        await fetchVehicles();
-        router.refresh();
-        toast.success(ui.ev.checkIn.messages.saved);
-        onSuccess();
-      } catch {
-        setError(ui.ev.checkIn.messages.unexpected);
-      }
+    run(() => submitVehicleSnapshot(formData), {
+      successMessage: ui.ev.checkIn.messages.saved,
+      failureMessage: ui.ev.checkIn.messages.failed,
+      onSuccess,
     });
   }
 
@@ -237,16 +219,9 @@ function BatteryCheckInForm({
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        <Button
-          type="submit"
-          className="w-full rounded-full h-11 text-base font-semibold"
-          disabled={isPending}
-        >
-          {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-          {isPending
-            ? ui.ev.checkIn.submit.saving
-            : ui.ev.checkIn.submit.save}
-        </Button>
+        <SubmitButton isPending={isPending} pendingLabel={ui.ev.checkIn.submit.saving}>
+          {ui.ev.checkIn.submit.save}
+        </SubmitButton>
       </form>
     </Form>
   );

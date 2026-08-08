@@ -1,18 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
-import { ChevronDown, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 
 import { editFuelLog, submitFuelLog } from "@/app/actions/fuel";
 import { ui } from "@/content/en/ui";
 import { useUserStore } from "@/store/user-store";
-import { useVehicleStore } from "@/store/vehicle-store";
-import type { BadgeDefinition } from "@/lib/badges";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
+import { SubmitButton } from "@/components/submit-button";
 import {
   CHARGE_PRICING_MODES,
   type ChargePricingMode,
@@ -95,16 +93,13 @@ export function ChargeSessionForm({
   log?: FuelLog;
   onSuccess: () => void;
 }) {
-  const router = useRouter();
-  const { fetchVehicles } = useVehicleStore();
   const { profile } = useUserStore();
-  const [error, setError] = useState<string | null>(null);
+  const { run, isPending, error } = useVehicleMutation();
   const [showExtras, setShowExtras] = useState(
     log != null &&
       (log.session_fee != null || log.idle_minutes != null || log.tax_percent != null),
   );
   const [overrideCost, setOverrideCost] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   const usableBatteryKwh = vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh;
 
@@ -169,8 +164,6 @@ export function ChargeSessionForm({
   }, [overrideCost, pricingMode, usableBatteryKwh, values]);
 
   function onSubmit(formValues: ChargeFormValues) {
-    setError(null);
-
     if (
       formValues.start_soc != null &&
       formValues.end_soc != null &&
@@ -229,39 +222,16 @@ export function ChargeSessionForm({
       formData.append("location", formValues.location);
     }
 
-    startTransition(async () => {
-      try {
-        const result = log
-          ? await editFuelLog(log.id, formData)
-          : await submitFuelLog(formData);
-
-        if (!result.success) {
-          setError(result.error || ui.ev.chargeModal.messages.failed);
-          return;
-        }
-
-        if ("newBadges" in result && result.newBadges?.length) {
-          result.newBadges.forEach((badge: BadgeDefinition) =>
-            setTimeout(
-              () =>
-                toast.success(`🏆 Unlocked: ${badge.name}!`, {
-                  description: badge.description,
-                }),
-              500,
-            ),
-          );
-        }
-
-        await fetchVehicles();
-        router.refresh();
-        toast.success(
-          log ? ui.ev.chargeModal.messages.editSaved : ui.ev.chargeModal.messages.saved,
-        );
-        onSuccess();
-      } catch {
-        setError(ui.fuel.modal.messages.unexpected);
-      }
-    });
+    run(
+      () => (log ? editFuelLog(log.id, formData) : submitFuelLog(formData)),
+      {
+        successMessage: log
+          ? ui.ev.chargeModal.messages.editSaved
+          : ui.ev.chargeModal.messages.saved,
+        failureMessage: ui.ev.chargeModal.messages.failed,
+        onSuccess,
+      },
+    );
   }
 
   return (
@@ -784,14 +754,9 @@ export function ChargeSessionForm({
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="h-11 w-full rounded-full text-base font-semibold"
-          disabled={isPending}
-        >
-          {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-          {isPending ? ui.fuel.modal.submit.saving : ui.fuel.modal.submit.save}
-        </Button>
+        <SubmitButton isPending={isPending}>
+          {ui.fuel.modal.submit.save}
+        </SubmitButton>
       </form>
     </Form>
   );

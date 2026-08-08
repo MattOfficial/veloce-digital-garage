@@ -2,6 +2,7 @@ import { brand } from "./brand";
 
 export const ui = {
   common: {
+    unexpectedError: "An unexpected error occurred.",
     actions: {
       back: "Back",
       cancel: "Cancel",

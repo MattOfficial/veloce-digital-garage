@@ -6,6 +6,22 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Audit — one write path for vehicle mutations (2026-08-08)
+
+- New `useVehicleMutation` hook owns the sequence every form was open-coding: call the server
+  action, read `success`, refresh the Zustand store *and* the router cache, toast, surface
+  the error. The copies had drifted — `fuel-delete-dialog` never called `router.refresh()`
+  and did not await `fetchVehicles()`, so a deletion could leave stale server-rendered data
+  on screen.
+- Badge toasts move into the hook, so any action returning `newBadges` announces them
+  without each caller repeating the `setTimeout`.
+- New `SubmitButton` replaces the hand-rolled spinner/disabled/height combination in each
+  form.
+- Applied to the charge, fuel log, fuel edit, battery check-in and fuel delete surfaces.
+  `update-odometer-modal` and the maintenance forms still use their own flow — their actions
+  return `{ error }` rather than `{ success }`, so converting them means changing the action
+  contract, which is left as a separate change.
+
 ### Audit — formatting, dead code, half-wired settings (2026-08-08)
 
 - `formatting.ts` gains `formatMoneyExact`, `formatMoneyCompact`, `formatNumber`,

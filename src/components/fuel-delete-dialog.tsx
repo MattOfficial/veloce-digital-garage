@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { deleteFuelLog } from "@/app/actions/fuel";
-import { useVehicleStore } from "@/store/vehicle-store";
-import { toast } from "sonner";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
 
 import { Loader2, TriangleAlert } from "lucide-react";
 import { ui } from "@/content/en/ui";
@@ -36,38 +35,26 @@ export function FuelDeleteDialog({
   open,
   onOpenChange,
 }: FuelDeleteDialogProps) {
-  const { fetchVehicles } = useVehicleStore();
+  const { run, isPending, error, clearError } = useVehicleMutation();
   const [confirmText, setConfirmText] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   const isConfirmed = confirmText.trim().toLowerCase() === CONFIRM_PHRASE;
 
   function handleClose(isOpen: boolean) {
     if (!isOpen) {
       setConfirmText("");
-      setError(null);
+      clearError();
     }
     onOpenChange(isOpen);
   }
 
   function handleDelete() {
     if (!isConfirmed) return;
-    setError(null);
 
-    startTransition(async () => {
-      try {
-        const result = await deleteFuelLog(logId, vehicleId);
-        if (result.success) {
-          toast.success(ui.fuel.deleteDialog.deleted);
-          fetchVehicles();
-          handleClose(false);
-        } else {
-          setError(result.error || ui.fuel.deleteDialog.failed);
-        }
-      } catch {
-        setError(ui.fuel.deleteDialog.unexpected);
-      }
+    run(() => deleteFuelLog(logId, vehicleId), {
+      successMessage: ui.fuel.deleteDialog.deleted,
+      failureMessage: ui.fuel.deleteDialog.failed,
+      onSuccess: () => handleClose(false),
     });
   }
 

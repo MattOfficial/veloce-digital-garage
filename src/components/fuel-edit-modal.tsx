@@ -3,16 +3,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useVehicleStore } from "@/store/vehicle-store";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import { editFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
-import { toast } from "sonner";
 
-import { Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { ui } from "@/content/en/ui";
 import { ChargeSessionForm } from "@/components/ev/charge-session-form";
+import { SubmitButton } from "@/components/submit-button";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
 import type { FuelLog, VehicleWithLogs } from "@/types/database";
 import {
   Form,
@@ -30,7 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Button,
   Input,
   Select,
   SelectContent,
@@ -110,11 +107,8 @@ function FuelEditForm({
   log: FuelLog;
   onOpenChange: (open: boolean) => void;
 }) {
-  const router = useRouter();
-  const { fetchVehicles } = useVehicleStore();
   const { profile, getVolumeUnit } = useUserStore();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { run, isPending, error } = useVehicleMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -128,7 +122,6 @@ function FuelEditForm({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setError(null);
     const formData = new FormData();
     formData.append("vehicle_id", log.vehicle_id);
     formData.append("date", values.date);
@@ -138,20 +131,10 @@ function FuelEditForm({
     formData.append("energy_type", "fuel");
     formData.append("fill_type", values.fill_type);
 
-    startTransition(async () => {
-      try {
-        const result = await editFuelLog(log.id, formData);
-        if (result.success) {
-          toast.success(ui.fuel.modal.editSaved);
-          await fetchVehicles();
-          router.refresh();
-          onOpenChange(false);
-        } else {
-          setError(result.error || ui.fuel.modal.editFailed);
-        }
-      } catch {
-        setError(ui.fuel.modal.messages.unexpected);
-      }
+    run(() => editFuelLog(log.id, formData), {
+      successMessage: ui.fuel.modal.editSaved,
+      failureMessage: ui.fuel.modal.editFailed,
+      onSuccess: () => onOpenChange(false),
     });
   }
 
@@ -275,14 +258,9 @@ function FuelEditForm({
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="w-full rounded-full h-11 text-base font-semibold"
-          disabled={isPending}
-        >
-          {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-          {isPending ? ui.common.actions.saving : ui.fuel.modal.saveChanges}
-        </Button>
+        <SubmitButton isPending={isPending}>
+          {ui.fuel.modal.saveChanges}
+        </SubmitButton>
       </form>
     </Form>
   );
