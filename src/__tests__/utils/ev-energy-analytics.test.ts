@@ -304,6 +304,47 @@ describe("summarizeChargeEfficiency", () => {
     expect(summary.consistencyScore).toBeGreaterThan(60);
   });
 
+  it("falls back to lifetime distance over lifetime energy with one session", () => {
+    // The case that showed an empty card: a single charge produces no segment.
+    const summary = summarizeChargeEfficiency(
+      [makeChargeLog({ id: "c1", fuel_volume: 2.6 })],
+      { lifetimeDistance: 91 },
+    );
+
+    expect(summary.usableSegmentCount).toBe(0);
+    expect(summary.basis).toBe("lifetime");
+    expect(summary.distancePerKwh).toBeCloseTo(35, 5);
+    expect(summary.confidence).toBe("low");
+    expect(summary.method).toBeNull();
+  });
+
+  it("divides lifetime cost by lifetime distance for the running cost", () => {
+    const summary = summarizeChargeEfficiency(
+      [makeChargeLog({ id: "c1", fuel_volume: 2.6, total_cost: 16.38 })],
+      { lifetimeDistance: 100 },
+    );
+
+    expect(summary.costPerDistance).toBeCloseTo(0.1638, 5);
+  });
+
+  it("prefers measured segments over the lifetime ratio once they exist", () => {
+    const summary = summarizeChargeEfficiency(evenlySpacedSessions(4), {
+      lifetimeDistance: 10_000,
+    });
+
+    expect(summary.basis).toBe("segments");
+    expect(summary.distancePerKwh).toBeCloseTo(100 / 3, 5);
+  });
+
+  it("reports no basis at all when there is no distance to divide by", () => {
+    const summary = summarizeChargeEfficiency([makeChargeLog({ id: "c1" })], {
+      lifetimeDistance: null,
+    });
+
+    expect(summary.basis).toBe("none");
+    expect(summary.distancePerKwh).toBeNull();
+  });
+
   it("counts sessions that never anchored a segment", () => {
     const summary = summarizeChargeEfficiency([
       makeChargeLog({
@@ -514,32 +555,6 @@ describe("buildEvEnergySummary", () => {
 
     expect(home?.isEstimated).toBe(true);
     expect(home?.sessionCount).toBe(0);
-  });
-
-  it("compares the running cost with the petrol equivalent", () => {
-    const vehicle = makeVehicle({
-      vehicle_snapshots: makeRidingHistory(),
-      fuel_logs: [
-        makeChargeLog({ id: "c1", date: "2026-07-05", odometer: 1150, fuel_volume: 6, total_cost: 48 }),
-      ],
-    });
-
-    const summary = buildEvEnergySummary(vehicle, {
-      petrolPricePerUnit: 105,
-      iceReferenceEfficiency: 45,
-      currentDate: CURRENT_DATE,
-    });
-
-    // 600 km at 45 km/L costs 13.33 L x 105.
-    expect(summary.savings.equivalentIceCost).toBeCloseTo(1400, 0);
-    expect(summary.savings.savings).toBeCloseTo(1352, 0);
-  });
-
-  it("has no savings figure without a petrol reference", () => {
-    const vehicle = makeVehicle({ vehicle_snapshots: makeRidingHistory() });
-    const summary = buildEvEnergySummary(vehicle, { currentDate: CURRENT_DATE });
-
-    expect(summary.savings.savings).toBeNull();
   });
 
   it("counts a full charge logged without percentages towards battery care", () => {

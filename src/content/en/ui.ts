@@ -547,11 +547,26 @@ export const ui = {
     savings: {
       title: "Savings vs Petrol",
       description: "What the same distance would have cost on petrol.",
-      saved: "Saved",
+      saved: "Saved so far",
       equivalentCost: "Petrol equivalent",
       perDistance: (unit: string) => `Saved per ${unit}`,
+      yourRate: (unit: string) => `Your cost per ${unit}`,
+      petrolRate: (unit: string) => `Petrol cost per ${unit}`,
+      benchmark: {
+        garage: (count: number, type: string) =>
+          `Measured from ${count === 1 ? "your other" : `your ${count} other`} petrol ${type}${count === 1 ? "" : "s"}`,
+        "profile-reference": "From the petrol price and economy in your profile",
+        "regional-default": (type: string) =>
+          `Typical Indian running cost for a petrol ${type}. Add a petrol ${type} to your garage, or set a reference in your profile, for a figure based on your own driving.`,
+        unavailable: "No petrol comparison available",
+      },
+      vehicleTypes: {
+        car: "car",
+        motorcycle: "two-wheeler",
+        truck: "truck",
+      },
       missingReference:
-        "Set a reference petrol price and economy in your profile to see savings.",
+        "Log a charge with its cost, and we can compare it against petrol.",
     },
     mix: {
       title: "Charging Mix",
@@ -683,6 +698,8 @@ export const ui = {
         "full-charge-anchor": "Between full charges",
       },
       methodMixed: "From a mix of full charges and battery percentages",
+      lifetimeBasis:
+        "Lifetime distance over every unit bought. Rough — it counts the charge still in your battery as though you had ridden it — and it sharpens once you have logged two charges.",
       segmentsUsed: (count: number) =>
         `${count} complete ${count === 1 ? "stretch" : "stretches"} of riding`,
       unanchored: (count: number) =>

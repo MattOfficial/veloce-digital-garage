@@ -25,6 +25,7 @@ import { FuelLogModal } from "@/components/fuel-log-modal";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { ui } from "@/content/en/ui";
 import { useUserStore } from "@/store/user-store";
+import { useVehicleStore } from "@/store/vehicle-store";
 import type { VehicleWithLogs } from "@/types/database";
 import {
   estimateDaysOfRangeLeft,
@@ -33,6 +34,7 @@ import {
 } from "@/utils/battery-health";
 import { convertEvEfficiency, getEvEfficiencyPrecision } from "@/utils/efficiency-units";
 import { buildEvEnergySummary } from "@/utils/ev-energy-analytics";
+import { buildEvSavings } from "@/utils/ev-savings";
 import { formatMoney } from "@/utils/formatting";
 import {
   Card,
@@ -79,6 +81,7 @@ function EstimateBadge() {
 
 export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
   const { profile, getEvEfficiencyUnit } = useUserStore();
+  const vehicles = useVehicleStore((state) => state.vehicles);
   const distanceUnit = profile.distanceUnit;
   const efficiencyUnit = getEvEfficiencyUnit();
 
@@ -104,18 +107,38 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
         whPerKm: health.whPerKm,
         usableBatteryKwh: vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh,
         tariffPerKwh: profile.electricityTariffPerKwh,
-        petrolPricePerUnit: profile.petrolPriceReference,
-        iceReferenceEfficiency: profile.iceReferenceEfficiency,
         periodDays: PERIOD_DAYS,
       }),
+    [health.whPerKm, profile.electricityTariffPerKwh, vehicle],
+  );
+
+  // Compared against the owner's own petrol vehicles of the same class where
+  // possible; a published average is the last resort, not the first.
+  const savings = useMemo(
+    () =>
+      buildEvSavings(vehicle, vehicles, {
+        petrolPricePerUnit: profile.petrolPriceReference,
+        iceReferenceEfficiency: profile.iceReferenceEfficiency,
+        currency: profile.currency,
+      }),
     [
-      health.whPerKm,
-      profile.electricityTariffPerKwh,
+      profile.currency,
       profile.iceReferenceEfficiency,
       profile.petrolPriceReference,
       vehicle,
+      vehicles,
     ],
   );
+
+  const vehicleTypeLabel = ui.ev.savings.vehicleTypes[savings.benchmark.vehicleType];
+  const benchmarkNote =
+    savings.benchmark.source === "garage"
+      ? ui.ev.savings.benchmark.garage(savings.benchmark.vehicleCount, vehicleTypeLabel)
+      : savings.benchmark.source === "regional-default"
+        ? ui.ev.savings.benchmark["regional-default"](vehicleTypeLabel)
+        : savings.benchmark.source === "profile-reference"
+          ? ui.ev.savings.benchmark["profile-reference"]
+          : ui.ev.savings.benchmark.unavailable;
 
   const latestSnapshot = getLatestSocSnapshot(vehicle.vehicle_snapshots ?? []);
   const averageDailyDistance =
@@ -293,9 +316,11 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                       label={ui.ev.efficiency.perKwh(distanceUnit)}
                       value={energy.efficiency.distancePerKwh.toFixed(1)}
                       hint={
-                        energy.efficiency.method != null
-                          ? ui.ev.efficiency.method[energy.efficiency.method]
-                          : ui.ev.efficiency.methodMixed
+                        energy.efficiency.basis === "lifetime"
+                          ? null
+                          : energy.efficiency.method != null
+                            ? ui.ev.efficiency.method[energy.efficiency.method]
+                            : ui.ev.efficiency.methodMixed
                       }
                     />
                     <StatTile
@@ -312,6 +337,14 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                       hint={ui.ev.health.confidence[energy.efficiency.confidence]}
                     />
                   </div>
+
+                  {/* A lifetime ratio is honest but coarse, and saying so is
+                      what stops it being read as a measured figure. */}
+                  {energy.efficiency.basis === "lifetime" ? (
+                    <p className="text-xs text-muted-foreground">
+                      {ui.ev.efficiency.lifetimeBasis}
+                    </p>
+                  ) : null}
 
                   {energy.efficiency.unanchoredSessionCount > 0 ? (
                     <p className="text-xs text-muted-foreground">
@@ -435,24 +468,40 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
               <CardDescription>{ui.ev.savings.description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {energy.savings.savings != null ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <StatTile
-                    label={ui.ev.savings.saved}
-                    value={formatMoney(energy.savings.savings, profile.currency)}
-                    hint={ui.ev.energy.monthlyCost}
-                  />
-                  <StatTile
-                    label={ui.ev.savings.equivalentCost}
-                    value={formatMoney(
-                      energy.savings.equivalentIceCost as number,
-                      profile.currency,
-                    )}
-                  />
-                </div>
+              {savings.savings != null ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <StatTile
+                      label={ui.ev.savings.saved}
+                      value={formatMoney(savings.savings, profile.currency)}
+                      hint={ui.ev.savings.equivalentCost.concat(
+                        `: ${formatMoney(savings.equivalentPetrolCost as number, profile.currency)}`,
+                      )}
+                    />
+                    <StatTile
+                      label={ui.ev.savings.petrolRate(distanceUnit)}
+                      value={formatMoney(
+                        savings.petrolCostPerDistance as number,
+                        profile.currency,
+                        { maximumFractionDigits: 2 },
+                      )}
+                      hint={`${ui.ev.savings.yourRate(distanceUnit)}: ${formatMoney(
+                        savings.evCostPerDistance as number,
+                        profile.currency,
+                        { maximumFractionDigits: 2 },
+                      )}`}
+                    />
+                  </div>
+
+                  {/* Where the petrol number came from changes what the saving
+                      claims, so it is always stated. */}
+                  <p className="text-xs text-muted-foreground">{benchmarkNote}</p>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  {ui.ev.savings.missingReference}
+                  {savings.benchmark.source === "unavailable"
+                    ? ui.ev.savings.benchmark.unavailable
+                    : ui.ev.savings.missingReference}
                 </p>
               )}
 

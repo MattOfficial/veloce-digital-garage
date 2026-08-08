@@ -92,18 +92,30 @@ export interface ChargeSegment {
 
 export type ChargeEfficiencyConfidence = "none" | "low" | "medium" | "high";
 
+/**
+ * `segments` is the measured figure. `lifetime` is total distance over total
+ * energy ever bought — coarse, because it ignores the charge still sitting in
+ * the battery and any charging done before tracking started, but it needs only
+ * one session and it converges on the truth.
+ */
+export type ChargeEfficiencyBasis = "segments" | "lifetime" | "none";
+
 export interface ChargeEfficiencySummary {
     segments: ChargeSegment[];
     usableSegmentCount: number;
-    /** Median across usable segments, using energy as billed. */
+    /** Best available: segment median, else the lifetime ratio. */
     distancePerKwh: number | null;
     costPerDistance: number | null;
-    /** Null when methods are mixed across segments. */
+    basis: ChargeEfficiencyBasis;
+    /** Segment basis only, and null when methods are mixed. */
     method: ChargeSegmentMethod | null;
     confidence: ChargeEfficiencyConfidence;
     consistencyScore: number | null;
     /** Sessions that produced no segment because nothing anchored them. */
     unanchoredSessionCount: number;
+    lifetimeDistance: number | null;
+    lifetimeEnergyKwh: number;
+    lifetimeCost: number;
 }
 
 export interface PackCapacitySummary {
@@ -150,14 +162,6 @@ export interface EvEnergyPeriod {
     basis: EnergyCostBasis;
 }
 
-export interface EvSavingsSummary {
-    distance: number | null;
-    evEnergyCost: number | null;
-    equivalentIceCost: number | null;
-    savings: number | null;
-    savingsPerDistance: number | null;
-}
-
 export interface BatteryCareSummary {
     score: number | null;
     band: BatteryCareBand;
@@ -170,7 +174,6 @@ export interface BatteryCareSummary {
 export interface EvEnergySummary {
     period: EvEnergyPeriod;
     mix: ChargingMix;
-    savings: EvSavingsSummary;
     care: BatteryCareSummary;
     efficiency: ChargeEfficiencySummary;
     capacity: PackCapacitySummary;
@@ -186,9 +189,6 @@ export interface EvEnergyOptions {
     /** Used only for the cold-start fallback and to derive kWh for timed sessions. */
     tariffPerKwh?: number | null;
     usableBatteryKwh?: number | null;
-    petrolPricePerUnit?: number | null;
-    /** Reference ICE economy in distance per unit volume, e.g. km/L. */
-    iceReferenceEfficiency?: number | null;
     periodDays?: number;
     currentDate?: Date;
 }
@@ -381,32 +381,70 @@ function resolveEfficiencyConfidence(
     return "medium";
 }
 
-export function summarizeChargeEfficiency(logs: FuelLog[]): ChargeEfficiencySummary {
+export function summarizeChargeEfficiency(
+    logs: FuelLog[],
+    options: { lifetimeDistance?: number | null } = {},
+): ChargeEfficiencySummary {
+    const { lifetimeDistance = null } = options;
+
     const segments = buildChargeSegments(logs);
     const usable = segments.filter((segment) => segment.usable);
     const rates = usable.map((segment) => segment.distancePerKwh);
     const consistency = consistencyScore(rates);
 
     const methods = new Set(usable.map((segment) => segment.method));
-    const chargeSessionCount = logs.filter(isChargeLog).length;
+    const chargeLogs = logs.filter(isChargeLog);
+    const lifetimeEnergyKwh = sumBy(chargeLogs, (log) => finiteOrZero(log.fuel_volume));
+    const lifetimeCost = sumBy(chargeLogs, (log) => finiteOrZero(log.total_cost));
+
+    const hasSegments = usable.length >= MIN_SEGMENTS_FOR_ESTIMATE;
+    const segmentRate = hasSegments ? median(rates) : null;
+
+    // One session is enough for the lifetime ratio, which is the point: an owner
+    // who has logged a single charge should not be told there is nothing to show.
+    const canUseLifetime =
+        lifetimeDistance != null && lifetimeDistance > 0 && lifetimeEnergyKwh > 0;
+
+    const basis: ChargeEfficiencyBasis =
+        segmentRate != null ? "segments" : canUseLifetime ? "lifetime" : "none";
+
+    const distancePerKwh =
+        basis === "segments"
+            ? segmentRate
+            : basis === "lifetime"
+                ? (lifetimeDistance as number) / lifetimeEnergyKwh
+                : null;
+
+    const costPerDistance =
+        basis === "segments"
+            ? median(usable.map((segment) => segment.costPerDistance))
+            : basis === "lifetime" && lifetimeCost > 0
+                ? lifetimeCost / (lifetimeDistance as number)
+                : null;
 
     return {
         segments,
         usableSegmentCount: usable.length,
-        distancePerKwh: usable.length >= MIN_SEGMENTS_FOR_ESTIMATE ? median(rates) : null,
-        costPerDistance:
-            usable.length >= MIN_SEGMENTS_FOR_ESTIMATE
-                ? median(usable.map((segment) => segment.costPerDistance))
-                : null,
-        method: methods.size === 1 ? [...methods][0] : null,
-        confidence: resolveEfficiencyConfidence(usable.length, consistency),
+        distancePerKwh,
+        costPerDistance,
+        basis,
+        method: basis === "segments" && methods.size === 1 ? [...methods][0] : null,
+        // A lifetime ratio is never better than low confidence: it counts energy
+        // that is still in the battery as though it had been driven.
+        confidence:
+            basis === "lifetime"
+                ? "low"
+                : resolveEfficiencyConfidence(usable.length, consistency),
         consistencyScore: consistency,
         // The first session opens a segment rather than closing one, so it is
         // never unanchored just for being first.
         unanchoredSessionCount: Math.max(
             0,
-            chargeSessionCount - segments.length - (chargeSessionCount > 0 ? 1 : 0),
+            chargeLogs.length - segments.length - (chargeLogs.length > 0 ? 1 : 0),
         ),
+        lifetimeDistance,
+        lifetimeEnergyKwh,
+        lifetimeCost,
     };
 }
 
@@ -514,43 +552,6 @@ function resolveBasis(
     return "unavailable";
 }
 
-function buildSavings(
-    distance: number | null,
-    evEnergyCost: number | null,
-    petrolPricePerUnit: number | null,
-    iceReferenceEfficiency: number | null,
-): EvSavingsSummary {
-    const canCompare =
-        distance != null &&
-        distance > 0 &&
-        evEnergyCost != null &&
-        petrolPricePerUnit != null &&
-        petrolPricePerUnit > 0 &&
-        iceReferenceEfficiency != null &&
-        iceReferenceEfficiency > 0;
-
-    if (!canCompare) {
-        return {
-            distance,
-            evEnergyCost,
-            equivalentIceCost: null,
-            savings: null,
-            savingsPerDistance: null,
-        };
-    }
-
-    const equivalentIceCost = (distance / iceReferenceEfficiency) * petrolPricePerUnit;
-    const savings = equivalentIceCost - evEnergyCost;
-
-    return {
-        distance,
-        evEnergyCost,
-        equivalentIceCost,
-        savings,
-        savingsPerDistance: savings / distance,
-    };
-}
-
 /**
  * A coaching metric, not a diagnostic one. It scores the three behaviours the
  * owner actually controls: sitting at a low state of charge, routinely charging
@@ -624,13 +625,7 @@ function buildSummary(
     days: number | null,
     options: EvEnergyOptions,
 ): EvEnergySummary {
-    const {
-        whPerKm = null,
-        tariffPerKwh = null,
-        usableBatteryKwh = null,
-        petrolPricePerUnit = null,
-        iceReferenceEfficiency = null,
-    } = options;
+    const { whPerKm = null, tariffPerKwh = null, usableBatteryKwh = null } = options;
 
     const loggedEnergyKwh = sumBy(chargeLogs, (log) => finiteOrZero(log.fuel_volume));
     const loggedCost = sumBy(chargeLogs, (log) => finiteOrZero(log.total_cost));
@@ -678,12 +673,13 @@ function buildSummary(
             basis: resolveBasis(loggedEnergyKwh, inferredEnergyKwh),
         },
         mix,
-        savings: buildSavings(distance, totalCost, petrolPricePerUnit, iceReferenceEfficiency),
         care: buildBatteryCareSummary(vehicle, chargeLogs, mix.dcFastShare),
         // Efficiency and capacity read the whole history: a segment routinely
         // straddles the start of the window, and a capacity measurement is worth
         // keeping however old it is.
-        efficiency: summarizeChargeEfficiency(allChargeLogs),
+        efficiency: summarizeChargeEfficiency(allChargeLogs, {
+            lifetimeDistance: getVehicleLifetimeDistanceSummary(vehicle).value,
+        }),
         capacity: summarizePackCapacity(allChargeLogs),
         chargingLoss: summarizeChargingLoss(allChargeLogs, usableBatteryKwh),
         whPerKm,

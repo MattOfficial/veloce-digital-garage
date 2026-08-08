@@ -42,7 +42,7 @@ export type Vehicle = {
   notes: string | null;
   custom_fields: Record<string, string> | null;
   tyre_info: TyreInfo | null;
-  vehicle_type: 'car' | 'motorcycle' | 'truck';
+  vehicle_type: VehicleType;
   powertrain: Powertrain;
   battery_capacity_kwh: number | null;
   /** What the pack actually delivers between 100% and 0% indicated. Denominator for Wh/km. */
@@ -55,7 +55,20 @@ export type Vehicle = {
   created_at: string;
 };
 
+export type VehicleType = 'car' | 'motorcycle' | 'truck';
+
 export type Powertrain = 'ice' | 'ev' | 'hev' | 'phev' | 'rex';
+
+/**
+ * Powertrains whose running cost is entirely liquid fuel, so they can stand as
+ * the petrol benchmark an EV is compared against. A self-charging hybrid counts;
+ * a plug-in does not, because part of its energy came off the grid.
+ */
+export const LIQUID_FUEL_POWERTRAINS: Powertrain[] = ['ice', 'hev'];
+
+export function isLiquidFuelPowertrain(powertrain: Powertrain | null | undefined): boolean {
+  return powertrain != null && LIQUID_FUEL_POWERTRAINS.includes(powertrain);
+}
 
 /** Powertrains that charge from the grid and therefore use SoC-based analytics. */
 export const ELECTRIC_POWERTRAINS: Powertrain[] = ['ev', 'phev', 'rex'];
