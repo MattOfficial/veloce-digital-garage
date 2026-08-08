@@ -11,16 +11,21 @@ import {
   YAxis,
 } from "recharts";
 import {
+  Activity,
   BatteryCharging,
   BatteryWarning,
+  DollarSign,
   HeartPulse,
   Lightbulb,
+  PiggyBank,
   Plug,
+  Zap,
 } from "lucide-react";
 
 import { BatteryCheckInModal } from "@/components/battery-check-in-modal";
 import { ChargeHistoryTable } from "@/components/ev/charge-history-table";
 import { FuelLogModal } from "@/components/fuel-log-modal";
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { ui } from "@/content/en/ui";
 import { useUserStore } from "@/store/user-store";
@@ -212,9 +217,13 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
       ) : (
         <MotionWrapper>
           <div className="space-y-3">
+            {/* Same card as the petrol page's summary row: an EV should not
+                look like a lesser version of a scooter one switch away. */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatTile
-                label={`${ui.ev.overview.efficiency} (${efficiencyUnit})`}
+              <MetricCard
+                tone="emerald"
+                icon={<Activity className="h-4 w-4" />}
+                label={ui.ev.overview.efficiency}
                 value={
                   displayedEfficiency != null
                     ? displayedEfficiency.toFixed(
@@ -222,9 +231,15 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                       )
                     : ui.common.emptyValue
                 }
-                hint={efficiencyHint}
+                hint={
+                  efficiencyHint
+                    ? `${efficiencyUnit} · ${efficiencyHint}`
+                    : efficiencyUnit
+                }
               />
-              <StatTile
+              <MetricCard
+                tone="rose"
+                icon={<DollarSign className="h-4 w-4" />}
                 label={ui.ev.overview.costPerDistance(distanceUnit)}
                 value={
                   energy.efficiency.costPerDistance != null
@@ -237,7 +252,9 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                 }
                 hint={ui.ev.overview.lifetime}
               />
-              <StatTile
+              <MetricCard
+                tone="amber"
+                icon={<PiggyBank className="h-4 w-4" />}
                 label={ui.ev.overview.saved}
                 value={
                   savings.savings != null
@@ -246,7 +263,9 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                 }
                 hint={benchmarkNote}
               />
-              <StatTile
+              <MetricCard
+                tone="blue"
+                icon={<Zap className="h-4 w-4" />}
                 label={ui.ev.overview.totalCharged}
                 value={formatMoney(
                   energy.efficiency.lifetimeCost,

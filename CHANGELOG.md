@@ -6,6 +6,18 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Styling — EV headline cards now match the petrol ones (2026-08-08)
+
+- The petrol page's summary cards had a coloured wash, an icon chip and a value in the
+  metric's own hue; the EV page's four tiles were flat grey boxes with white numbers. One
+  vehicle switch apart, that read as the EV page being unfinished rather than different.
+- New shared `MetricCard` carries the whole treatment, and both pages now use it — the two
+  cannot drift apart again, which is how they got here.
+- EV tones: efficiency emerald and cost rose, matching their petrol equivalents so the same
+  metric keeps the same colour across vehicles; savings amber, total charged blue.
+- `hint` accepts nodes as well as text, which the fuel-price card needs for its coloured
+  trend clause.
+
 ### Fix — EV charge pills looked unstyled next to the petrol ones (2026-08-08)
 
 - The "Billed" column rendered plain muted text while the equivalent column on the petrol

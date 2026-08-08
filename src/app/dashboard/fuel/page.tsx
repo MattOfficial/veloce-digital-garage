@@ -36,6 +36,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { EnergyBatteryPanel } from "@/components/ev/energy-battery-panel";
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
@@ -389,143 +390,95 @@ export default function FuelPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-auto-rows-[1fr] items-stretch">
             <MotionWrapper delay={0.1} className="h-full">
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                {/* A wash of the metric's own colour, so the three summary
-                    cards are distinguishable before you read them. */}
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-emerald-500/10 to-transparent"
-                />
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.averageEfficiency}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300">
-                      <Activity aria-hidden="true" className="h-4 w-4" />
-                    </span>
-                    {activeAnalysisMode === "fuel" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-lg border border-border/60 bg-background/70 px-2.5 text-xs font-semibold shadow-sm"
-                            aria-label={ui.fuel.changeEfficiencyUnit(activeMetric)}
-                          >
-                            {activeMetric}
-                            <ChevronDown
-                              aria-hidden="true"
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                            />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="rounded-xl border border-border bg-popover shadow-2xl backdrop-blur-xl"
+              <MetricCard
+                tone="emerald"
+                icon={<Activity aria-hidden="true" className="h-4 w-4" />}
+                label={ui.fuel.averageEfficiency}
+                value={
+                  averageEfficiency != null ? averageEfficiency.toFixed(2) : "--"
+                }
+                hint={efficiencyUnit}
+                action={
+                  activeAnalysisMode === "fuel" ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-lg border border-border/60 bg-background/70 px-2.5 text-xs font-semibold shadow-sm"
+                          aria-label={ui.fuel.changeEfficiencyUnit(activeMetric)}
                         >
-                          <DropdownMenuRadioGroup
-                            value={activeMetric}
-                            onValueChange={(metric) => {
-                              if (isFuelEfficiencyUnit(metric)) {
-                                setSelectedMetric(metric);
-                              }
-                            }}
-                          >
-                            {METRIC_OPTIONS.map((metric) => (
-                              <DropdownMenuRadioItem
-                                key={metric}
-                                value={metric}
-                                className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
-                              >
-                                {metric}
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="relative z-10 px-5">
-                  <div className="text-3xl font-semibold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-300">
-                    {averageEfficiency != null
-                      ? averageEfficiency.toFixed(2)
-                      : "--"}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {efficiencyUnit}
-                  </p>
-                </CardContent>
-              </Card>
+                          {activeMetric}
+                          <ChevronDown
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                          />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="rounded-xl border border-border bg-popover shadow-2xl backdrop-blur-xl"
+                      >
+                        <DropdownMenuRadioGroup
+                          value={activeMetric}
+                          onValueChange={(metric) => {
+                            if (isFuelEfficiencyUnit(metric)) {
+                              setSelectedMetric(metric);
+                            }
+                          }}
+                        >
+                          {METRIC_OPTIONS.map((metric) => (
+                            <DropdownMenuRadioItem
+                              key={metric}
+                              value={metric}
+                              className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                            >
+                              {metric}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null
+                }
+              />
             </MotionWrapper>
 
             <MotionWrapper delay={0.2} className="h-full">
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-rose-500/10 to-transparent"
-                />
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.costPerDistance(profile.distanceUnit)}
-                  </CardTitle>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/15 text-rose-600 dark:bg-rose-400/10 dark:text-rose-300">
-                    <DollarSign className="h-4 w-4" />
-                  </span>
-                </CardHeader>
-                <CardContent className="relative z-10 px-5">
-                  <div className="text-3xl font-semibold tracking-tight tabular-nums text-rose-700 dark:text-rose-300">
-                    {averageCostPerDistance > 0
-                      ? formatMoneyExact(averageCostPerDistance, profile.currency)
-                      : "--"}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.fuel.averageRunningCost}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="rose"
+                icon={<DollarSign className="h-4 w-4" />}
+                label={ui.fuel.costPerDistance(profile.distanceUnit)}
+                value={
+                  averageCostPerDistance > 0
+                    ? formatMoneyExact(averageCostPerDistance, profile.currency)
+                    : "--"
+                }
+                hint={ui.fuel.averageRunningCost}
+              />
             </MotionWrapper>
 
             <MotionWrapper
               delay={0.3}
               className="md:col-span-2 lg:col-span-1 h-full"
             >
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-blue-500/10 to-transparent"
-                />
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.latestUnitPrice(activeAnalysisMode)}
-                  </CardTitle>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300">
-                    <BadgeDollarSign className="h-4 w-4" />
-                  </span>
-                </CardHeader>
-                <CardContent className="relative z-10 px-5">
-                  <div className="text-3xl font-semibold tracking-tight tabular-nums text-blue-700 dark:text-blue-300">
-                    {unitPriceSummary.latest == null
-                      ? "--"
-                      : formatMoneyExact(unitPriceSummary.latest, profile.currency)}
-                  </div>
-                  {unitPriceSummary.latest == null ? (
-                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      {ui.fuel.unitPriceUnavailable}
-                    </p>
+              <MetricCard
+                tone="blue"
+                icon={<BadgeDollarSign className="h-4 w-4" />}
+                label={ui.fuel.latestUnitPrice(activeAnalysisMode)}
+                value={
+                  unitPriceSummary.latest == null
+                    ? "--"
+                    : formatMoneyExact(unitPriceSummary.latest, profile.currency)
+                }
+                hint={
+                  unitPriceSummary.latest == null ? (
+                    ui.fuel.unitPriceUnavailable
                   ) : (
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs font-medium">
-                      <span className="text-muted-foreground">
-                        {ui.fuel.perUnit(unitPriceUnit)}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="text-muted-foreground"
-                      >
-                        ·
-                      </span>
+                    <>
+                      <span>{ui.fuel.perUnit(unitPriceUnit)}</span>
+                      <span aria-hidden="true">·</span>
                       <span className={unitPriceTrendClass}>
                         {unitPriceSummary.previous == null
                           ? ui.fuel.noPreviousUnitPrice
@@ -535,10 +488,10 @@ export default function FuelPage() {
                                 unitPriceSummary.changePercent,
                               )}
                       </span>
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    </>
+                  )
+                }
+              />
             </MotionWrapper>
           </div>
 
