@@ -19,8 +19,11 @@ import { cn } from "@/lib/utils";
  * because Tailwind only ships classes it can see in the source.
  */
 export const PILL_TONES = {
+  // Carries more weight than the coloured tones deliberately: at slate-500/15
+  // with slate-300 text this sat so close to ordinary body copy that it read as
+  // an unstyled cell rather than a chip.
   neutral:
-    "bg-slate-500/15 text-slate-700 border-slate-500/20 dark:bg-slate-400/10 dark:text-slate-300 dark:border-slate-400/20",
+    "bg-slate-500/20 text-slate-800 border-slate-500/30 dark:bg-slate-300/15 dark:text-slate-100 dark:border-slate-300/25",
   blue: "bg-blue-500/15 text-blue-700 border-blue-500/20 dark:bg-blue-400/10 dark:text-blue-300 dark:border-blue-400/20",
   emerald:
     "bg-emerald-500/15 text-emerald-800 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:border-emerald-400/20",

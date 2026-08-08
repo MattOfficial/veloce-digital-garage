@@ -6,6 +6,21 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Fix — EV charge pills looked unstyled next to the petrol ones (2026-08-08)
+
+- The "Billed" column rendered plain muted text while the equivalent column on the petrol
+  table was a pill, so the EV rows had a bare gap where the petrol rows had colour. It is now
+  a pill toned per pricing mode, in colours that do not collide with the source column beside
+  it.
+- The `neutral` tone was the real culprit for rows that looked blank. Its *text* contrast was
+  never the problem — 9.04:1 in dark mode — but the chip background separated from the row
+  behind it by only **1.18:1**, so the pill shape was invisible and it read as unstyled text.
+  Charge sources backfilled to `other` by the earlier migration all landed on this tone.
+  Strengthened to slate-500/20 with slate-800 text in light and slate-300/15 with slate-100 in
+  dark, lifting chip-vs-row separation to 1.46:1 while keeping text at 10.7:1 and 9.96:1.
+- Neutral needs more lightness separation than the coloured tones because it has no hue to
+  distinguish it — the others are told apart by colour, not brightness.
+
 ### Styling — fuel page charts and empty states, plus light-mode fixes (2026-08-08)
 
 - **Five light-mode bugs on the fuel page.** The no-data card was `bg-white/5` with a

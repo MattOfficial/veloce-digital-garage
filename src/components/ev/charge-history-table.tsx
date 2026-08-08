@@ -9,7 +9,12 @@ import { TablePagination } from "@/components/table-pagination";
 import { Pill, PillDot, type PillTone } from "@/components/ui/pill";
 import { ui } from "@/content/en/ui";
 import { useUserStore } from "@/store/user-store";
-import type { ChargeSource, FuelLog, VehicleWithLogs } from "@/types/database";
+import type {
+  ChargePricingMode,
+  ChargeSource,
+  FuelLog,
+  VehicleWithLogs,
+} from "@/types/database";
 import { isFullChargeSession } from "@/utils/charge-session";
 import {
   formatMoney,
@@ -34,6 +39,18 @@ const SOURCE_TONES: Record<ChargeSource, PillTone> = {
   ac_public: "cyan",
   dc_fast: "orange",
   other: "neutral",
+};
+
+/**
+ * How the session was billed, in tones that do not collide with the source
+ * column beside it — otherwise two pills of the same colour in one row imply a
+ * relationship that is not there.
+ */
+const PRICING_TONES: Record<ChargePricingMode, PillTone> = {
+  per_kwh: "blue",
+  per_minute: "amber",
+  flat: "rose",
+  free: "emerald",
 };
 
 /** Newest first: the session you just logged should be the one you can see. */
@@ -178,14 +195,23 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
                             </p>
                           ) : null}
                         </td>
-                        <td className="px-6 py-4 text-xs text-muted-foreground">
-                          {log.pricing_mode
-                            ? ui.ev.chargeModal.pricingModes[log.pricing_mode]
-                            : ui.common.emptyValue}
-                          {log.duration_minutes != null ? (
-                            <span className="ml-1 tabular-nums">
-                              · {formatNumber(log.duration_minutes)} min
+                        {/* This column was plain text while the equivalent
+                            column on the petrol table was a pill, which is what
+                            made the EV rows look washed out beside it. */}
+                        <td className="px-6 py-4">
+                          {log.pricing_mode ? (
+                            <Pill tone={PRICING_TONES[log.pricing_mode]}>
+                              {ui.ev.chargeModal.pricingModes[log.pricing_mode]}
+                            </Pill>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {ui.common.emptyValue}
                             </span>
+                          )}
+                          {log.duration_minutes != null ? (
+                            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                              {formatNumber(log.duration_minutes)} min
+                            </p>
                           ) : null}
                         </td>
                         <td className="px-6 py-4 text-right tabular-nums">
