@@ -11,11 +11,17 @@ import {
 } from "@/utils/fuel-analytics";
 import {
   FUEL_EFFICIENCY_UNITS,
+  convertEvEfficiency,
   convertFuelEfficiency,
   getDefaultFuelEfficiencyUnit,
   isFuelEfficiencyUnit,
   type FuelEfficiencyUnit,
 } from "@/utils/efficiency-units";
+import {
+  formatDayLabel,
+  formatMoneyExact,
+  formatTableDate,
+} from "@/utils/formatting";
 import { getUnitPriceSummary } from "@/utils/unit-price";
 
 import {
@@ -25,17 +31,19 @@ import {
   BadgeDollarSign,
   BatteryCharging,
   Pencil,
+  Receipt,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
 } from "lucide-react";
 import { EnergyBatteryPanel } from "@/components/ev/energy-battery-panel";
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
 import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { PageHeader } from "@/components/page-header";
+import { Pill, PillDot } from "@/components/ui/pill";
+import { TablePagination } from "@/components/table-pagination";
 import { Tabs, TabsList, TabsTrigger } from "@mattofficial/veloce-ui";
 import {
   LineChart,
@@ -61,11 +69,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@mattofficial/veloce-ui";
 
 const METRIC_OPTIONS = FUEL_EFFICIENCY_UNITS;
@@ -98,27 +101,17 @@ function sortLogsDescending(
   return right.id.localeCompare(left.id);
 }
 
-function convertChargeEfficiency(distance: number, energy: number): number | null {
-  if (distance <= 0 || energy <= 0) {
-    return null;
-  }
-
-  return distance / energy;
-}
-
-function formatDateLabel(date: string) {
-  return new Date(date).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatHistoryDate(date: string) {
-  return new Date(date).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+function convertChargeEfficiency(
+  distance: number,
+  energy: number,
+  distanceUnit: "km" | "miles",
+): number | null {
+  return convertEvEfficiency(
+    distance,
+    energy,
+    distanceUnit === "miles" ? "mi/kWh" : "km/kWh",
+    distanceUnit,
+  );
 }
 
 export default function FuelPage() {
@@ -224,7 +217,7 @@ export default function FuelPage() {
 
   const averageEfficiency =
     activeAnalysisMode === "charge"
-      ? convertChargeEfficiency(totalSegmentDistance, totalSegmentVolume)
+      ? convertChargeEfficiency(totalSegmentDistance, totalSegmentVolume, profile.distanceUnit)
       : convertFuelEfficiency(
           totalSegmentDistance,
           totalSegmentVolume,
@@ -240,7 +233,7 @@ export default function FuelPage() {
   const efficiencyTrendData = activeStream.closed_segments.map((segment) => {
     const efficiency =
       activeAnalysisMode === "charge"
-        ? convertChargeEfficiency(segment.distance, segment.volume)
+        ? convertChargeEfficiency(segment.distance, segment.volume, profile.distanceUnit)
         : convertFuelEfficiency(
             segment.distance,
             segment.volume,
@@ -250,7 +243,7 @@ export default function FuelPage() {
           );
 
     return {
-      date: formatDateLabel(segment.closing_log_date),
+      date: formatDayLabel(segment.closing_log_date),
       rawDate: segment.closing_log_date,
       efficiency:
         efficiency == null ? null : Number(efficiency.toFixed(2)),
@@ -266,7 +259,7 @@ export default function FuelPage() {
         log.fuel_volume > 0,
     )
     .map((log) => ({
-      date: formatDateLabel(log.date),
+      date: formatDayLabel(log.date),
       rawDate: log.date,
       rate: Number((log.total_cost / log.fuel_volume).toFixed(2)),
     }));
@@ -274,17 +267,10 @@ export default function FuelPage() {
   const rangeTrendData = analytics.charge.logs
     .filter((log) => log.estimated_range != null)
     .map((log) => ({
-      date: formatDateLabel(log.date),
+      date: formatDayLabel(log.date),
       rawDate: log.date,
       range: Number(log.estimated_range),
     }));
-
-  const numberFormat = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  const formatCurrency = (value: number) =>
-    `${profile.currency || "$"}${numberFormat.format(value)}`;
 
   const unitPriceSummary = getUnitPriceSummary(activeStream.logs);
   const unitPriceTrendClass = unitPriceSummary.direction === "up"
@@ -301,24 +287,21 @@ export default function FuelPage() {
           ? "UK gal"
           : "US gal";
 
-  const getLogEfficiencyDisplay = (log: DerivedFuelLog) => {
+  /** `value` is null for the pending and unavailable states, which render plainly. */
+  const getLogEfficiencyDisplay = (
+    log: DerivedFuelLog,
+  ): { text: string; value: number | null } => {
     if (log.fill_type === "partial" || log.pending_full) {
-      return {
-        text: ui.fuel.efficiencyStates.pending,
-        className: "text-muted-foreground",
-      };
+      return { text: ui.fuel.efficiencyStates.pending, value: null };
     }
 
     if (log.segment_distance == null || log.segment_volume == null) {
-      return {
-        text: ui.fuel.efficiencyStates.unavailable,
-        className: "text-muted-foreground",
-      };
+      return { text: ui.fuel.efficiencyStates.unavailable, value: null };
     }
 
     const value =
       log.energy_type === "charge"
-        ? convertChargeEfficiency(log.segment_distance, log.segment_volume)
+        ? convertChargeEfficiency(log.segment_distance, log.segment_volume, profile.distanceUnit)
         : convertFuelEfficiency(
             log.segment_distance,
             log.segment_volume,
@@ -329,16 +312,10 @@ export default function FuelPage() {
     const unit = log.energy_type === "charge" ? chargeMetricUnit : activeMetric;
 
     if (value == null) {
-      return {
-        text: ui.fuel.efficiencyStates.unavailable,
-        className: "text-muted-foreground",
-      };
+      return { text: ui.fuel.efficiencyStates.unavailable, value: null };
     }
 
-    return {
-      text: `${value.toFixed(2)} ${unit}`,
-      className: "text-emerald-600 dark:text-emerald-400 font-semibold",
-    };
+    return { text: `${value.toFixed(2)} ${unit}`, value };
   };
 
   // A pure EV gets a different page entirely. Tank segments and the full-tank
@@ -393,9 +370,13 @@ export default function FuelPage() {
 
       {!hasLogs ? (
         <MotionWrapper delay={0.1}>
-          <Card className="bg-white/5 border-dashed border-2 border-white/10">
+          {/* `bg-white/5` here was invisible in light mode — white on white.
+              The theme variables carry both themes. */}
+          <Card className="rounded-[2rem] border-2 border-dashed bg-secondary/30 dark:bg-white/5">
             <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-              <Fuel className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                <Fuel className="h-8 w-8" />
+              </span>
               <h3 className="text-xl font-semibold tracking-tight">
                 {ui.fuel.noFuelDataYetTitle}
               </h3>
@@ -409,126 +390,95 @@ export default function FuelPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 grid-auto-rows-[1fr] items-stretch">
             <MotionWrapper delay={0.1} className="h-full">
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.averageEfficiency}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Activity
-                      aria-hidden="true"
-                      className="h-4 w-4 text-emerald-500"
-                    />
-                    {activeAnalysisMode === "fuel" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-lg border border-border/60 bg-background/70 px-2.5 text-xs font-semibold shadow-sm"
-                            aria-label={ui.fuel.changeEfficiencyUnit(activeMetric)}
-                          >
-                            {activeMetric}
-                            <ChevronDown
-                              aria-hidden="true"
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                            />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="rounded-xl border border-white/10 bg-veloce-bg backdrop-blur-xl shadow-2xl"
+              <MetricCard
+                tone="emerald"
+                icon={<Activity aria-hidden="true" className="h-4 w-4" />}
+                label={ui.fuel.averageEfficiency}
+                value={
+                  averageEfficiency != null ? averageEfficiency.toFixed(2) : "--"
+                }
+                hint={efficiencyUnit}
+                action={
+                  activeAnalysisMode === "fuel" ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-lg border border-border/60 bg-background/70 px-2.5 text-xs font-semibold shadow-sm"
+                          aria-label={ui.fuel.changeEfficiencyUnit(activeMetric)}
                         >
-                          <DropdownMenuRadioGroup
-                            value={activeMetric}
-                            onValueChange={(metric) => {
-                              if (isFuelEfficiencyUnit(metric)) {
-                                setSelectedMetric(metric);
-                              }
-                            }}
-                          >
-                            {METRIC_OPTIONS.map((metric) => (
-                              <DropdownMenuRadioItem
-                                key={metric}
-                                value={metric}
-                                className="cursor-pointer focus:bg-white/10"
-                              >
-                                {metric}
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="px-5">
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                    {averageEfficiency != null
-                      ? averageEfficiency.toFixed(2)
-                      : "--"}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {efficiencyUnit}
-                  </p>
-                </CardContent>
-              </Card>
+                          {activeMetric}
+                          <ChevronDown
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                          />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="rounded-xl border border-border bg-popover shadow-2xl backdrop-blur-xl"
+                      >
+                        <DropdownMenuRadioGroup
+                          value={activeMetric}
+                          onValueChange={(metric) => {
+                            if (isFuelEfficiencyUnit(metric)) {
+                              setSelectedMetric(metric);
+                            }
+                          }}
+                        >
+                          {METRIC_OPTIONS.map((metric) => (
+                            <DropdownMenuRadioItem
+                              key={metric}
+                              value={metric}
+                              className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                            >
+                              {metric}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null
+                }
+              />
             </MotionWrapper>
 
             <MotionWrapper delay={0.2} className="h-full">
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.costPerDistance(profile.distanceUnit)}
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-rose-500" />
-                </CardHeader>
-                <CardContent className="px-5">
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                    {averageCostPerDistance > 0
-                      ? formatCurrency(averageCostPerDistance)
-                      : "--"}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.fuel.averageRunningCost}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="rose"
+                icon={<DollarSign className="h-4 w-4" />}
+                label={ui.fuel.costPerDistance(profile.distanceUnit)}
+                value={
+                  averageCostPerDistance > 0
+                    ? formatMoneyExact(averageCostPerDistance, profile.currency)
+                    : "--"
+                }
+                hint={ui.fuel.averageRunningCost}
+              />
             </MotionWrapper>
 
             <MotionWrapper
               delay={0.3}
               className="md:col-span-2 lg:col-span-1 h-full"
             >
-              <Card className="relative h-full gap-4 overflow-hidden rounded-3xl py-5 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between px-5 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.fuel.latestUnitPrice(activeAnalysisMode)}
-                  </CardTitle>
-                  <BadgeDollarSign className="h-4 w-4 text-blue-500" />
-                </CardHeader>
-                <CardContent className="px-5">
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                    {unitPriceSummary.latest == null
-                      ? "--"
-                      : formatCurrency(unitPriceSummary.latest)}
-                  </div>
-                  {unitPriceSummary.latest == null ? (
-                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      {ui.fuel.unitPriceUnavailable}
-                    </p>
+              <MetricCard
+                tone="blue"
+                icon={<BadgeDollarSign className="h-4 w-4" />}
+                label={ui.fuel.latestUnitPrice(activeAnalysisMode)}
+                value={
+                  unitPriceSummary.latest == null
+                    ? "--"
+                    : formatMoneyExact(unitPriceSummary.latest, profile.currency)
+                }
+                hint={
+                  unitPriceSummary.latest == null ? (
+                    ui.fuel.unitPriceUnavailable
                   ) : (
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs font-medium">
-                      <span className="text-muted-foreground">
-                        {ui.fuel.perUnit(unitPriceUnit)}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="text-muted-foreground/60"
-                      >
-                        ·
-                      </span>
+                    <>
+                      <span>{ui.fuel.perUnit(unitPriceUnit)}</span>
+                      <span aria-hidden="true">·</span>
                       <span className={unitPriceTrendClass}>
                         {unitPriceSummary.previous == null
                           ? ui.fuel.noPreviousUnitPrice
@@ -538,29 +488,56 @@ export default function FuelPage() {
                                 unitPriceSummary.changePercent,
                               )}
                       </span>
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    </>
+                  )
+                }
+              />
             </MotionWrapper>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             {efficiencyTrendData.length > 0 && (
               <MotionWrapper delay={0.4}>
-                <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-white/5">
-                    <CardTitle>{ui.fuel.efficiencyTrendTitle}</CardTitle>
+                <Card className="h-full overflow-hidden rounded-[2rem]">
+                  <CardHeader className="border-b bg-gradient-to-br from-emerald-500/[0.07] via-transparent to-transparent">
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+                        <Activity className="h-4 w-4" />
+                      </span>
+                      {ui.fuel.efficiencyTrendTitle}
+                    </CardTitle>
                     <CardDescription>
                       {ui.fuel.efficiencyTrendDescription(activeAnalysisMode)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[250px] w-full pt-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <AreaChart
                         data={efficiencyTrendData}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
+                        {/* A fade under the line gives the series weight
+                            without adding a second colour to read. */}
+                        <defs>
+                          <linearGradient
+                            id="efficiencyFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="var(--chart-2)"
+                              stopOpacity={0.28}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="var(--chart-2)"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
@@ -579,6 +556,7 @@ export default function FuelPage() {
                           tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
+                          cursor={{ stroke: "var(--chart-2)", strokeOpacity: 0.3 }}
                           contentStyle={{
                             borderRadius: "1rem",
                             border: "1px solid var(--border)",
@@ -586,11 +564,12 @@ export default function FuelPage() {
                             backdropFilter: "blur(10px)",
                           }}
                         />
-                        <Line
+                        <Area
                           type="monotone"
                           dataKey="efficiency"
                           stroke="var(--chart-2)"
                           strokeWidth={3}
+                          fill="url(#efficiencyFill)"
                           dot={{
                             r: 4,
                             fill: "var(--chart-2)",
@@ -600,7 +579,7 @@ export default function FuelPage() {
                           activeDot={{ r: 6 }}
                           name={efficiencyUnit}
                         />
-                      </LineChart>
+                      </AreaChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
@@ -609,21 +588,44 @@ export default function FuelPage() {
 
             {unitPriceTrendData.length > 0 && (
               <MotionWrapper delay={0.5}>
-                <Card className="h-full overflow-hidden rounded-3xl shadow-sm">
-                  <CardHeader className="border-b border-border/70">
-                    <CardTitle>
+                <Card className="h-full overflow-hidden rounded-[2rem] shadow-sm">
+                  <CardHeader className="border-b bg-gradient-to-br from-blue-500/[0.07] via-transparent to-transparent">
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/15 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                        <BadgeDollarSign className="h-4 w-4" />
+                      </span>
                       {ui.fuel.unitPriceTrendTitle(activeAnalysisMode)}
                     </CardTitle>
                     <CardDescription>
                       {ui.fuel.unitPriceTrendDescription(activeAnalysisMode)}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="h-[250px] w-full">
+                  <CardContent className="h-[250px] w-full pt-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={unitPriceTrendData}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
+                        <defs>
+                          <linearGradient
+                            id="unitPriceFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="var(--chart-5)"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="var(--chart-5)"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
@@ -642,6 +644,7 @@ export default function FuelPage() {
                           tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
+                          cursor={{ stroke: "var(--chart-5)", strokeOpacity: 0.3 }}
                           contentStyle={{
                             borderRadius: "1rem",
                             border: "1px solid var(--border)",
@@ -653,9 +656,15 @@ export default function FuelPage() {
                           type="monotone"
                           dataKey="rate"
                           stroke="var(--chart-5)"
-                          fill="var(--chart-5)"
-                          fillOpacity={0.2}
+                          fill="url(#unitPriceFill)"
                           strokeWidth={2}
+                          dot={{
+                            r: 3,
+                            fill: "var(--chart-5)",
+                            strokeWidth: 2,
+                            stroke: "var(--card)",
+                          }}
+                          activeDot={{ r: 6 }}
                           name={`${profile.currency}/${unitPriceUnit}`}
                         />
                       </AreaChart>
@@ -669,8 +678,13 @@ export default function FuelPage() {
           {activeAnalysisMode === "charge" && rangeTrendData.length > 0 && (
             <MotionWrapper delay={0.6}>
               <Card className="overflow-hidden">
-                <CardHeader className="border-b border-white/5">
-                  <CardTitle>{ui.fuel.batteryRangeTrendTitle}</CardTitle>
+                <CardHeader className="border-b bg-gradient-to-br from-violet-500/[0.07] via-transparent to-transparent">
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/15 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
+                      <BatteryCharging className="h-4 w-4" />
+                    </span>
+                    {ui.fuel.batteryRangeTrendTitle}
+                  </CardTitle>
                   <CardDescription>
                     {ui.fuel.batteryRangeTrendDescription}
                   </CardDescription>
@@ -730,59 +744,74 @@ export default function FuelPage() {
             </MotionWrapper>
           )}
 
-          <Card className="rounded-[2rem] shadow-sm overflow-hidden border">
-            <CardHeader className="bg-muted/20 border-b pb-4">
-              <CardTitle>{ui.fuel.fillUpHistoryTitle}</CardTitle>
+          <Card className="overflow-hidden rounded-[2rem] border shadow-sm">
+            <CardHeader className="border-b bg-gradient-to-br from-primary/[0.07] via-transparent to-transparent pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Receipt className="h-4 w-4" />
+                </span>
+                {ui.fuel.fillUpHistoryTitle}
+              </CardTitle>
               <CardDescription>
                 {ui.fuel.fillUpHistoryDescription}
               </CardDescription>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-muted-foreground uppercase bg-muted/10 border-b">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b bg-gradient-to-r from-muted/40 via-muted/20 to-transparent text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.fuel.columns.date}
                     </th>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.fuel.columns.energyType}
                     </th>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.fuel.columns.fillType}
                     </th>
-                    <th className="px-6 py-4 font-medium text-right">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.fuel.columns.odometer}
                     </th>
-                    <th className="px-6 py-4 font-medium text-right">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.fuel.columns.volume}
                     </th>
-                    <th className="px-6 py-4 font-medium text-right">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.fuel.columns.cost}
                     </th>
-                    <th className="px-6 py-4 font-medium text-right">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.fuel.columns.efficiency}
                     </th>
-                    <th className="px-6 py-4 font-medium text-right">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.fuel.columns.actions}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-border/60">
                   {paginatedLogs.map((log) => {
                     const efficiencyDisplay = getLogEfficiencyDisplay(log);
 
                     return (
                       <tr
                         key={log.id}
-                        className="hover:bg-muted/30 transition-colors"
+                        className="group transition-colors even:bg-muted/[0.12] hover:bg-primary/[0.05] dark:even:bg-white/[0.02]"
                       >
-                        <td className="px-6 py-4 font-medium">
-                          {formatHistoryDate(log.date)}
+                        {/* A colour rail keyed to the energy type: at a glance
+                            you can see which rows are petrol and which are
+                            charges without reading the pill. */}
+                        <td className="relative px-6 py-4 font-medium tabular-nums">
+                          <span
+                            aria-hidden="true"
+                            className={`absolute inset-y-0 left-0 w-1 opacity-0 transition-opacity group-hover:opacity-100 ${log.energy_type === "charge" ? "bg-blue-500" : "bg-amber-500"}`}
+                          />
+                          {formatTableDate(log.date)}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-300">
+                          <Pill
+                            tone={log.energy_type === "charge" ? "blue" : "amber"}
+                          >
+                            <PillDot />
                             {ui.fuel.energyTypes[log.energy_type]}
-                          </span>
+                          </Pill>
                         </td>
                         <td className="px-6 py-4">
                           {/* Charge rows have no fill type — the concept is
@@ -792,39 +821,46 @@ export default function FuelPage() {
                               {ui.common.emptyValue}
                             </span>
                           ) : (
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${log.fill_type === "full" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/10 text-amber-600 dark:text-amber-300"}`}
+                            <Pill
+                              tone={log.fill_type === "full" ? "emerald" : "amber"}
                             >
                               {ui.fuel.fillTypes[log.fill_type]}
+                            </Pill>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right tabular-nums">
+                          {log.odometer.toLocaleString()}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            {profile.distanceUnit}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right tabular-nums">
+                          {log.fuel_volume.toLocaleString()}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            {log.energy_type === "charge" ? "kWh" : volumeUnit}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                          {formatMoneyExact(log.total_cost, profile.currency)}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {efficiencyDisplay.value != null ? (
+                            <Pill tone="emerald" className="tabular-nums">
+                              {efficiencyDisplay.text}
+                            </Pill>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {efficiencyDisplay.text}
                             </span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {log.odometer.toLocaleString()}{" "}
-                          <span className="text-muted-foreground text-xs">
-                            {profile.distanceUnit}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          {log.fuel_volume.toLocaleString()}{" "}
-                          <span className="text-muted-foreground text-xs">
-                            {log.energy_type === "charge" ? "kWh" : volumeUnit}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-medium text-rose-600 dark:text-rose-400">
-                          {formatCurrency(log.total_cost)}
-                        </td>
-                        <td
-                          className={`px-6 py-4 text-right ${efficiencyDisplay.className}`}
-                        >
-                          {efficiencyDisplay.text}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+                              aria-label={ui.common.actions.edit}
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                               onClick={() => setEditingLog(log)}
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -832,7 +868,8 @@ export default function FuelPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              aria-label={ui.common.actions.delete}
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => setDeletingLog(log)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -846,64 +883,13 @@ export default function FuelPage() {
               </table>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t gap-4">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-                <div className="flex items-center gap-2">
-                  <p>Rows per page</p>
-                  <Select
-                    value={pageSize.toString()}
-                    onValueChange={(value) => {
-                      setPageSize(Number(value));
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue placeholder={pageSize.toString()} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[10, 25, 50].map((size) => (
-                        <SelectItem key={size} value={size.toString()}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="hidden sm:block">
-                  Showing {(safePage - 1) * pageSize + 1} to {Math.min(safePage * pageSize, allLogs.length)} of {allLogs.length}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="sm:hidden text-sm text-muted-foreground">
-                  {safePage} / {totalPages}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={safePage === 1}
-                    className="h-8 px-2 lg:px-3 gap-1"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden lg:inline">Previous</span>
-                  </Button>
-                  <div className="hidden sm:block text-sm font-medium mx-2">
-                    Page {safePage} of {totalPages}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="h-8 px-2 lg:px-3 gap-1"
-                  >
-                    <span className="hidden lg:inline">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <TablePagination
+              page={safePage}
+              pageSize={pageSize}
+              totalItems={allLogs.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </Card>
         </>
       )}
@@ -911,6 +897,7 @@ export default function FuelPage() {
       {editingLog && (
         <FuelEditModal
           log={editingLog}
+          vehicle={selectedVehicle}
           open={Boolean(editingLog)}
           onOpenChange={(open) => {
             if (!open) {
@@ -924,7 +911,7 @@ export default function FuelPage() {
         <FuelDeleteDialog
           logId={deletingLog.id}
           vehicleId={deletingLog.vehicle_id}
-          logDate={formatHistoryDate(deletingLog.date)}
+          logDate={formatTableDate(deletingLog.date)}
           open={Boolean(deletingLog)}
           onOpenChange={(open) => {
             if (!open) {

@@ -3,15 +3,15 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useVehicleStore } from "@/store/vehicle-store";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import { editFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
-import { toast } from "sonner";
 
-import { Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { ui } from "@/content/en/ui";
+import { ChargeSessionForm } from "@/components/ev/charge-session-form";
+import { SubmitButton } from "@/components/submit-button";
+import { useVehicleMutation } from "@/hooks/use-vehicle-mutation";
+import type { FuelLog, VehicleWithLogs } from "@/types/database";
 import {
   Form,
   FormControl,
@@ -28,7 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Button,
   Input,
   Select,
   SelectContent,
@@ -47,50 +46,55 @@ const formSchema = z.object({
     .positive({ message: "Must be a positive number" }),
   total_cost: z.coerce.number().min(0, { message: "Must be 0 or greater" }),
   fill_type: z.enum(["full", "partial"]),
-  estimated_range: z.coerce.number().optional(),
 });
-
-type FuelLog = {
-  id: string;
-  vehicle_id: string;
-  date: string;
-  odometer: number;
-  fuel_volume: number;
-  total_cost: number;
-  estimated_range?: number | null;
-  energy_type?: string;
-  /** Null on charge rows: fill type is an ICE-only concept. */
-  fill_type: "full" | "partial" | null;
-  charge_source?: string | null;
-  start_soc?: number | null;
-  end_soc?: number | null;
-  charger_network?: string | null;
-  location?: string | null;
-};
 
 interface FuelEditModalProps {
   log: FuelLog;
+  vehicle: VehicleWithLogs;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function FuelEditModal({ log, open, onOpenChange }: FuelEditModalProps) {
+export function FuelEditModal({
+  log,
+  vehicle,
+  open,
+  onOpenChange,
+}: FuelEditModalProps) {
+  const isCharge = log.energy_type === "charge";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-112.5 max-h-[90vh] overflow-y-auto rounded-[2rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Pencil className="h-5 w-5 text-primary" />
-            {ui.fuel.modal.editTitle}
+            {isCharge ? ui.ev.chargeModal.editTitle : ui.fuel.modal.editTitle}
           </DialogTitle>
-          <DialogDescription>{ui.fuel.modal.editDescription}</DialogDescription>
+          <DialogDescription>
+            {isCharge
+              ? ui.ev.chargeModal.editDescription
+              : ui.fuel.modal.editDescription}
+          </DialogDescription>
         </DialogHeader>
 
-        <FuelEditForm
-          key={`${log.id}-${open ? "open" : "closed"}`}
-          log={log}
-          onOpenChange={onOpenChange}
-        />
+        {/* Editing a charge reuses the logging form, so a session's tariff can
+            actually be corrected. The old edit path silently carried the charge
+            fields through untouched. */}
+        {isCharge ? (
+          <ChargeSessionForm
+            key={`${log.id}-${open ? "open" : "closed"}`}
+            vehicle={vehicle}
+            log={log}
+            onSuccess={() => onOpenChange(false)}
+          />
+        ) : (
+          <FuelEditForm
+            key={`${log.id}-${open ? "open" : "closed"}`}
+            log={log}
+            onOpenChange={onOpenChange}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -103,13 +107,8 @@ function FuelEditForm({
   log: FuelLog;
   onOpenChange: (open: boolean) => void;
 }) {
-  const router = useRouter();
-  const { fetchVehicles } = useVehicleStore();
   const { profile, getVolumeUnit } = useUserStore();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  const isCharge = log.energy_type === "charge";
+  const { run, isPending, error } = useVehicleMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,59 +118,23 @@ function FuelEditForm({
       fuel_volume: log.fuel_volume,
       total_cost: log.total_cost,
       fill_type: log.fill_type ?? "full",
-      estimated_range: log.estimated_range ?? undefined,
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setError(null);
     const formData = new FormData();
     formData.append("vehicle_id", log.vehicle_id);
     formData.append("date", values.date);
     formData.append("odometer", values.odometer.toString());
     formData.append("fuel_volume", values.fuel_volume.toString());
     formData.append("total_cost", values.total_cost.toString());
-    // Without this the server would normalise every edited row back to "fuel".
-    formData.append("energy_type", isCharge ? "charge" : "fuel");
+    formData.append("energy_type", "fuel");
+    formData.append("fill_type", values.fill_type);
 
-    if (isCharge) {
-      // Charge-specific details are not editable here, so carry them through
-      // unchanged rather than letting the server reset them to defaults.
-      formData.append("charge_source", log.charge_source ?? "other");
-      if (log.start_soc != null) {
-        formData.append("start_soc", log.start_soc.toString());
-      }
-      if (log.end_soc != null) {
-        formData.append("end_soc", log.end_soc.toString());
-      }
-      if (log.charger_network) {
-        formData.append("charger_network", log.charger_network);
-      }
-      if (log.location) {
-        formData.append("location", log.location);
-      }
-    } else {
-      formData.append("fill_type", values.fill_type);
-    }
-
-    if (values.estimated_range != null) {
-      formData.append("estimated_range", values.estimated_range.toString());
-    }
-
-    startTransition(async () => {
-      try {
-        const result = await editFuelLog(log.id, formData);
-        if (result.success) {
-          toast.success(ui.fuel.modal.editSaved);
-          await fetchVehicles();
-          router.refresh();
-          onOpenChange(false);
-        } else {
-          setError(result.error || ui.fuel.modal.editFailed);
-        }
-      } catch {
-        setError(ui.fuel.modal.messages.unexpected);
-      }
+    run(() => editFuelLog(log.id, formData), {
+      successMessage: ui.fuel.modal.editSaved,
+      failureMessage: ui.fuel.modal.editFailed,
+      onSuccess: () => onOpenChange(false),
     });
   }
 
@@ -214,40 +177,37 @@ function FuelEditForm({
             )}
           />
 
-          {/* Fill type does not apply to charge sessions. */}
-          {!isCharge && (
-            <FormField
-              control={form.control}
-              name="fill_type"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="full">
-                        {ui.fuel.modal.fillTypeOptions.fullFuel}
-                      </SelectItem>
-                      <SelectItem value="partial">
-                        {ui.fuel.modal.fillTypeOptions.partialFuel}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {ui.fuel.modal.labels.partialFillHelper}
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="fill_type"
+            render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel>{ui.fuel.modal.labels.fillType}</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="full">
+                      {ui.fuel.modal.fillTypeOptions.fullFuel}
+                    </SelectItem>
+                    <SelectItem value="partial">
+                      {ui.fuel.modal.fillTypeOptions.partialFuel}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {ui.fuel.modal.labels.partialFillHelper}
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
@@ -255,9 +215,7 @@ function FuelEditForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {isCharge
-                    ? ui.fuel.modal.labels.energy
-                    : ui.fuel.modal.labels.volume(getVolumeUnit())}
+                  {ui.fuel.modal.labels.volume(getVolumeUnit())}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -292,33 +250,6 @@ function FuelEditForm({
               </FormItem>
             )}
           />
-
-          {isCharge && (
-            <FormField
-              control={form.control}
-              name="estimated_range"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>
-                    {ui.fuel.modal.estimatedRangeShort(profile.distanceUnit)}{" "}
-                    <span className="text-muted-foreground text-xs font-normal">
-                      {ui.fuel.modal.labels.estimatedRangeOptional}
-                    </span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      className="rounded-xl"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
         </div>
 
         {error && (
@@ -327,14 +258,9 @@ function FuelEditForm({
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="w-full rounded-full h-11 text-base font-semibold"
-          disabled={isPending}
-        >
-          {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-          {isPending ? ui.common.actions.saving : ui.fuel.modal.saveChanges}
-        </Button>
+        <SubmitButton isPending={isPending}>
+          {ui.fuel.modal.saveChanges}
+        </SubmitButton>
       </form>
     </Form>
   );

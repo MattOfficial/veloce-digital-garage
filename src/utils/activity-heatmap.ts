@@ -5,6 +5,8 @@ export const ACTIVITY_HEATMAP_DAYS = 365;
 export type ActivityHeatmapDay = {
   date: string;
   fuelCount: number;
+  /** Charge sessions, split out from `fuelCount` by the log's energy type. */
+  chargeCount: number;
   maintenanceCount: number;
   totalCount: number;
   intensity: 0 | 1 | 2 | 3 | 4;
@@ -31,7 +33,14 @@ type ActivityVehicle = Pick<
 
 type ActivityCounts = {
   fuelCount: number;
+  chargeCount: number;
   maintenanceCount: number;
+};
+
+const EMPTY_COUNTS: ActivityCounts = {
+  fuelCount: 0,
+  chargeCount: 0,
+  maintenanceCount: 0,
 };
 
 function startOfLocalDay(date: Date) {
@@ -100,17 +109,19 @@ export function buildActivityHeatmap(
     const date = normalizeActivityDate(value);
     if (!date || date < rangeStartKey || date > rangeEndKey) return;
 
-    const current = countsByDate.get(date) ?? {
-      fuelCount: 0,
-      maintenanceCount: 0,
-    };
+    const current = countsByDate.get(date) ?? { ...EMPTY_COUNTS };
     current[type] += 1;
     countsByDate.set(date, current);
   };
 
   vehicles.forEach((vehicle) => {
+    // Split on the log, not the vehicle: a plug-in hybrid produces both kinds
+    // and belongs under both.
     (vehicle.fuel_logs ?? []).forEach((log) =>
-      increment(log.date, "fuelCount"),
+      increment(
+        log.date,
+        log.energy_type === "charge" ? "chargeCount" : "fuelCount",
+      ),
     );
     (vehicle.maintenance_logs ?? []).forEach((log) =>
       increment(log.date, "maintenanceCount"),
@@ -130,12 +141,10 @@ export function buildActivityHeatmap(
       const dateKey = toLocalDateKey(date);
       const isInRange = dateKey >= rangeStartKey && dateKey <= rangeEndKey;
       const counts = isInRange
-        ? countsByDate.get(dateKey) ?? {
-            fuelCount: 0,
-            maintenanceCount: 0,
-          }
-        : { fuelCount: 0, maintenanceCount: 0 };
-      const totalCount = counts.fuelCount + counts.maintenanceCount;
+        ? countsByDate.get(dateKey) ?? EMPTY_COUNTS
+        : EMPTY_COUNTS;
+      const totalCount =
+        counts.fuelCount + counts.chargeCount + counts.maintenanceCount;
 
       days.push({
         date: dateKey,
@@ -167,7 +176,8 @@ export function buildActivityHeatmap(
     weeks,
     activeDays: countsByDate.size,
     totalActivities: Array.from(countsByDate.values()).reduce(
-      (sum, counts) => sum + counts.fuelCount + counts.maintenanceCount,
+      (sum, counts) =>
+        sum + counts.fuelCount + counts.chargeCount + counts.maintenanceCount,
       0,
     ),
   };

@@ -86,19 +86,18 @@ export function isEvEfficiencyUnit(value: string): value is EvEfficiencyUnit {
   return EV_EFFICIENCY_UNITS.some((unit) => unit === value);
 }
 
+/**
+ * Distance per unit of energy, in whichever distance unit the owner uses.
+ *
+ * Wh/km is the engineering convention and is offered, but "how far does a unit
+ * take me" is how owners actually reason about a charge — and it keeps the two
+ * distance units consistent rather than giving miles an economy unit and
+ * kilometres a consumption one.
+ */
 export function getDefaultEvEfficiencyUnit(
   distanceUnit: DistanceUnit,
 ): EvEfficiencyUnit {
-  return distanceUnit === "miles" ? "mi/kWh" : "Wh/km";
-}
-
-/**
- * Consumption units (Wh/km, kWh/100km) improve as they fall, economy units
- * (km/kWh, mi/kWh) improve as they rise. Trend arrows and "better than last
- * month" comparisons need to know which way is good.
- */
-export function isLowerBetterEvUnit(unit: EvEfficiencyUnit): boolean {
-  return unit === "Wh/km" || unit === "kWh/100km";
+  return distanceUnit === "miles" ? "mi/kWh" : "km/kWh";
 }
 
 /**

@@ -3,6 +3,13 @@
 Branch: `feat/ev-vehicle-redesign`
 Status: implemented (sections 1–6). Deferred items are listed in section 9.
 
+> **Partly superseded.** The energy half of this document — "home charging is never
+> logged, infer it from `distance × Wh/km`" — was replaced by
+> [ev-charging-redesign.md](ev-charging-redesign.md). Charging is a logged event again,
+> home included, and inference survives only as a cold-start fallback. **The battery-health
+> half still stands**: SoC snapshots, km per %, usable range and state of health are
+> unchanged, and sections 3, 5 and 7 remain the reference for those.
+
 ## 1. The problem with what we have today
 
 Today an EV is modelled as an ICE vehicle with the units swapped out:

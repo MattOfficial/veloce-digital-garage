@@ -46,6 +46,8 @@ import {
   buildVehicleDistanceTrends,
   type DistanceTrendMonth,
 } from "@/utils/distance-trends";
+import { formatDistance, formatNumber } from "@/utils/formatting";
+import { median } from "@/utils/statistics";
 import {
   Button,
   Card,
@@ -119,15 +121,6 @@ function CoverageBadge({
       {label}
     </span>
   );
-}
-
-function median(values: number[]) {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0
-    ? (sorted[middle - 1] + sorted[middle]) / 2
-    : sorted[middle];
 }
 
 function ComparisonDirectionIcon({
@@ -231,16 +224,10 @@ export function DistanceTrendsPanel({
     (month) => month.key === effectiveMonthKey,
   );
 
-  const numberFormat = new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 0,
-  });
-  const decimalFormat = new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 1,
-  });
-  const formatDistance = (value: number | null, decimals = false) =>
+  const formatDistanceValue = (value: number | null, decimals = false) =>
     value == null
       ? ui.common.emptyValue
-      : `${decimals ? decimalFormat.format(value) : numberFormat.format(value)} ${distanceUnit}`;
+      : formatDistance(value, distanceUnit, { decimals: decimals ? 1 : 0 });
 
   const comparisonText =
     trends.comparison.percentageChange == null
@@ -290,7 +277,7 @@ export function DistanceTrendsPanel({
           <div className="grid divide-y divide-border/50 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
             <SummaryMetric
               label={ui.insights.distanceTrends.currentMonth}
-              value={formatDistance(currentMonth?.totalDistance ?? null)}
+              value={formatDistanceValue(currentMonth?.totalDistance ?? null)}
               detail={
                 currentMonth?.hasData
                   ? ui.insights.distanceTrends.estimatedThrough(
@@ -302,7 +289,7 @@ export function DistanceTrendsPanel({
             />
             <SummaryMetric
               label={ui.insights.distanceTrends.typicalMonth}
-              value={formatDistance(typicalMonth)}
+              value={formatDistanceValue(typicalMonth)}
               detail={ui.insights.distanceTrends.medianAcross(
                 completedMonths.length,
               )}
@@ -310,7 +297,7 @@ export function DistanceTrendsPanel({
             />
             <SummaryMetric
               label={ui.insights.distanceTrends.trailingTotal(rangeMonths)}
-              value={formatDistance(
+              value={formatDistanceValue(
                 monthsWithData.length > 0 ? trailingDistance : null,
               )}
               detail={ui.insights.distanceTrends.basedOnCoveredMonths(
@@ -320,7 +307,7 @@ export function DistanceTrendsPanel({
             />
             <SummaryMetric
               label={ui.insights.distanceTrends.busiestMonth}
-              value={formatDistance(peakMonth?.totalDistance ?? null)}
+              value={formatDistanceValue(peakMonth?.totalDistance ?? null)}
               detail={
                 peakMonth
                   ? ui.insights.distanceTrends.busiestMonthDescription(
@@ -433,17 +420,17 @@ export function DistanceTrendsPanel({
                       width={52}
                       fontSize={11}
                       tickFormatter={(value) =>
-                        new Intl.NumberFormat(undefined, {
+                        formatNumber(Number(value), {
                           notation: "compact",
                           maximumFractionDigits: 1,
-                        }).format(Number(value))
+                        })
                       }
                     />
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
                           formatter={(value: unknown, name: unknown) => [
-                            formatDistance(Number(value)),
+                            formatDistanceValue(Number(value)),
                             name === "rollingAverage"
                               ? ui.insights.distanceTrends.rollingAverage
                               : ui.insights.distanceTrends.estimatedDistance,
@@ -683,7 +670,7 @@ export function DistanceTrendsPanel({
                 {ui.insights.distanceTrends.totalDistance}
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatDistance(selected.totalDistance)}
+                {formatDistanceValue(selected.totalDistance)}
               </p>
             </div>
             <div className="rounded-2xl bg-muted/45 p-4">
@@ -693,7 +680,7 @@ export function DistanceTrendsPanel({
                 )}
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatDistance(trends.comparison.previousDistance)}
+                {formatDistanceValue(trends.comparison.previousDistance)}
               </p>
             </div>
             <div className="rounded-2xl bg-muted/45 p-4">
@@ -701,7 +688,7 @@ export function DistanceTrendsPanel({
                 {ui.insights.distanceTrends.dailyAverage}
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatDistance(
+                {formatDistanceValue(
                   selected.kpis.averageCoveredDayDistance,
                   true,
                 )}
@@ -774,7 +761,9 @@ export function DistanceTrendsPanel({
                     axisLine={false}
                     width={46}
                     fontSize={11}
-                    tickFormatter={(value) => decimalFormat.format(Number(value))}
+                    tickFormatter={(value) =>
+                      formatNumber(Number(value), { maximumFractionDigits: 1 })
+                    }
                   />
                   <ChartTooltip
                     content={
@@ -786,7 +775,7 @@ export function DistanceTrendsPanel({
                           return point?.label ?? "";
                         }}
                         formatter={(value: unknown) =>
-                          formatDistance(Number(value), true)
+                          formatDistanceValue(Number(value), true)
                         }
                       />
                     }
@@ -825,7 +814,7 @@ export function DistanceTrendsPanel({
               </p>
               <p className="mt-1 text-sm font-semibold">
                 {selected.kpis.peakDay
-                  ? `${selected.kpis.peakDay.label} · ${formatDistance(selected.kpis.peakDay.distance, true)}`
+                  ? `${selected.kpis.peakDay.label} · ${formatDistanceValue(selected.kpis.peakDay.distance, true)}`
                   : ui.common.emptyValue}
               </p>
             </div>

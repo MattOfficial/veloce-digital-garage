@@ -40,6 +40,7 @@ import {
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
+import { formatMoneyCompact, formatMoneyExact } from "@/utils/formatting";
 import {
   Card,
   CardContent,
@@ -219,16 +220,8 @@ export function CostTrendsPanel({
     value: segment.distance > 0 ? segment.cost / segment.distance : null,
   }));
 
-  const numberFormat = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  const compactCurrency = new Intl.NumberFormat(undefined, {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
   const formatCurrency = (value: number) =>
-    `${currencySymbol}${numberFormat.format(value)}`;
+    formatMoneyExact(value, currencySymbol);
 
   const chartConfig = {
     fuel: {
@@ -411,7 +404,7 @@ export function CostTrendsPanel({
                         tickMargin={8}
                         width={54}
                         tickFormatter={(value) =>
-                          `${currencySymbol}${compactCurrency.format(Number(value))}`
+                          formatMoneyCompact(Number(value), currencySymbol)
                         }
                       />
                       <ChartTooltip

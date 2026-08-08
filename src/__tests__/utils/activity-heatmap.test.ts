@@ -6,6 +6,7 @@ import {
   normalizeActivityDate,
   toLocalDateKey,
 } from "@/utils/activity-heatmap";
+import { makeFuelLog, makeMaintenanceLog } from "@/__tests__/factories";
 
 type ActivityVehicle = Pick<
   VehicleWithLogs,
@@ -17,35 +18,26 @@ function makeVehicle(
   maintenanceDates: string[] = [],
 ): ActivityVehicle {
   return {
-    fuel_logs: fuelDates.map((date, index) => ({
-      id: `fuel-${index}`,
-      vehicle_id: "vehicle-1",
-      date,
-      odometer: 10_000 + index,
-      fuel_volume: 20,
-      total_cost: 1_000,
-      calculated_efficiency: null,
-      energy_type: "fuel",
-      fill_type: "full",
-      charge_source: null,
-      start_soc: null,
-      end_soc: null,
-      is_estimated: false,
-      charger_network: null,
-      location: null,
-      estimated_range: null,
-      created_at: `${date}T12:00:00Z`,
-    })),
-    maintenance_logs: maintenanceDates.map((date, index) => ({
-      id: `maintenance-${index}`,
-      vehicle_id: "vehicle-1",
-      date,
-      service_type: "Service",
-      cost: 2_000,
-      odometer: 10_000 + index,
-      notes: null,
-      created_at: `${date}T12:00:00Z`,
-    })),
+    fuel_logs: fuelDates.map((date, index) =>
+      makeFuelLog({
+        id: `fuel-${index}`,
+        vehicle_id: "vehicle-1",
+        date,
+        odometer: 10_000 + index,
+        fuel_volume: 20,
+        total_cost: 1_000,
+        created_at: `${date}T12:00:00Z`,
+      }),
+    ),
+    maintenance_logs: maintenanceDates.map((date, index) =>
+      makeMaintenanceLog({
+        id: `maintenance-${index}`,
+        vehicle_id: "vehicle-1",
+        date,
+        odometer: 10_000 + index,
+        created_at: `${date}T12:00:00Z`,
+      }),
+    ),
   };
 }
 
@@ -91,6 +83,42 @@ describe("activity heatmap", () => {
     });
     expect(data.activeDays).toBe(1);
     expect(data.totalActivities).toBe(3);
+  });
+
+  it("counts charge sessions separately from liquid fuel", () => {
+    const vehicle = {
+      fuel_logs: [
+        makeFuelLog({ id: "f1", date: "2025-06-10", energy_type: "fuel" }),
+        makeFuelLog({ id: "c1", date: "2025-06-10", energy_type: "charge" }),
+        makeFuelLog({ id: "c2", date: "2025-06-10", energy_type: "charge" }),
+      ],
+      maintenance_logs: [],
+    };
+
+    const day = findDay(buildActivityHeatmap([vehicle], endDate), "2025-06-10");
+
+    expect(day).toMatchObject({
+      fuelCount: 1,
+      chargeCount: 2,
+      maintenanceCount: 0,
+      totalCount: 3,
+    });
+  });
+
+  it("splits a plug-in hybrid's two streams onto the same day", () => {
+    // The split is on the log, not the vehicle, so a PHEV shows under both.
+    const phev = {
+      fuel_logs: [
+        makeFuelLog({ id: "f1", date: "2025-06-11", energy_type: "fuel" }),
+        makeFuelLog({ id: "c1", date: "2025-06-11", energy_type: "charge" }),
+      ],
+      maintenance_logs: [],
+    };
+
+    const day = findDay(buildActivityHeatmap([phev], endDate), "2025-06-11");
+
+    expect(day?.fuelCount).toBe(1);
+    expect(day?.chargeCount).toBe(1);
   });
 
   it("caps intensity at four while retaining the full activity count", () => {

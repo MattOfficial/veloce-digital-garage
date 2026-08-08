@@ -1,6 +1,12 @@
 import { differenceInCalendarDays, format, isValid, parseISO, startOfMonth, subMonths } from "date-fns";
 
 import type { VehicleSnapshot } from "@/types/database";
+import {
+  consistencyScore as scoreConsistency,
+  getOutlierBounds,
+  leastSquaresSlope,
+  median,
+} from "@/utils/statistics";
 
 /**
  * Battery health derived from state-of-charge snapshots.
@@ -117,34 +123,6 @@ function sortSnapshots(snapshots: VehicleSnapshot[]): VehicleSnapshot[] {
   });
 }
 
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-
-  return sorted.length % 2 === 0
-    ? (sorted[middle - 1] + sorted[middle]) / 2
-    : sorted[middle];
-}
-
-function medianAbsoluteDeviation(values: number[], center: number): number {
-  const deviations = values.map((value) => Math.abs(value - center));
-  return median(deviations) ?? 0;
-}
-
-function coefficientOfVariation(values: number[]): number | null {
-  if (values.length < 2) return null;
-
-  const mean = values.reduce((total, value) => total + value, 0) / values.length;
-  if (mean <= 0) return null;
-
-  const variance =
-    values.reduce((total, value) => total + (value - mean) ** 2, 0) / values.length;
-
-  return Math.sqrt(variance) / mean;
-}
-
 /**
  * Pairs consecutive snapshots into candidate discharge segments and marks the
  * ones we cannot trust. Every candidate is returned, rejected or not, so the UI
@@ -219,20 +197,15 @@ function flagOutliers(segments: BatteryDischargeSegment[]): BatteryDischargeSegm
     return segments;
   }
 
-  const center = median(usableRates);
-  if (center == null || center <= 0) return segments;
-
-  // Very consistent riding collapses the MAD to zero, which would let a wild
-  // reading through, so the threshold never falls below a fraction of the median.
-  const deviation = medianAbsoluteDeviation(usableRates, center);
-  const limit = Math.max(
-    OUTLIER_MAD_MULTIPLIER * deviation,
-    center * OUTLIER_MIN_RELATIVE_SPREAD,
-  );
+  const bounds = getOutlierBounds(usableRates, {
+    madMultiplier: OUTLIER_MAD_MULTIPLIER,
+    minRelativeSpread: OUTLIER_MIN_RELATIVE_SPREAD,
+  });
+  if (bounds == null) return segments;
 
   return segments.map((segment) => {
     if (!segment.usable) return segment;
-    if (Math.abs(segment.kmPerPercent - center) <= limit) return segment;
+    if (Math.abs(segment.kmPerPercent - bounds.center) <= bounds.limit) return segment;
 
     return { ...segment, usable: false, rejection: "outlier" as const };
   });
@@ -283,20 +256,13 @@ function estimateRangeSlopePerYear(trend: BatteryHealthTrendPoint[]): number | n
 
   const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
   const originTime = points[0].time;
-  const xs = points.map((point) => (point.time - originTime) / msPerYear);
-  const ys = points.map((point) => point.range);
 
-  const meanX = xs.reduce((total, value) => total + value, 0) / xs.length;
-  const meanY = ys.reduce((total, value) => total + value, 0) / ys.length;
-
-  let numerator = 0;
-  let denominator = 0;
-  for (let index = 0; index < xs.length; index += 1) {
-    numerator += (xs[index] - meanX) * (ys[index] - meanY);
-    denominator += (xs[index] - meanX) ** 2;
-  }
-
-  return denominator > 0 ? numerator / denominator : null;
+  return leastSquaresSlope(
+    points.map((point) => ({
+      x: (point.time - originTime) / msPerYear,
+      y: point.range,
+    })),
+  );
 }
 
 function resolveConfidence(
@@ -347,9 +313,7 @@ export function summarizeBatteryHealth(
   const kmPerPercent = hasEnoughData ? median(rates) : null;
   const usableRangeKm = kmPerPercent != null ? kmPerPercent * 100 : null;
 
-  const variation = coefficientOfVariation(rates);
-  const consistencyScore =
-    variation != null ? Math.max(0, Math.min(100, (1 - variation) * 100)) : null;
+  const consistencyScore = scoreConsistency(rates);
 
   // Without a configured baseline, the earliest usable segments stand in for
   // "when new". That is only meaningful if tracking started early in ownership,

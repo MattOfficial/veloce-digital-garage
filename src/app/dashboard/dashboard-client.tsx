@@ -69,7 +69,12 @@ import {
   getEvEfficiencyPrecision,
 } from "@/utils/efficiency-units";
 import { buildFuelAnalytics, type FuelAnalyticsMode } from "@/utils/fuel-analytics";
-import { formatMoney, getCurrencySymbol } from "@/utils/formatting";
+import {
+  formatMoney,
+  formatMoneyExact,
+  formatNumber,
+  getCurrencySymbol,
+} from "@/utils/formatting";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 import {
   getServiceReminderStatus,
@@ -401,15 +406,10 @@ export default function DashboardClient({
     { label: "Other", value: ownership.totalOtherCost, color: "bg-violet-500" },
   ].filter((item) => item.value > 0);
 
-  const formatDistance = (value: number) =>
-    new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
   const costPerDistanceLabel =
     ownership.costPerDistance == null
       ? ui.common.emptyValue
-      : formatMoney(ownership.costPerDistance, currencySymbol, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
+      : formatMoneyExact(ownership.costPerDistance, currencySymbol);
   const spendTrend = ownership.periodTrendPercent;
   const SpendTrendIcon =
     spendTrend != null && spendTrend > 0 ? ArrowUpRight : ArrowDownRight;
@@ -422,7 +422,7 @@ export default function DashboardClient({
         return `Due in ${Math.max(0, nextService.daysRemaining)} days`;
       }
       if (nextService.distanceRemaining != null) {
-        return `${formatDistance(Math.max(0, nextService.distanceRemaining))} ${distanceUnit} remaining`;
+        return `${formatNumber(Math.max(0, nextService.distanceRemaining))} ${distanceUnit} remaining`;
       }
       return "Approaching its service interval";
     }
@@ -433,7 +433,7 @@ export default function DashboardClient({
       return `Due in ${nextService.daysRemaining} days`;
     }
     if (nextService.distanceRemaining != null) {
-      return `${formatDistance(nextService.distanceRemaining)} ${distanceUnit} remaining`;
+      return `${formatNumber(nextService.distanceRemaining)} ${distanceUnit} remaining`;
     }
     return "No service pressure detected";
   })();
@@ -501,7 +501,7 @@ export default function DashboardClient({
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">
                   {ownership.trackedDistance > 0
-                    ? `${formatMoney(ownership.totalCost, currencySymbol)} tracked over ${formatDistance(ownership.trackedDistance)} ${distanceUnit}`
+                    ? `${formatMoney(ownership.totalCost, currencySymbol)} tracked over ${formatNumber(ownership.trackedDistance)} ${distanceUnit}`
                     : "Add odometer history to unlock your ownership rate."}
                 </p>
               </div>
@@ -534,14 +534,14 @@ export default function DashboardClient({
                   <p className="mt-1 font-semibold tabular-nums">
                     {distanceLast30Days.hasSufficientData &&
                     distanceLast30Days.value != null
-                      ? `${formatDistance(distanceLast30Days.value)} ${distanceUnit}`
+                      ? `${formatNumber(distanceLast30Days.value)} ${distanceUnit}`
                       : ui.common.emptyValue}
                   </p>
                 </div>
                 <div className="border-border/70 sm:border-l sm:pl-5">
                   <p className="text-xs text-muted-foreground">Current odometer</p>
                   <p className="mt-1 font-semibold tabular-nums">
-                    {formatDistance(latestOdometer)} {distanceUnit}
+                    {formatNumber(latestOdometer)} {distanceUnit}
                   </p>
                 </div>
               </div>

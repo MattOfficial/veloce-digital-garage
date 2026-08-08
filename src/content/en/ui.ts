@@ -2,6 +2,15 @@ import { brand } from "./brand";
 
 export const ui = {
   common: {
+    unexpectedError: "An unexpected error occurred.",
+    pagination: {
+      rowsPerPage: "Rows per page",
+      showing: (first: number, last: number, total: number) =>
+        `Showing ${first} to ${last} of ${total}`,
+      pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
+      previous: "Previous",
+      next: "Next",
+    },
     actions: {
       back: "Back",
       cancel: "Cancel",
@@ -33,6 +42,8 @@ export const ui = {
     items: {
       dashboard: "Dashboard",
       fuelHistory: "Fuel History",
+      /** Matches the page title for a pure EV, which has no fuel history. */
+      energyBattery: "Energy & Battery",
       maintenance: "Maintenance",
       insights: "Trends",
     },
@@ -249,13 +260,16 @@ export const ui = {
       `${count} ${count === 1 ? "activity" : "activities"}`,
     fuelStops: (count: number) =>
       `${count} fuel ${count === 1 ? "stop" : "stops"}`,
+    charges: (count: number) =>
+      `${count} ${count === 1 ? "charge" : "charges"}`,
     maintenancePayments: (count: number) =>
       `${count} maintenance ${count === 1 ? "payment" : "payments"}`,
     loading: "Loading activity…",
     emptyTitle: "No activity yet",
     emptyDescription:
-      "Fuel stops and maintenance payments will appear here.",
+      "Fuel stops, charges and maintenance payments will appear here.",
     fuelLegend: "Fuel",
+    chargeLegend: "Charge",
     maintenanceLegend: "Maintenance",
     intensityLegend: "More activity = stronger color",
   },
@@ -523,30 +537,49 @@ export const ui = {
       costPerDistance: (unit: string) => `Cost per ${unit}`,
       monthlyCost: "Last 30 days",
       energyUsed: "Energy Used",
-      inferredHome: "Home charging (estimated)",
-      loggedPublic: "Public charging (logged)",
+      inferredHome: "Estimated (nothing logged)",
+      loggedPublic: "Logged sessions",
       basisLabel: "Basis",
       basis: {
-        measured: "Measured from logged sessions",
+        measured: "From the sessions you logged",
         "partially-inferred":
-          "Public sessions measured, home charging estimated from distance and efficiency",
-        inferred: "Estimated from distance, efficiency and your tariff",
+          "Part logged, part estimated from distance and efficiency",
+        inferred:
+          "Nothing logged this period, so this is estimated from distance, efficiency and your tariff",
         unavailable: "Not enough data",
       },
       estimateBadge: "Estimated",
+      chargingLoss: "Lost in charging",
+      chargingLossHelper:
+        "The gap between what the meter billed and what reached the battery.",
       missingTariff:
-        "Set your electricity tariff in your profile to see home charging costs.",
+        "Set your electricity tariff in your profile and we can estimate periods you did not log.",
       missingEfficiency:
-        "Record a few battery check-ins to unlock energy and cost estimates.",
+        "Log a charge, or record a few battery check-ins, to unlock energy and cost figures.",
     },
     savings: {
       title: "Savings vs Petrol",
       description: "What the same distance would have cost on petrol.",
-      saved: "Saved",
+      saved: "Saved so far",
       equivalentCost: "Petrol equivalent",
       perDistance: (unit: string) => `Saved per ${unit}`,
+      yourRate: (unit: string) => `Your cost per ${unit}`,
+      petrolRate: (unit: string) => `Petrol cost per ${unit}`,
+      benchmark: {
+        garage: (count: number, type: string) =>
+          `Measured from ${count === 1 ? "your other" : `your ${count} other`} petrol ${type}${count === 1 ? "" : "s"}`,
+        "profile-reference": "From the petrol price and economy in your profile",
+        "regional-default": (type: string) =>
+          `Typical Indian running cost for a petrol ${type}. Add a petrol ${type} to your garage, or set a reference in your profile, for a figure based on your own driving.`,
+        unavailable: "No petrol comparison available",
+      },
+      vehicleTypes: {
+        car: "car",
+        motorcycle: "two-wheeler",
+        truck: "truck",
+      },
       missingReference:
-        "Set a reference petrol price and economy in your profile to see savings.",
+        "Log a charge with its cost, and we can compare it against petrol.",
     },
     mix: {
       title: "Charging Mix",
@@ -583,24 +616,160 @@ export const ui = {
       atSoc: (soc: number) => `At ${soc.toFixed(0)}% charge`,
     },
     chargeModal: {
-      trigger: "Log Public Charge",
-      title: "Log Public Charge",
+      trigger: "Log Charge",
+      title: "Log a Charge",
+      editTitle: "Edit Charge",
       description:
-        "Home charging is worked out automatically. Only log sessions you paid for.",
+        "Every charge counts, at home or on the road. Pick how you were billed.",
+      editDescription: "Update this charging session.",
+      pricingModes: {
+        per_kwh: "Per unit",
+        per_minute: "Per minute",
+        flat: "Flat",
+        free: "Free",
+      },
+      pricingModeHelp: {
+        per_kwh:
+          "Meter or charger reported the units. Home charging and most DC chargers work this way.",
+        per_minute:
+          "Billed by the clock — Ather Grid, for example. We work out the units from the battery percentages.",
+        flat: "One price for the whole session, whatever it delivered.",
+        free: "Free to use. Still worth logging: it keeps your efficiency and battery figures honest.",
+      },
       labels: {
-        chargeSource: "Charger Type",
-        startSoc: "Start %",
-        endSoc: "End %",
+        chargeSource: "Where",
+        pricingMode: "Billed",
+        units: "Units consumed (kWh)",
+        ratePerKwh: (currency: string) => `Cost per unit (${currency}/kWh)`,
+        durationMinutes: "Minutes charged",
+        ratePerMinute: (currency: string) => `Cost per minute (${currency})`,
+        sessionPrice: (currency: string) => `Session price (${currency})`,
+        startSoc: "Battery at start (%)",
+        endSoc: "Battery at end (%)",
+        chargedToFull: "Charged to 100%",
+        chargedToFullHelper:
+          "Turn this on and you can skip the percentages below — a full charge is a reference point on its own.",
+        chargedToFullOn:
+          "That is all we need. The percentages below are optional.",
+        socOptional:
+          "Battery percentages (optional). They sharpen efficiency between charges and let us track pack capacity.",
+        socOptionalFull:
+          "Optional. A real start percentage lets us measure your pack capacity, which units alone cannot.",
         network: "Network",
         location: "Location",
-        energyOptional:
-          "Leave energy blank to derive it from the battery percentages.",
+        extras: "Session fee, idle time and tax",
+        sessionFee: (currency: string) => `Session fee (${currency})`,
+        idleMinutes: "Idle minutes",
+        idleRate: (currency: string) => `Idle rate (${currency}/min)`,
+        taxPercent: "Tax (%)",
+        overrideCost: "Enter the amount myself",
+        overrideCostHelper:
+          "Use this whenever the receipt disagrees with the maths. What you paid always wins.",
+        totalCost: (currency: string) => `Amount paid (${currency})`,
       },
       placeholders: {
         network: "e.g. Ather Grid",
         location: "e.g. Indiranagar",
         soc: "e.g. 20",
+        units: "e.g. 3.4",
+        rate: "e.g. 8",
+        minutes: "e.g. 45",
+        tax: "e.g. 18",
       },
+      summary: {
+        title: "This session",
+        total: "Total",
+        energy: "Energy",
+        effectiveRate: (currency: string) => `Effective ${currency}/kWh`,
+        derivedFromSoc: "Worked out from the battery percentages",
+        impliedStartSoc: (delta: number, start: number) =>
+          `That is about ${delta.toFixed(0)}% of your battery, so you started around ${Math.max(0, start).toFixed(0)}%. Measured at the meter, so the real swing is a little smaller.`,
+        needsBatterySize:
+          "Set the usable battery size on this vehicle and we can work out the units from the percentages.",
+        needsSoc: "Add the start and end percentages to get the units for this session.",
+      },
+      errors: {
+        missingEnergy:
+          "Enter the units consumed, or both battery percentages so we can work them out.",
+        missingEnergyTimed:
+          "Add the start and end battery percentages — a per-minute charger never reports units, so that is the only way to know the energy.",
+        socOrder: "The end percentage has to be above the start.",
+      },
+      messages: {
+        saved: "Charge logged.",
+        editSaved: "Charge updated.",
+        failed: "Failed to save the charge.",
+      },
+    },
+    efficiency: {
+      title: "Charging Efficiency",
+      description: "Distance covered per unit you paid for.",
+      perKwh: (unit: string) => `${unit}/kWh`,
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      method: {
+        "soc-corrected": "From your battery percentages",
+        "full-charge-anchor": "Between full charges",
+      },
+      methodMixed: "From a mix of full charges and battery percentages",
+      lifetimeBasis:
+        "Lifetime distance over every unit bought. Rough — it counts the charge still in your battery as though you had ridden it — and it sharpens once you have logged two charges.",
+      segmentsUsed: (count: number) =>
+        `${count} complete ${count === 1 ? "stretch" : "stretches"} of riding`,
+      unanchored: (count: number) =>
+        `${count} ${count === 1 ? "session has" : "sessions have"} no reference point. Add the battery percentages, or mark a session as charged to 100%.`,
+      empty:
+        "Log two charges with the battery percentages and your real efficiency appears here.",
+    },
+    overview: {
+      efficiency: "Efficiency",
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      saved: "Saved vs petrol",
+      totalCharged: "Total charged",
+      lifetime: "Lifetime",
+      chargingLoss: (percent: string) =>
+        `${percent} of what you pay for is lost in charging and never reaches the battery.`,
+      emptyTitle: "Nothing logged yet",
+      emptyDescription:
+        "Log your first charge and your efficiency, running cost and savings appear here.",
+    },
+    more: {
+      title: "More to unlock",
+      health: "Record a battery check-in — odometer and battery level — to track how much range your pack still has.",
+      capacity:
+        "Charge from under 50% all the way to full, with the units, to measure your battery's real capacity.",
+      mix: "Log a charge somewhere other than home to see where your energy comes from.",
+      care: "A few more check-ins and charges will unlock your battery care score.",
+    },
+    history: {
+      title: "Charging History",
+      description: "Every session you have logged. Edit or remove any of them.",
+      empty: "No charges logged yet.",
+      columns: {
+        date: "Date",
+        where: "Where",
+        billed: "Billed",
+        energy: "Energy",
+        cost: "Cost",
+        rate: "Per kWh",
+        battery: "Battery",
+        actions: "",
+      },
+      toFull: "to 100%",
+      free: "Free",
+      socRange: (start: number, end: number) => `${start}% → ${end}%`,
+      derivedEnergy: "Worked out from the battery percentages",
+    },
+    capacity: {
+      title: "Pack Capacity",
+      description:
+        "Measured whenever you charge from low to full. This is the one thing a 100% charge is worth doing.",
+      latest: "Latest",
+      baseline: "First measured",
+      stateOfHealth: "Against first measurement",
+      empty:
+        "Charge from under 50% all the way to full and we can size your battery.",
+      lossNote:
+        "Measured at the meter, so it includes charging losses and reads a little high. The trend is what matters.",
     },
   },
   insights: {
@@ -1218,6 +1387,9 @@ export const ui = {
       kilometers: "Kilometers (km)",
       miles: "Miles",
     },
+    evEfficiencyUnit: "EV Efficiency Unit",
+    evEfficiencyUnitDescription:
+      "How electric efficiency is shown. Wh/km and kWh/100km are consumption — lower is better. km/kWh and mi/kWh are economy — higher is better.",
     electricityTariff: (currency: string) =>
       `Electricity Tariff (${currency} per unit)`,
     electricityTariffPlaceholder: "e.g. 8.00",

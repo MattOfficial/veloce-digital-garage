@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Droplet, Wrench } from "lucide-react";
+import { CalendarDays, Droplet, Wrench, Zap } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -26,37 +26,52 @@ type ActivityHeatmapProps = {
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
-const CELL_STYLES = {
-  fuel: [
-    "bg-amber-500/30",
-    "bg-amber-500/45",
-    "bg-amber-500/65",
-    "bg-amber-500/85",
-  ],
-  maintenance: [
-    "bg-sky-500/30",
-    "bg-sky-500/45",
-    "bg-sky-500/65",
-    "bg-sky-500/85",
-  ],
-  mixed: [
-    "bg-gradient-to-br from-amber-500/40 to-sky-500/40",
-    "bg-gradient-to-br from-amber-500/55 to-sky-500/55",
-    "bg-gradient-to-br from-amber-500/75 to-sky-500/75",
-    "bg-gradient-to-br from-amber-500 to-sky-500",
-  ],
-} as const;
+/** Ramps live in globals.css so each theme can pick its own lightness curve. */
+type CategoryKey = "fuel" | "charge" | "maint";
 
-function getCellStyle(day: ActivityHeatmapDay) {
+export const CATEGORY_SWATCH: Record<CategoryKey, string> = {
+  fuel: "var(--heat-fuel-4)",
+  charge: "var(--heat-charge-4)",
+  maint: "var(--heat-maint-4)",
+};
+
+function getCellClass(day: ActivityHeatmapDay) {
   if (!day.isInRange) return "bg-transparent";
-  if (day.totalCount === 0) return "bg-muted/70 dark:bg-white/5";
+  if (day.totalCount === 0) return "bg-muted/70 dark:bg-white/[0.06]";
+  return "";
+}
 
-  const index = day.intensity - 1;
-  if (day.fuelCount > 0 && day.maintenanceCount > 0) {
-    return CELL_STYLES.mixed[index];
-  }
-  if (day.fuelCount > 0) return CELL_STYLES.fuel[index];
-  return CELL_STYLES.maintenance[index];
+/**
+ * A day's colour comes from the categories it actually contains, banded rather
+ * than blended — two colours faded into each other make a third colour that
+ * means nothing, whereas hard bands stay readable at 12px.
+ */
+function getCellBackground(day: ActivityHeatmapDay): string | undefined {
+  if (!day.isInRange || day.totalCount === 0) return undefined;
+
+  const present = (
+    [
+      ["fuel", day.fuelCount],
+      ["charge", day.chargeCount],
+      ["maint", day.maintenanceCount],
+    ] as const
+  )
+    .filter(([, count]) => count > 0)
+    .sort((left, right) => right[1] - left[1]);
+
+  const colorFor = (key: CategoryKey) => `var(--heat-${key}-${day.intensity})`;
+
+  if (present.length === 1) return colorFor(present[0][0]);
+
+  const bands = present
+    .map(([key], index) => {
+      const from = (index / present.length) * 100;
+      const to = ((index + 1) / present.length) * 100;
+      return `${colorFor(key)} ${from}%, ${colorFor(key)} ${to}%`;
+    })
+    .join(", ");
+
+  return `linear-gradient(135deg, ${bands})`;
 }
 
 function formatDate(date: string) {
@@ -74,9 +89,17 @@ function pluralize(count: number, singular: string, plural = `${singular}s`) {
 
 function getDaySummary(day: ActivityHeatmapDay) {
   const activity = pluralize(day.totalCount, "activity", "activities");
-  const fuel = pluralize(day.fuelCount, "fuel stop");
-  const maintenance = pluralize(day.maintenanceCount, "maintenance payment");
-  return `${formatDate(day.date)}: ${activity}, ${fuel}, ${maintenance}`;
+  // Only the categories the day actually has, so a petrol-only garage never
+  // reads "0 charges" on every single cell.
+  const parts = [
+    day.fuelCount > 0 ? pluralize(day.fuelCount, "fuel stop") : null,
+    day.chargeCount > 0 ? pluralize(day.chargeCount, "charge") : null,
+    day.maintenanceCount > 0
+      ? pluralize(day.maintenanceCount, "maintenance payment")
+      : null,
+  ].filter((part) => part != null);
+
+  return `${formatDate(day.date)}: ${activity}, ${parts.join(", ")}`;
 }
 
 export function ActivityHeatmap({
@@ -115,7 +138,13 @@ export function ActivityHeatmap({
 
   return (
     <Card className="rounded-[2rem] border-none shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden relative">
-      <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-amber-400 via-primary to-sky-500" />
+      <div
+        aria-hidden="true"
+        className="absolute left-0 top-0 h-1 w-full"
+        style={{
+          background: `linear-gradient(to right, ${CATEGORY_SWATCH.fuel}, ${CATEGORY_SWATCH.charge}, ${CATEGORY_SWATCH.maint})`,
+        }}
+      />
       <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -193,7 +222,8 @@ export function ActivityHeatmap({
                     }
                   >
                     {week.days.map((day) => {
-                      const className = `${isFillScale ? "aspect-square w-full" : "h-3 w-3"} rounded-[3px] border border-foreground/5 transition-all ${getCellStyle(day)}`;
+                      const className = `${isFillScale ? "aspect-square w-full" : "h-3 w-3"} rounded-[3px] border border-foreground/5 transition-all ${getCellClass(day)}`;
+                      const background = getCellBackground(day);
 
                       if (!day.isInRange || day.totalCount === 0) {
                         return (
@@ -214,6 +244,7 @@ export function ActivityHeatmap({
                           aria-pressed={selectedDay?.date === day.date}
                           title={summary}
                           onClick={() => setSelectedDate(day.date)}
+                          style={{ background }}
                           className={`${className} cursor-pointer outline-none hover:scale-125 hover:ring-2 hover:ring-ring/40 focus-visible:scale-125 focus-visible:ring-2 focus-visible:ring-ring ${selectedDay?.date === day.date ? "ring-2 ring-ring ring-offset-2 ring-offset-background" : ""}`}
                         />
                       );
@@ -237,10 +268,21 @@ export function ActivityHeatmap({
                   {formatDate(selectedDay.date)}
                 </p>
                 <p className="mt-1 text-muted-foreground">
-                  {ui.activityHeatmap.fuelStops(selectedDay.fuelCount)} ·{" "}
-                  {ui.activityHeatmap.maintenancePayments(
-                    selectedDay.maintenanceCount,
-                  )}
+                  {[
+                    selectedDay.fuelCount > 0
+                      ? ui.activityHeatmap.fuelStops(selectedDay.fuelCount)
+                      : null,
+                    selectedDay.chargeCount > 0
+                      ? ui.activityHeatmap.charges(selectedDay.chargeCount)
+                      : null,
+                    selectedDay.maintenanceCount > 0
+                      ? ui.activityHeatmap.maintenancePayments(
+                          selectedDay.maintenanceCount,
+                        )
+                      : null,
+                  ]
+                    .filter((part) => part != null)
+                    .join(" · ")}
                 </p>
               </div>
             ) : (
@@ -256,14 +298,41 @@ export function ActivityHeatmap({
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Droplet className="h-3.5 w-3.5 text-amber-500" />{" "}
+              <Droplet
+                className="h-3.5 w-3.5"
+                style={{ color: CATEGORY_SWATCH.fuel }}
+              />
               {ui.activityHeatmap.fuelLegend}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Wrench className="h-3.5 w-3.5 text-sky-500" />{" "}
+              <Zap
+                className="h-3.5 w-3.5"
+                style={{ color: CATEGORY_SWATCH.charge }}
+              />
+              {ui.activityHeatmap.chargeLegend}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Wrench
+                className="h-3.5 w-3.5"
+                style={{ color: CATEGORY_SWATCH.maint }}
+              />
               {ui.activityHeatmap.maintenanceLegend}
             </span>
-            <span>{ui.activityHeatmap.intensityLegend}</span>
+
+            {/* The ramp itself, so "stronger colour" has something to mean. */}
+            <span className="inline-flex items-center gap-1.5">
+              <span>{ui.activityHeatmap.intensityLegend}</span>
+              <span className="inline-flex gap-0.5">
+                {[1, 2, 3, 4].map((step) => (
+                  <span
+                    key={step}
+                    aria-hidden="true"
+                    className="h-3 w-3 rounded-[3px] border border-foreground/5"
+                    style={{ background: `var(--heat-fuel-${step})` }}
+                  />
+                ))}
+              </span>
+            </span>
           </div>
         </div>
       </CardContent>

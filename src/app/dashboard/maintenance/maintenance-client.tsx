@@ -44,6 +44,11 @@ import {
   getVehicleServiceInterval,
 } from "@/utils/vehicle-metrics";
 import {
+  formatMoneyExact,
+  formatNumber,
+  getCurrencySymbol,
+} from "@/utils/formatting";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -106,15 +111,9 @@ export default function MaintenanceClient({
   );
 
   const { distanceUnit, currency } = profile;
-  const currencySymbol = currency || "$";
-  const numberFormat = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  const formatCurrency = (val: number) =>
-    `${currencySymbol}${numberFormat.format(val)}`;
-  const formatDistance = (val: number) =>
-    new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(val);
+  const currencySymbol = getCurrencySymbol(currency);
+  const formatCurrency = (val: number) => formatMoneyExact(val, currency);
+  const formatDistance = (val: number) => formatNumber(val);
 
   const logs = [...(selectedVehicle.maintenance_logs || [])].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),

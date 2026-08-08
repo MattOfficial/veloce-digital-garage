@@ -3,6 +3,7 @@
 import { useVehicleStore } from "@/store/vehicle-store";
 import {
   BarChart2,
+  BatteryCharging,
   Car,
   Fuel,
   LayoutDashboard,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { logout } from "@/app/login/actions";
 
 import { useUserStore } from "@/store/user-store";
@@ -33,29 +34,52 @@ import {
   AvatarImage,
 } from "@mattofficial/veloce-ui";
 
-const navigation = [
-  {
-    name: ui.sidebar.items.dashboard,
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  { name: ui.sidebar.items.fuelHistory, href: "/dashboard/fuel", icon: Fuel },
-  {
-    name: ui.sidebar.items.maintenance,
-    href: "/dashboard/maintenance",
-    icon: Wrench,
-  },
-  {
-    name: ui.sidebar.items.insights,
-    href: "/dashboard/insights",
-    icon: BarChart2,
-  },
-];
+/**
+ * `/dashboard/fuel` renders an entirely different page for a pure EV — energy,
+ * battery health and charge sessions, with no fuel anywhere on it — so the nav
+ * entry has to follow the vehicle rather than the route. A plug-in hybrid keeps
+ * the fuel wording because it keeps the fuel page.
+ */
+function buildNavigation(isEv: boolean) {
+  return [
+    {
+      name: ui.sidebar.items.dashboard,
+      href: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    isEv
+      ? {
+          name: ui.sidebar.items.energyBattery,
+          href: "/dashboard/fuel",
+          icon: BatteryCharging,
+        }
+      : {
+          name: ui.sidebar.items.fuelHistory,
+          href: "/dashboard/fuel",
+          icon: Fuel,
+        },
+    {
+      name: ui.sidebar.items.maintenance,
+      href: "/dashboard/maintenance",
+      icon: Wrench,
+    },
+    {
+      name: ui.sidebar.items.insights,
+      href: "/dashboard/insights",
+      icon: BarChart2,
+    },
+  ];
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { profile, fetchProfile } = useUserStore();
   const { fetchVehicles } = useVehicleStore();
+  const selectedVehicle = useVehicleStore((state) => state.getSelectedVehicle());
+  const navigation = useMemo(
+    () => buildNavigation(selectedVehicle?.powertrain === "ev"),
+    [selectedVehicle?.powertrain],
+  );
 
   useEffect(() => {
     fetchProfile();

@@ -149,57 +149,84 @@ export type Database = {
         Row: {
           calculated_efficiency: number | null
           charge_source: "home" | "ac_public" | "dc_fast" | "other" | null
+          charged_to_full: boolean | null
           charger_network: string | null
           created_at: string | null
           date: string
+          duration_minutes: number | null
           end_soc: number | null
+          energy_basis: "metered" | "soc_derived" | null
           energy_type: "fuel" | "charge" | null
           estimated_range: number | null
           fill_type: "full" | "partial" | null
           fuel_volume: number
           id: string
+          idle_minutes: number | null
+          idle_rate_per_minute: number | null
           is_estimated: boolean
           location: string | null
           odometer: number
+          pricing_mode: "per_kwh" | "per_minute" | "flat" | "free" | null
+          rate_per_unit: number | null
+          session_fee: number | null
           start_soc: number | null
+          tax_percent: number | null
           total_cost: number
           vehicle_id: string
         }
         Insert: {
           calculated_efficiency?: number | null
           charge_source?: "home" | "ac_public" | "dc_fast" | "other" | null
+          charged_to_full?: boolean | null
           charger_network?: string | null
           created_at?: string | null
           date: string
+          duration_minutes?: number | null
           end_soc?: number | null
+          energy_basis?: "metered" | "soc_derived" | null
           energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
           fill_type?: "full" | "partial" | null
           fuel_volume: number
           id?: string
+          idle_minutes?: number | null
+          idle_rate_per_minute?: number | null
           is_estimated?: boolean
           location?: string | null
           odometer: number
+          pricing_mode?: "per_kwh" | "per_minute" | "flat" | "free" | null
+          rate_per_unit?: number | null
+          session_fee?: number | null
           start_soc?: number | null
+          tax_percent?: number | null
           total_cost: number
           vehicle_id: string
         }
         Update: {
           calculated_efficiency?: number | null
           charge_source?: "home" | "ac_public" | "dc_fast" | "other" | null
+          charged_to_full?: boolean | null
           charger_network?: string | null
           created_at?: string | null
           date?: string
+          duration_minutes?: number | null
           end_soc?: number | null
+          energy_basis?: "metered" | "soc_derived" | null
           energy_type?: "fuel" | "charge" | null
           estimated_range?: number | null
           fill_type?: "full" | "partial" | null
           fuel_volume?: number
           id?: string
+          idle_minutes?: number | null
+          idle_rate_per_minute?: number | null
           is_estimated?: boolean
           location?: string | null
           odometer?: number
+          pricing_mode?: "per_kwh" | "per_minute" | "flat" | "free" | null
+          rate_per_unit?: number | null
+          session_fee?: number | null
           start_soc?: number | null
+          tax_percent?: number | null
           total_cost?: number
           vehicle_id?: string
         }

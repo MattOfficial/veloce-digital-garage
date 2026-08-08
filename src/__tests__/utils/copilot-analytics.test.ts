@@ -2,65 +2,25 @@ import { describe, it, expect } from "vitest";
 import { computeCopilotAnalytics } from "@/utils/copilot-analytics";
 import type { CopilotAnalyticsQuery, CopilotDateRange } from "@/types/ai";
 import type { FuelLog, VehicleWithLogs, MaintenanceLog } from "@/types/database";
+import * as factories from "@/__tests__/factories";
 
 function makeVehicle(overrides: Partial<VehicleWithLogs> = {}): VehicleWithLogs {
-    return {
-        id: "v-1",
-        user_id: "u-1",
-        make: "Toyota",
-        model: "Camry",
-        year: 2022,
-        baseline_odometer: 1000,
+    return factories.makeVehicle({
         current_odometer: 15000,
-        image_url: null,
-        vin: null,
-        license_plate: null,
-        color: null,
         nickname: "My Car",
-        engine_type: null,
-        transmission: null,
-        notes: null,
-        custom_fields: null,
-        tyre_info: null,
-        vehicle_type: "car",
-        powertrain: "ice",
-        battery_capacity_kwh: null,
-        usable_battery_kwh: null,
-        rated_range_km: null,
-        baseline_range_km: null,
-        battery_warranty_years: null,
-        battery_warranty_km: null,
-        created_at: "2024-01-01T00:00:00Z",
-        fuel_logs: [],
-        maintenance_logs: [],
-        custom_logs: [],
-        service_reminders: [],
-        vehicle_snapshots: [],
         ...overrides,
-    };
+    });
 }
 
 function makeFuelLog(overrides: Partial<FuelLog> = {}): FuelLog {
-    return {
+    return factories.makeFuelLog({
         id: "fl-1",
-        vehicle_id: "v-1",
         date: "2024-03-15",
-        odometer: 5000,
         fuel_volume: 40,
         total_cost: 80,
-        calculated_efficiency: null,
-        energy_type: "fuel",
-        fill_type: "full",
-        charge_source: null,
-        start_soc: null,
-        end_soc: null,
-        is_estimated: false,
-        charger_network: null,
-        location: null,
-        estimated_range: null,
         created_at: "2024-03-15T10:00:00Z",
         ...overrides,
-    };
+    });
 }
 
 function makeMaintenanceLog(overrides: Partial<MaintenanceLog> = {}): MaintenanceLog {
