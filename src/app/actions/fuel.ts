@@ -10,6 +10,7 @@ import type {
     FuelLogFillType,
 } from "@/types/database";
 import { calculateSessionCost, resolveSessionEnergy } from "@/utils/charge-session";
+import { getDatabaseErrorMessage } from "@/utils/errors";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
@@ -326,7 +327,10 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
 
     if (error) {
         console.error("Error inserting fuel log:", error);
-        return { success: false, error: "Failed to save fuel log" };
+        return {
+            success: false,
+            error: getDatabaseErrorMessage(error, "Failed to save fuel log"),
+        };
     }
 
     await syncVehicleCurrentOdometer(supabase, payload.vehicle_id);
@@ -395,7 +399,10 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
 
     if (error) {
         console.error("Error updating fuel log:", error);
-        return { success: false, error: error.message };
+        return {
+            success: false,
+            error: getDatabaseErrorMessage(error, "Failed to update fuel log"),
+        };
     }
 
     await syncVehicleCurrentOdometer(supabase, payload.vehicle_id, {
@@ -440,7 +447,10 @@ export async function deleteFuelLog(logId: string, vehicleId: string) {
 
     if (error) {
         console.error("Error deleting fuel log:", error);
-        return { success: false, error: error.message };
+        return {
+            success: false,
+            error: getDatabaseErrorMessage(error, "Failed to delete fuel log"),
+        };
     }
 
     await syncVehicleCurrentOdometer(supabase, vehicleId, {

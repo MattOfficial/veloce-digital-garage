@@ -6,6 +6,16 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Fix — say when a save failed because a migration is pending (2026-08-08)
+
+- `submitFuelLog` returned a flat "Failed to save fuel log" and left the real cause in a
+  server-side `console.error`, which does not reach the browser console. A pending migration
+  therefore presented as a mysterious app bug with nothing to go on.
+- New `getDatabaseErrorMessage` recognises `PGRST204` and Postgres `42703` — both mean the
+  table lacks a column the code writes to — and says so, naming the column and the command to
+  run. Every other database error now carries its message through instead of being swallowed.
+- Applied to the insert, update and delete paths in `fuel.ts`.
+
 ### Fix — entering kWh was rejected, and a full charge now skips the percentages (2026-08-08)
 
 - **Bug:** typing the units consumed still produced "Enter the units consumed, or both battery
