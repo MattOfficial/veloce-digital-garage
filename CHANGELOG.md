@@ -6,6 +6,24 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Styling — colour and highlights on the history tables (2026-08-08)
+
+- New `Pill` primitive with eight tones, each carrying a background, text colour and hairline
+  border for both themes. Replaces the hand-written Tailwind strings the two tables had
+  drifting copies of.
+- Fuel history: rows are tinted by energy type with a colour rail on hover, fill type and
+  efficiency become pills, numerics are `tabular-nums` so columns stop jittering, and the
+  three summary cards get a coloured wash, an icon chip and a value in their own hue.
+- Charge history: charge source is colour-coded (home violet, public AC cyan, DC fast orange)
+  so the expensive sessions stand out from the routine ones; a full charge shows an emerald
+  battery pill, since that is the session that measures pack capacity; free sessions read as
+  a pill rather than ₹0.00.
+- **Contrast measured, not eyeballed.** Composited every pill against the tinted row and
+  computed WCAG ratios: cyan-700 came in at 4.42 and orange-700 at 4.21, both below the 4.5
+  needed for 12px text, and emerald-700 cleared it by only 0.02. All three moved to their
+  -800 shades. Muted cell text at 60–70% opacity measured 2.5–3.0 and went back to full.
+  Worst case across both themes is now 4.88:1.
+
 ### EV page — one headline row, and cards that earn their place (2026-08-08)
 
 - **Bug:** the Running Cost card's "Efficiency" tile read `health.whPerKm`, which comes from

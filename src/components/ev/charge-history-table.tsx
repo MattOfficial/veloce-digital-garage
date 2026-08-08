@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Zap } from "lucide-react";
 
 import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
 import { TablePagination } from "@/components/table-pagination";
+import { Pill, PillDot, type PillTone } from "@/components/ui/pill";
 import { ui } from "@/content/en/ui";
 import { useUserStore } from "@/store/user-store";
-import type { FuelLog, VehicleWithLogs } from "@/types/database";
+import type { ChargeSource, FuelLog, VehicleWithLogs } from "@/types/database";
 import { isFullChargeSession } from "@/utils/charge-session";
 import {
   formatMoney,
@@ -24,6 +25,17 @@ import {
   Button,
 } from "@mattofficial/veloce-ui";
 
+/**
+ * Colour by where the energy came from: home is the cheap routine one, DC fast
+ * the expensive exception, so they should not look alike in a list.
+ */
+const SOURCE_TONES: Record<ChargeSource, PillTone> = {
+  home: "violet",
+  ac_public: "cyan",
+  dc_fast: "orange",
+  other: "neutral",
+};
+
 /** Newest first: the session you just logged should be the one you can see. */
 function sortNewestFirst(left: FuelLog, right: FuelLog): number {
   const byDate = new Date(right.date).getTime() - new Date(left.date).getTime();
@@ -36,16 +48,26 @@ function sortNewestFirst(left: FuelLog, right: FuelLog): number {
 }
 
 function BatteryCell({ log }: { log: FuelLog }) {
+  // A session that reached full is the one that measures pack capacity, so it
+  // is worth being able to spot down the column.
+  const reachedFull = isFullChargeSession(log);
+
   if (log.start_soc != null && log.end_soc != null) {
-    return <>{ui.ev.history.socRange(log.start_soc, log.end_soc)}</>;
+    return (
+      <Pill tone={reachedFull ? "emerald" : "neutral"} className="tabular-nums">
+        {ui.ev.history.socRange(log.start_soc, log.end_soc)}
+      </Pill>
+    );
   }
 
-  if (isFullChargeSession(log)) {
-    return <>{ui.ev.history.toFull}</>;
+  if (reachedFull) {
+    return <Pill tone="emerald">{ui.ev.history.toFull}</Pill>;
   }
 
   if (log.start_soc != null) {
-    return <>{`${log.start_soc}% →`}</>;
+    return (
+      <Pill tone="neutral" className="tabular-nums">{`${log.start_soc}% →`}</Pill>
+    );
   }
 
   return <span className="text-muted-foreground">{ui.common.emptyValue}</span>;
@@ -76,8 +98,13 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
   return (
     <>
       <Card className="overflow-hidden rounded-[2rem] border shadow-sm">
-        <CardHeader className="border-b bg-muted/20 pb-4">
-          <CardTitle>{ui.ev.history.title}</CardTitle>
+        <CardHeader className="border-b bg-gradient-to-br from-primary/[0.07] via-transparent to-transparent pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Zap className="h-4 w-4" />
+            </span>
+            {ui.ev.history.title}
+          </CardTitle>
           <CardDescription>{ui.ev.history.description}</CardDescription>
         </CardHeader>
 
@@ -89,51 +116,62 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b bg-muted/10 text-xs uppercase text-muted-foreground">
+                <thead className="border-b bg-gradient-to-r from-muted/40 via-muted/20 to-transparent text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.ev.history.columns.date}
                     </th>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.ev.history.columns.where}
                     </th>
-                    <th className="px-6 py-4 font-medium">
+                    <th className="px-6 py-4 font-semibold">
                       {ui.ev.history.columns.billed}
                     </th>
-                    <th className="px-6 py-4 text-right font-medium">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.ev.history.columns.energy}
                     </th>
-                    <th className="px-6 py-4 text-right font-medium">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.ev.history.columns.cost}
                     </th>
-                    <th className="px-6 py-4 text-right font-medium">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.ev.history.columns.rate}
                     </th>
-                    <th className="px-6 py-4 text-right font-medium">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.ev.history.columns.battery}
                     </th>
-                    <th className="px-6 py-4 text-right font-medium">
+                    <th className="px-6 py-4 text-right font-semibold">
                       {ui.ev.history.columns.actions}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-border/60">
                   {visibleLogs.map((log) => {
                     const effectiveRate =
                       log.fuel_volume > 0 ? log.total_cost / log.fuel_volume : null;
 
+                    const source = log.charge_source ?? "other";
+                    const isFree = log.total_cost === 0;
+
                     return (
-                      <tr key={log.id} className="transition-colors hover:bg-muted/30">
-                        <td className="px-6 py-4 font-medium">
+                      <tr
+                        key={log.id}
+                        className="group transition-colors even:bg-muted/[0.12] hover:bg-primary/[0.05] dark:even:bg-white/[0.02]"
+                      >
+                        <td className="relative px-6 py-4 font-medium tabular-nums">
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-y-0 left-0 w-1 bg-primary opacity-0 transition-opacity group-hover:opacity-100"
+                          />
                           {formatTableDate(log.date)}
                           <span className="ml-2 text-xs text-muted-foreground">
                             {formatNumber(log.odometer)} {profile.distanceUnit}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-300">
-                            {ui.ev.mix.sources[log.charge_source ?? "other"]}
-                          </span>
+                          <Pill tone={SOURCE_TONES[source]}>
+                            <PillDot />
+                            {ui.ev.mix.sources[source]}
+                          </Pill>
                           {log.charger_network ? (
                             <p className="mt-1 text-xs text-muted-foreground">
                               {log.charger_network}
@@ -145,29 +183,37 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
                             ? ui.ev.chargeModal.pricingModes[log.pricing_mode]
                             : ui.common.emptyValue}
                           {log.duration_minutes != null ? (
-                            <span className="ml-1">
+                            <span className="ml-1 tabular-nums">
                               · {formatNumber(log.duration_minutes)} min
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          {log.fuel_volume.toFixed(2)}{" "}
+                        <td className="px-6 py-4 text-right tabular-nums">
+                          <span className="font-medium">
+                            {log.fuel_volume.toFixed(2)}
+                          </span>{" "}
                           <span className="text-xs text-muted-foreground">kWh</span>
                           {/* A derived figure is not a meter reading, and the
                               table is where that distinction is easiest to lose. */}
                           {log.energy_basis === "soc_derived" ? (
-                            <p
-                              className="text-xs text-muted-foreground"
+                            <span
+                              className="ml-1 cursor-help text-xs text-amber-600 dark:text-amber-400"
                               title={ui.ev.history.derivedEnergy}
                             >
                               ≈
-                            </p>
+                            </span>
                           ) : null}
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-rose-600 dark:text-rose-400">
-                          {formatMoneyExact(log.total_cost, profile.currency)}
+                        <td className="px-6 py-4 text-right">
+                          {isFree ? (
+                            <Pill tone="emerald">{ui.ev.history.free}</Pill>
+                          ) : (
+                            <span className="font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                              {formatMoneyExact(log.total_cost, profile.currency)}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-6 py-4 text-right text-muted-foreground">
+                        <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
                           {effectiveRate != null
                             ? formatMoney(effectiveRate, profile.currency, {
                                 maximumFractionDigits: 2,
@@ -178,12 +224,12 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
                           <BatteryCell log={log} />
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                             <Button
                               variant="ghost"
                               size="icon"
                               aria-label={ui.common.actions.edit}
-                              className="h-8 w-8 rounded-lg text-muted-foreground/40 transition-colors hover:bg-primary/10 hover:text-primary"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                               onClick={() => setEditingLog(log)}
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -192,7 +238,7 @@ export function ChargeHistoryTable({ vehicle }: { vehicle: VehicleWithLogs }) {
                               variant="ghost"
                               size="icon"
                               aria-label={ui.common.actions.delete}
-                              className="h-8 w-8 rounded-lg text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => setDeletingLog(log)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />

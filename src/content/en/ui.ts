@@ -750,6 +750,7 @@ export const ui = {
         actions: "",
       },
       toFull: "to 100%",
+      free: "Free",
       socRange: (start: number, end: number) => `${start}% → ${end}%`,
       derivedEnergy: "Worked out from the battery percentages",
     },
