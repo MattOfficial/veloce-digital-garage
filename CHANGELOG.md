@@ -6,6 +6,26 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Audit — formatting, dead code, half-wired settings (2026-08-08)
+
+- `formatting.ts` gains `formatMoneyExact`, `formatMoneyCompact`, `formatNumber`,
+  `formatDistance`, `formatDayLabel` and `formatTableDate`, replacing hand-rolled
+  `Intl.NumberFormat` instances in six files. Four of those built their currency prefix from
+  `currency || "$"` instead of `getCurrencySymbol`, so a rupee user saw `$` on the fuel,
+  maintenance and cost-trends pages.
+- `distance-trends-panel.tsx` had a private `median`; it now uses `statistics.ts`.
+- Removed `isLowerBetterEvUnit` and the fuel page's local `convertChargeEfficiency`
+  reimplementation — both had no caller doing anything the shared code did not already do.
+- Wired up the EV efficiency unit preference. The store, the server action and the database
+  column all existed; the profile page had no selector, so `EV_EFFICIENCY_UNITS` was
+  unreachable and the setting could never be changed.
+- `summarizeChargingLoss` surfaces the gap between metered energy and what reached the pack,
+  which is what explains a per-kWh figure that disagrees with the vehicle's own display.
+- Reworded the running-cost strings: inference is cold-start only now, so "Home charging
+  (estimated)" was describing behaviour that no longer exists.
+- Marked the energy half of `docs/ev-redesign.md` superseded, keeping the battery-health half
+  as the live reference.
+
 ### UI — a charge form that knows how you were billed (2026-08-08)
 
 - New `src/components/ev/charge-session-form.tsx`. Pricing-mode tabs (per unit / per minute /

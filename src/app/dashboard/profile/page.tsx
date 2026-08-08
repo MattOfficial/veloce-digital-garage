@@ -43,6 +43,13 @@ import {
   getGarageLifetimeDistanceSummary,
 } from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
+import { formatDistance } from "@/utils/formatting";
+import {
+  EV_EFFICIENCY_UNITS,
+  getDefaultEvEfficiencyUnit,
+  isEvEfficiencyUnit,
+  type EvEfficiencyUnit,
+} from "@/utils/efficiency-units";
 import {
   Dialog,
   DialogContent,
@@ -71,6 +78,7 @@ type ProfileDraft = {
   displayName: string;
   currency: string;
   distanceUnit: "km" | "miles";
+  evEfficiencyUnit: EvEfficiencyUnit | null;
   avatarUrl: string | null;
   preferredProvider: ProviderPreference;
   // Kept as strings so an empty field stays distinguishable from zero.
@@ -86,6 +94,7 @@ function createProfileDraft(
     displayName: profile.displayName || "",
     currency: profile.currency || "₹",
     distanceUnit: profile.distanceUnit || "km",
+    evEfficiencyUnit: profile.evEfficiencyUnit,
     avatarUrl: profile.avatarUrl || null,
     preferredProvider: profile.preferredProvider || "gemini",
     electricityTariffPerKwh: profile.electricityTariffPerKwh?.toString() ?? "",
@@ -142,10 +151,6 @@ export default function ProfilePage() {
   }, [fetchProfile, fetchVehicles]);
 
   const resolvedProfile = profileDraft ?? createProfileDraft(profile);
-  const formatDistance = (value: number) =>
-    new Intl.NumberFormat(undefined, {
-      maximumFractionDigits: 0,
-    }).format(value);
   const garageDistanceMetrics = useMemo(
     () => ({
       last30Days: getGarageDistanceSummary(
@@ -180,6 +185,9 @@ export default function ProfilePage() {
     formData.append("display_name", resolvedProfile.displayName);
     formData.append("currency", resolvedProfile.currency);
     formData.append("distance_unit", resolvedProfile.distanceUnit);
+    if (resolvedProfile.evEfficiencyUnit) {
+      formData.append("ev_efficiency_unit", resolvedProfile.evEfficiencyUnit);
+    }
     if (resolvedProfile.avatarUrl) {
       formData.append("avatar_url", resolvedProfile.avatarUrl);
     }
@@ -462,7 +470,7 @@ export default function ProfilePage() {
                     {isVehiclesLoading && vehicles.length === 0
                       ? ui.common.emptyValue
                       : summary.hasSufficientData && summary.value != null
-                        ? `${formatDistance(summary.value)} ${resolvedProfile.distanceUnit}`
+                        ? formatDistance(summary.value, resolvedProfile.distanceUnit)
                         : ui.profile.distanceUnavailable}
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
@@ -602,8 +610,50 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                {/* Home charging is never logged, so these three rates are what
-                    turn distance into a running cost and a petrol comparison. */}
+                <div className="space-y-2 pt-4">
+                  <Label
+                    htmlFor="ev_efficiency_unit"
+                    className="text-muted-foreground uppercase text-xs tracking-wider font-semibold"
+                  >
+                    {ui.profile.evEfficiencyUnit}
+                  </Label>
+                  <Select
+                    value={
+                      resolvedProfile.evEfficiencyUnit ||
+                      getDefaultEvEfficiencyUnit(resolvedProfile.distanceUnit)
+                    }
+                    onValueChange={(value: string) => {
+                      if (isEvEfficiencyUnit(value)) {
+                        updateProfileDraft("evEfficiencyUnit", value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="ev_efficiency_unit"
+                      className="max-w-md h-12 rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EV_EFFICIENCY_UNITS.map((unit) => (
+                        <SelectItem
+                          key={unit}
+                          value={unit}
+                          className="cursor-pointer"
+                        >
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    {ui.profile.evEfficiencyUnitDescription}
+                  </p>
+                </div>
+
+                {/* The tariff prefills the charge form and stands in for periods
+                    with nothing logged; the petrol pair drives the savings
+                    comparison. */}
                 <div className="space-y-2 pt-4">
                   <Label
                     htmlFor="electricity_tariff_per_kwh"

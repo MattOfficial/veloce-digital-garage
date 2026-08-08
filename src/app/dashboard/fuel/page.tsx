@@ -11,11 +11,17 @@ import {
 } from "@/utils/fuel-analytics";
 import {
   FUEL_EFFICIENCY_UNITS,
+  convertEvEfficiency,
   convertFuelEfficiency,
   getDefaultFuelEfficiencyUnit,
   isFuelEfficiencyUnit,
   type FuelEfficiencyUnit,
 } from "@/utils/efficiency-units";
+import {
+  formatDayLabel,
+  formatMoneyExact,
+  formatTableDate,
+} from "@/utils/formatting";
 import { getUnitPriceSummary } from "@/utils/unit-price";
 
 import {
@@ -98,27 +104,17 @@ function sortLogsDescending(
   return right.id.localeCompare(left.id);
 }
 
-function convertChargeEfficiency(distance: number, energy: number): number | null {
-  if (distance <= 0 || energy <= 0) {
-    return null;
-  }
-
-  return distance / energy;
-}
-
-function formatDateLabel(date: string) {
-  return new Date(date).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatHistoryDate(date: string) {
-  return new Date(date).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+function convertChargeEfficiency(
+  distance: number,
+  energy: number,
+  distanceUnit: "km" | "miles",
+): number | null {
+  return convertEvEfficiency(
+    distance,
+    energy,
+    distanceUnit === "miles" ? "mi/kWh" : "km/kWh",
+    distanceUnit,
+  );
 }
 
 export default function FuelPage() {
@@ -224,7 +220,7 @@ export default function FuelPage() {
 
   const averageEfficiency =
     activeAnalysisMode === "charge"
-      ? convertChargeEfficiency(totalSegmentDistance, totalSegmentVolume)
+      ? convertChargeEfficiency(totalSegmentDistance, totalSegmentVolume, profile.distanceUnit)
       : convertFuelEfficiency(
           totalSegmentDistance,
           totalSegmentVolume,
@@ -240,7 +236,7 @@ export default function FuelPage() {
   const efficiencyTrendData = activeStream.closed_segments.map((segment) => {
     const efficiency =
       activeAnalysisMode === "charge"
-        ? convertChargeEfficiency(segment.distance, segment.volume)
+        ? convertChargeEfficiency(segment.distance, segment.volume, profile.distanceUnit)
         : convertFuelEfficiency(
             segment.distance,
             segment.volume,
@@ -250,7 +246,7 @@ export default function FuelPage() {
           );
 
     return {
-      date: formatDateLabel(segment.closing_log_date),
+      date: formatDayLabel(segment.closing_log_date),
       rawDate: segment.closing_log_date,
       efficiency:
         efficiency == null ? null : Number(efficiency.toFixed(2)),
@@ -266,7 +262,7 @@ export default function FuelPage() {
         log.fuel_volume > 0,
     )
     .map((log) => ({
-      date: formatDateLabel(log.date),
+      date: formatDayLabel(log.date),
       rawDate: log.date,
       rate: Number((log.total_cost / log.fuel_volume).toFixed(2)),
     }));
@@ -274,17 +270,10 @@ export default function FuelPage() {
   const rangeTrendData = analytics.charge.logs
     .filter((log) => log.estimated_range != null)
     .map((log) => ({
-      date: formatDateLabel(log.date),
+      date: formatDayLabel(log.date),
       rawDate: log.date,
       range: Number(log.estimated_range),
     }));
-
-  const numberFormat = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  const formatCurrency = (value: number) =>
-    `${profile.currency || "$"}${numberFormat.format(value)}`;
 
   const unitPriceSummary = getUnitPriceSummary(activeStream.logs);
   const unitPriceTrendClass = unitPriceSummary.direction === "up"
@@ -318,7 +307,7 @@ export default function FuelPage() {
 
     const value =
       log.energy_type === "charge"
-        ? convertChargeEfficiency(log.segment_distance, log.segment_volume)
+        ? convertChargeEfficiency(log.segment_distance, log.segment_volume, profile.distanceUnit)
         : convertFuelEfficiency(
             log.segment_distance,
             log.segment_volume,
@@ -487,7 +476,7 @@ export default function FuelPage() {
                 <CardContent className="px-5">
                   <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
                     {averageCostPerDistance > 0
-                      ? formatCurrency(averageCostPerDistance)
+                      ? formatMoneyExact(averageCostPerDistance, profile.currency)
                       : "--"}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 font-medium">
@@ -512,7 +501,7 @@ export default function FuelPage() {
                   <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
                     {unitPriceSummary.latest == null
                       ? "--"
-                      : formatCurrency(unitPriceSummary.latest)}
+                      : formatMoneyExact(unitPriceSummary.latest, profile.currency)}
                   </div>
                   {unitPriceSummary.latest == null ? (
                     <p className="mt-1 text-xs font-medium text-muted-foreground">
@@ -777,7 +766,7 @@ export default function FuelPage() {
                         className="hover:bg-muted/30 transition-colors"
                       >
                         <td className="px-6 py-4 font-medium">
-                          {formatHistoryDate(log.date)}
+                          {formatTableDate(log.date)}
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-300">
@@ -812,7 +801,7 @@ export default function FuelPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-rose-600 dark:text-rose-400">
-                          {formatCurrency(log.total_cost)}
+                          {formatMoneyExact(log.total_cost, profile.currency)}
                         </td>
                         <td
                           className={`px-6 py-4 text-right ${efficiencyDisplay.className}`}
@@ -925,7 +914,7 @@ export default function FuelPage() {
         <FuelDeleteDialog
           logId={deletingLog.id}
           vehicleId={deletingLog.vehicle_id}
-          logDate={formatHistoryDate(deletingLog.date)}
+          logDate={formatTableDate(deletingLog.date)}
           open={Boolean(deletingLog)}
           onOpenChange={(open) => {
             if (!open) {

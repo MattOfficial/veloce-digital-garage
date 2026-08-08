@@ -390,7 +390,27 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                     {`${energy.period.loggedEnergyKwh.toFixed(1)} kWh · ${formatMoney(energy.period.loggedCost, profile.currency)}`}
                   </span>
                 </div>
+
+                {/* Only measurable when a session recorded both a meter reading
+                    and a state of charge, which is also the only way to explain
+                    why our per-kWh figure differs from the vehicle's own. */}
+                {energy.chargingLoss != null ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">
+                      {ui.ev.energy.chargingLoss}
+                    </span>
+                    <span className="font-medium">
+                      {`${(energy.chargingLoss * 100).toFixed(0)}%`}
+                    </span>
+                  </div>
+                ) : null}
               </div>
+
+              {energy.chargingLoss != null ? (
+                <p className="text-xs text-muted-foreground">
+                  {ui.ev.energy.chargingLossHelper}
+                </p>
+              ) : null}
 
               {health.whPerKm == null ? (
                 <p className="text-xs text-muted-foreground">

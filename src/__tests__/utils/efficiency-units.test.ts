@@ -7,7 +7,6 @@ import {
   getEvEfficiencyPrecision,
   isEvEfficiencyUnit,
   isFuelEfficiencyUnit,
-  isLowerBetterEvUnit,
 } from "@/utils/efficiency-units";
 
 describe("fuel efficiency units", () => {
@@ -93,13 +92,6 @@ describe("EV efficiency units", () => {
   it("defaults to the unit that matches the distance preference", () => {
     expect(getDefaultEvEfficiencyUnit("km")).toBe("Wh/km");
     expect(getDefaultEvEfficiencyUnit("miles")).toBe("mi/kWh");
-  });
-
-  it("knows which units improve as they fall", () => {
-    expect(isLowerBetterEvUnit("Wh/km")).toBe(true);
-    expect(isLowerBetterEvUnit("kWh/100km")).toBe(true);
-    expect(isLowerBetterEvUnit("km/kWh")).toBe(false);
-    expect(isLowerBetterEvUnit("mi/kWh")).toBe(false);
   });
 
   it("shows a decimal only where it carries meaning", () => {

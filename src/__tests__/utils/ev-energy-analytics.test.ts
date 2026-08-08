@@ -6,6 +6,7 @@ import {
   buildEvEnergySummary,
   buildEvLifetimeEnergySummary,
   summarizeChargeEfficiency,
+  summarizeChargingLoss,
   summarizePackCapacity,
 } from "@/utils/ev-energy-analytics";
 import * as factories from "@/__tests__/factories";
@@ -374,6 +375,34 @@ describe("summarizePackCapacity", () => {
 
     expect(summary.measurements).toHaveLength(0);
     expect(summary.latestApparentKwh).toBeNull();
+  });
+});
+
+describe("summarizeChargingLoss", () => {
+  it("takes the median loss across sessions that recorded both figures", () => {
+    // 2 kWh metered against 50% of a 3 kWh pack (1.5 kWh) is a 25% loss.
+    const loss = summarizeChargingLoss(
+      [
+        makeChargeLog({ id: "c1", start_soc: 20, end_soc: 70, fuel_volume: 2 }),
+        makeChargeLog({ id: "c2", start_soc: 20, end_soc: 70, fuel_volume: 2 }),
+      ],
+      3,
+    );
+
+    expect(loss).toBeCloseTo(0.25, 5);
+  });
+
+  it("is unavailable when no session carries both a meter reading and a percentage", () => {
+    expect(
+      summarizeChargingLoss(
+        [makeChargeLog({ start_soc: null, end_soc: null })],
+        3,
+      ),
+    ).toBeNull();
+  });
+
+  it("is unavailable without a pack size", () => {
+    expect(summarizeChargingLoss([makeChargeLog()], null)).toBeNull();
   });
 });
 

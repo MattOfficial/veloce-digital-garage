@@ -2,6 +2,7 @@ import { format, isValid, parseISO, subDays } from "date-fns";
 
 import type { ChargeSource, FuelLog, VehicleWithLogs } from "@/types/database";
 import {
+    estimateChargingLoss,
     getSocDelta,
     isFullChargeSession,
     measurePackCapacity,
@@ -173,6 +174,8 @@ export interface EvEnergySummary {
     care: BatteryCareSummary;
     efficiency: ChargeEfficiencySummary;
     capacity: PackCapacitySummary;
+    /** Share of metered energy that never reached the pack, 0-1. */
+    chargingLoss: number | null;
     /** Pack-level consumption, from battery health rather than from the meter. */
     whPerKm: number | null;
 }
@@ -624,6 +627,7 @@ function buildSummary(
     const {
         whPerKm = null,
         tariffPerKwh = null,
+        usableBatteryKwh = null,
         petrolPricePerUnit = null,
         iceReferenceEfficiency = null,
     } = options;
@@ -681,6 +685,7 @@ function buildSummary(
         // keeping however old it is.
         efficiency: summarizeChargeEfficiency(allChargeLogs),
         capacity: summarizePackCapacity(allChargeLogs),
+        chargingLoss: summarizeChargingLoss(allChargeLogs, usableBatteryKwh),
         whPerKm,
     };
 }
@@ -727,4 +732,23 @@ export function buildEvLifetimeEnergySummary(
         null,
         options,
     );
+}
+
+/**
+ * Median share of metered energy lost to the charger and onboard rectifier.
+ *
+ * Only measurable on sessions that recorded both a meter reading and a state of
+ * charge, so it is often unavailable. When it is available it explains the gap
+ * between the app's per-kWh figure and what the vehicle's own display claims.
+ */
+export function summarizeChargingLoss(
+    logs: FuelLog[],
+    usableBatteryKwh: number | null,
+): number | null {
+    const losses = logs
+        .filter(isChargeLog)
+        .map((log) => estimateChargingLoss(log, usableBatteryKwh))
+        .filter((loss): loss is number => loss != null);
+
+    return losses.length > 0 ? median(losses) : null;
 }

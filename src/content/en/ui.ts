@@ -523,21 +523,25 @@ export const ui = {
       costPerDistance: (unit: string) => `Cost per ${unit}`,
       monthlyCost: "Last 30 days",
       energyUsed: "Energy Used",
-      inferredHome: "Home charging (estimated)",
-      loggedPublic: "Public charging (logged)",
+      inferredHome: "Estimated (nothing logged)",
+      loggedPublic: "Logged sessions",
       basisLabel: "Basis",
       basis: {
-        measured: "Measured from logged sessions",
+        measured: "From the sessions you logged",
         "partially-inferred":
-          "Public sessions measured, home charging estimated from distance and efficiency",
-        inferred: "Estimated from distance, efficiency and your tariff",
+          "Part logged, part estimated from distance and efficiency",
+        inferred:
+          "Nothing logged this period, so this is estimated from distance, efficiency and your tariff",
         unavailable: "Not enough data",
       },
       estimateBadge: "Estimated",
+      chargingLoss: "Lost in charging",
+      chargingLossHelper:
+        "The gap between what the meter billed and what reached the battery.",
       missingTariff:
-        "Set your electricity tariff in your profile to see home charging costs.",
+        "Set your electricity tariff in your profile and we can estimate periods you did not log.",
       missingEfficiency:
-        "Record a few battery check-ins to unlock energy and cost estimates.",
+        "Log a charge, or record a few battery check-ins, to unlock energy and cost figures.",
     },
     savings: {
       title: "Savings vs Petrol",
@@ -1303,6 +1307,9 @@ export const ui = {
       kilometers: "Kilometers (km)",
       miles: "Miles",
     },
+    evEfficiencyUnit: "EV Efficiency Unit",
+    evEfficiencyUnitDescription:
+      "How electric efficiency is shown. Wh/km and kWh/100km are consumption — lower is better. km/kWh and mi/kWh are economy — higher is better.",
     electricityTariff: (currency: string) =>
       `Electricity Tariff (${currency} per unit)`,
     electricityTariffPlaceholder: "e.g. 8.00",

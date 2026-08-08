@@ -93,15 +93,6 @@ export function getDefaultEvEfficiencyUnit(
 }
 
 /**
- * Consumption units (Wh/km, kWh/100km) improve as they fall, economy units
- * (km/kWh, mi/kWh) improve as they rise. Trend arrows and "better than last
- * month" comparisons need to know which way is good.
- */
-export function isLowerBetterEvUnit(unit: EvEfficiencyUnit): boolean {
-  return unit === "Wh/km" || unit === "kWh/100km";
-}
-
-/**
  * Wh/km reads best as a whole number, the economy units need a decimal to be
  * useful at all (4.2 km/kWh vs 4 km/kWh is a 5% difference).
  */
