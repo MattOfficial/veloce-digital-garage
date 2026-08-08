@@ -6,6 +6,27 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Fix — entering kWh was rejected, and a full charge now skips the percentages (2026-08-08)
+
+- **Bug:** typing the units consumed still produced "Enter the units consumed, or both battery
+  percentages", and the summary showed a zero total. `useWatch` returns the raw value of a
+  number input, which is a *string*, and `Number.isFinite("2.6")` is `false` — it does not
+  coerce. So the live preview read every numeric field as absent, and `onSubmit` validated
+  against that preview. New `src/utils/form-values.ts` coerces watched values at the
+  boundary, and submission now validates the zod-parsed values instead of the preview.
+- The same bug silently zeroed the rate, duration, tax and idle fields in the preview, so the
+  calculated total was wrong for every pricing mode, not just per-unit.
+- **"Charged to 100%" now genuinely replaces the percentages.** It moved above the SoC
+  fields, states that they are optional, and hides the end-percentage field, which a full
+  charge already answers. Switching it on clears any end value so a stale figure cannot be
+  submitted from a hidden field.
+- When a full charge is logged with units, the summary works backwards and shows the implied
+  start percentage. It stays a hint and is never stored: metered energy includes charging
+  losses so it overstates the swing, and storing a percentage derived from energy would make
+  `measurePackCapacity` circular — it divides energy by that same percentage.
+- Per-minute and flat sessions no longer attach their "no energy" error to a units field they
+  never render; it lands on the percentages, with wording that says why.
+
 ### Audit — one write path for vehicle mutations (2026-08-08)
 
 - New `useVehicleMutation` hook owns the sequence every form was open-coding: call the server

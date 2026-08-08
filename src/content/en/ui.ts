@@ -620,7 +620,13 @@ export const ui = {
         endSoc: "Battery at end (%)",
         chargedToFull: "Charged to 100%",
         chargedToFullHelper:
-          "Without percentages this is the only reference point we have for efficiency.",
+          "Turn this on and you can skip the percentages below — a full charge is a reference point on its own.",
+        chargedToFullOn:
+          "That is all we need. The percentages below are optional.",
+        socOptional:
+          "Battery percentages (optional). They sharpen efficiency between charges and let us track pack capacity.",
+        socOptionalFull:
+          "Optional. A real start percentage lets us measure your pack capacity, which units alone cannot.",
         network: "Network",
         location: "Location",
         extras: "Session fee, idle time and tax",
@@ -648,6 +654,8 @@ export const ui = {
         energy: "Energy",
         effectiveRate: (currency: string) => `Effective ${currency}/kWh`,
         derivedFromSoc: "Worked out from the battery percentages",
+        impliedStartSoc: (delta: number, start: number) =>
+          `That is about ${delta.toFixed(0)}% of your battery, so you started around ${Math.max(0, start).toFixed(0)}%. Measured at the meter, so the real swing is a little smaller.`,
         needsBatterySize:
           "Set the usable battery size on this vehicle and we can work out the units from the percentages.",
         needsSoc: "Add the start and end percentages to get the units for this session.",
@@ -655,6 +663,8 @@ export const ui = {
       errors: {
         missingEnergy:
           "Enter the units consumed, or both battery percentages so we can work them out.",
+        missingEnergyTimed:
+          "Add the start and end battery percentages — a per-minute charger never reports units, so that is the only way to know the energy.",
         socOrder: "The end percentage has to be above the start.",
       },
       messages: {

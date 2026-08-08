@@ -19,6 +19,7 @@ import {
 } from "@/types/database";
 import { calculateSessionCost, resolveSessionEnergy } from "@/utils/charge-session";
 import { CHARGE_SOURCES } from "@/utils/ev-energy-analytics";
+import { toNumericFields, toOptionalNumber } from "@/utils/form-values";
 import { formatMoney } from "@/utils/formatting";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 import {
@@ -41,19 +42,33 @@ import {
   Switch,
 } from "@mattofficial/veloce-ui";
 
-const optionalNumber = z.preprocess(
-  (value) => (value === "" || value == null ? undefined : Number(value)),
-  z.number().optional(),
-);
+const optionalNumber = z.preprocess(toOptionalNumber, z.number().optional());
 
 const optionalPercent = z.preprocess(
-  (value) => (value === "" || value == null ? undefined : Number(value)),
+  toOptionalNumber,
   z
     .number()
     .min(0, { message: "Must be between 0 and 100" })
     .max(100, { message: "Must be between 0 and 100" })
     .optional(),
 );
+
+/**
+ * Watched values arrive as strings from the number inputs, so every field that
+ * feeds a calculation has to be coerced first.
+ */
+const NUMERIC_FIELDS = [
+  "fuel_volume",
+  "rate_per_unit",
+  "duration_minutes",
+  "session_fee",
+  "idle_minutes",
+  "idle_rate_per_minute",
+  "tax_percent",
+  "start_soc",
+  "end_soc",
+  "total_cost",
+] as const;
 
 const formSchema = z.object({
   date: z.string().nonempty({ message: "Date is required" }),
@@ -127,12 +142,15 @@ export function ChargeSessionForm({
     },
   });
 
-  const values = useWatch({ control: form.control });
-  const pricingMode = (values.pricing_mode ?? "per_kwh") as ChargePricingMode;
-  const isHome = values.charge_source === "home";
+  const watched = useWatch({ control: form.control });
+  const pricingMode = (watched.pricing_mode ?? "per_kwh") as ChargePricingMode;
+  const isHome = watched.charge_source === "home";
+  const chargedToFull = watched.charged_to_full === true;
 
   // The same functions the server uses, so the preview is the saved figure.
   const preview = useMemo(() => {
+    const values = toNumericFields(watched, NUMERIC_FIELDS);
+
     const energy = resolveSessionEnergy({
       pricingMode,
       energyKwh: pricingMode === "per_kwh" ? values.fuel_volume : null,
@@ -152,7 +170,17 @@ export function ChargeSessionForm({
       taxPercent: values.tax_percent,
     });
 
-    const total = overrideCost && values.total_cost != null ? values.total_cost : cost.total;
+    const total =
+      overrideCost && values.total_cost != null ? values.total_cost : cost.total;
+
+    // What the units imply about the battery, for a session that reached full.
+    // Shown as a hint only, never stored: metered energy includes charging
+    // losses, so it overstates the swing, and a stored value derived from
+    // energy would make the pack-capacity measurement circular.
+    const impliedSocDelta =
+      energy.energyKwh != null && usableBatteryKwh != null && usableBatteryKwh > 0
+        ? (energy.energyKwh / usableBatteryKwh) * 100
+        : null;
 
     return {
       energyKwh: energy.energyKwh,
@@ -160,8 +188,12 @@ export function ChargeSessionForm({
       total,
       effectiveRate:
         energy.energyKwh != null && energy.energyKwh > 0 ? total / energy.energyKwh : null,
+      impliedSocDelta:
+        impliedSocDelta != null && impliedSocDelta > 0 && impliedSocDelta <= 100
+          ? impliedSocDelta
+          : null,
     };
-  }, [overrideCost, pricingMode, usableBatteryKwh, values]);
+  }, [overrideCost, pricingMode, usableBatteryKwh, watched]);
 
   function onSubmit(formValues: ChargeFormValues) {
     if (
@@ -173,9 +205,26 @@ export function ChargeSessionForm({
       return;
     }
 
-    if (preview.energyKwh == null) {
-      form.setError("fuel_volume", {
-        message: ui.ev.chargeModal.errors.missingEnergy,
+    // Validate against the submitted values, which zod has already coerced,
+    // rather than the preview — a preview built on watched strings is exactly
+    // what used to reject a perfectly good kWh figure.
+    const submittedEnergy = resolveSessionEnergy({
+      pricingMode: formValues.pricing_mode,
+      energyKwh:
+        formValues.pricing_mode === "per_kwh" ? formValues.fuel_volume : null,
+      startSoc: formValues.start_soc,
+      endSoc: formValues.end_soc,
+      usableBatteryKwh,
+    });
+
+    if (submittedEnergy.energyKwh == null) {
+      // Per-kWh sessions have a units field to complain about; the other modes
+      // do not render one, so the message has to land on the percentages.
+      const isMetered = formValues.pricing_mode === "per_kwh";
+      form.setError(isMetered ? "fuel_volume" : "start_soc", {
+        message: isMetered
+          ? ui.ev.chargeModal.errors.missingEnergy
+          : ui.ev.chargeModal.errors.missingEnergyTimed,
       });
       return;
     }
@@ -443,6 +492,50 @@ export function ChargeSessionForm({
             />
           )}
 
+        </div>
+
+        {/* Asked before the percentages, because answering yes is what makes
+            them unnecessary: a full charge is a reference point on its own. */}
+        <FormField
+          control={form.control}
+          name="charged_to_full"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/40 p-4 dark:border-white/5 dark:bg-white/5">
+              <div>
+                <FormLabel className="text-sm">
+                  {ui.ev.chargeModal.labels.chargedToFull}
+                </FormLabel>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {chargedToFull
+                    ? ui.ev.chargeModal.labels.chargedToFullOn
+                    : ui.ev.chargeModal.labels.chargedToFullHelper}
+                </p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked);
+                    // The end field is about to disappear; leaving a stale
+                    // value behind would submit a percentage the user can no
+                    // longer see or correct.
+                    if (checked) {
+                      form.setValue("end_soc", undefined);
+                    }
+                  }}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <p className="col-span-2 -mb-1 text-xs text-muted-foreground">
+            {chargedToFull
+              ? ui.ev.chargeModal.labels.socOptionalFull
+              : ui.ev.chargeModal.labels.socOptional}
+          </p>
+
           <FormField
             control={form.control}
             name="start_soc"
@@ -466,53 +559,33 @@ export function ChargeSessionForm({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="end_soc"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{ui.ev.chargeModal.labels.endSoc}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    max="100"
-                    className="rounded-xl"
-                    placeholder={ui.ev.chargeModal.placeholders.soc}
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* A full charge already states the end, so asking again is just a
+              second chance to contradict yourself. */}
+          {!chargedToFull && (
+            <FormField
+              control={form.control}
+              name="end_soc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{ui.ev.chargeModal.labels.endSoc}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      className="rounded-xl"
+                      placeholder={ui.ev.chargeModal.placeholders.soc}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
-
-        {/* Without percentages a full charge is the only reference point that
-            can anchor an efficiency figure, so it has to be askable. */}
-        {values.end_soc == null && (
-          <FormField
-            control={form.control}
-            name="charged_to_full"
-            render={({ field }) => (
-              <FormItem className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/40 p-4 dark:border-white/5 dark:bg-white/5">
-                <div>
-                  <FormLabel className="text-sm">
-                    {ui.ev.chargeModal.labels.chargedToFull}
-                  </FormLabel>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {ui.ev.chargeModal.labels.chargedToFullHelper}
-                  </p>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        )}
 
         {!isHome && (
           <div className="grid grid-cols-2 gap-4">
@@ -700,6 +773,19 @@ export function ChargeSessionForm({
               {ui.ev.chargeModal.summary.derivedFromSoc}
             </p>
           )}
+
+          {/* With a full charge and a units figure the start percentage is
+              recoverable, so we show it rather than asking for it. */}
+          {preview.basis === "metered" &&
+          chargedToFull &&
+          preview.impliedSocDelta != null ? (
+            <p className="text-xs text-muted-foreground">
+              {ui.ev.chargeModal.summary.impliedStartSoc(
+                preview.impliedSocDelta,
+                100 - preview.impliedSocDelta,
+              )}
+            </p>
+          ) : null}
 
           {preview.energyKwh == null && (
             <p className="text-xs text-amber-700 dark:text-amber-200">
