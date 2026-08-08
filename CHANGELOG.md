@@ -6,6 +6,21 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Styling — fuel page charts and empty states, plus light-mode fixes (2026-08-08)
+
+- **Five light-mode bugs on the fuel page.** The no-data card was `bg-white/5` with a
+  `border-white/10` — white on white, effectively invisible in light mode. Two chart headers
+  used `border-b border-white/5`, so their separator vanished. The efficiency-unit dropdown
+  used `focus:bg-white/10`, meaning keyboard focus was invisible in light mode, and its
+  container used `border-white/10`. All now use theme variables, per the light-mode rule in
+  `CLAUDE.md`.
+- The three trend charts get gradient headers with icon chips in their own hue (efficiency
+  emerald, unit price blue, battery range violet), gradient area fills instead of flat ones,
+  and coloured hover cursors.
+- The efficiency trend became an area chart to match the other two; it was the only line
+  chart of the three.
+- Empty state gets a coloured icon tile instead of a bare grey glyph.
+
 ### Styling — colour and highlights on the history tables (2026-08-08)
 
 - New `Pill` primitive with eight tones, each carrying a background, text colour and hairline

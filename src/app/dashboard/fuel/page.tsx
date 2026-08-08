@@ -369,9 +369,13 @@ export default function FuelPage() {
 
       {!hasLogs ? (
         <MotionWrapper delay={0.1}>
-          <Card className="bg-white/5 border-dashed border-2 border-white/10">
+          {/* `bg-white/5` here was invisible in light mode — white on white.
+              The theme variables carry both themes. */}
+          <Card className="rounded-[2rem] border-2 border-dashed bg-secondary/30 dark:bg-white/5">
             <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-              <Fuel className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                <Fuel className="h-8 w-8" />
+              </span>
               <h3 className="text-xl font-semibold tracking-tight">
                 {ui.fuel.noFuelDataYetTitle}
               </h3>
@@ -419,7 +423,7 @@ export default function FuelPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="rounded-xl border border-white/10 bg-veloce-bg backdrop-blur-xl shadow-2xl"
+                          className="rounded-xl border border-border bg-popover shadow-2xl backdrop-blur-xl"
                         >
                           <DropdownMenuRadioGroup
                             value={activeMetric}
@@ -433,7 +437,7 @@ export default function FuelPage() {
                               <DropdownMenuRadioItem
                                 key={metric}
                                 value={metric}
-                                className="cursor-pointer focus:bg-white/10"
+                                className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
                               >
                                 {metric}
                               </DropdownMenuRadioItem>
@@ -541,19 +545,46 @@ export default function FuelPage() {
           <div className="grid gap-6 md:grid-cols-2">
             {efficiencyTrendData.length > 0 && (
               <MotionWrapper delay={0.4}>
-                <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-white/5">
-                    <CardTitle>{ui.fuel.efficiencyTrendTitle}</CardTitle>
+                <Card className="h-full overflow-hidden rounded-[2rem]">
+                  <CardHeader className="border-b bg-gradient-to-br from-emerald-500/[0.07] via-transparent to-transparent">
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+                        <Activity className="h-4 w-4" />
+                      </span>
+                      {ui.fuel.efficiencyTrendTitle}
+                    </CardTitle>
                     <CardDescription>
                       {ui.fuel.efficiencyTrendDescription(activeAnalysisMode)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[250px] w-full pt-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <AreaChart
                         data={efficiencyTrendData}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
+                        {/* A fade under the line gives the series weight
+                            without adding a second colour to read. */}
+                        <defs>
+                          <linearGradient
+                            id="efficiencyFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="var(--chart-2)"
+                              stopOpacity={0.28}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="var(--chart-2)"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
@@ -572,6 +603,7 @@ export default function FuelPage() {
                           tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
+                          cursor={{ stroke: "var(--chart-2)", strokeOpacity: 0.3 }}
                           contentStyle={{
                             borderRadius: "1rem",
                             border: "1px solid var(--border)",
@@ -579,11 +611,12 @@ export default function FuelPage() {
                             backdropFilter: "blur(10px)",
                           }}
                         />
-                        <Line
+                        <Area
                           type="monotone"
                           dataKey="efficiency"
                           stroke="var(--chart-2)"
                           strokeWidth={3}
+                          fill="url(#efficiencyFill)"
                           dot={{
                             r: 4,
                             fill: "var(--chart-2)",
@@ -593,7 +626,7 @@ export default function FuelPage() {
                           activeDot={{ r: 6 }}
                           name={efficiencyUnit}
                         />
-                      </LineChart>
+                      </AreaChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
@@ -602,21 +635,44 @@ export default function FuelPage() {
 
             {unitPriceTrendData.length > 0 && (
               <MotionWrapper delay={0.5}>
-                <Card className="h-full overflow-hidden rounded-3xl shadow-sm">
-                  <CardHeader className="border-b border-border/70">
-                    <CardTitle>
+                <Card className="h-full overflow-hidden rounded-[2rem] shadow-sm">
+                  <CardHeader className="border-b bg-gradient-to-br from-blue-500/[0.07] via-transparent to-transparent">
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/15 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                        <BadgeDollarSign className="h-4 w-4" />
+                      </span>
                       {ui.fuel.unitPriceTrendTitle(activeAnalysisMode)}
                     </CardTitle>
                     <CardDescription>
                       {ui.fuel.unitPriceTrendDescription(activeAnalysisMode)}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="h-[250px] w-full">
+                  <CardContent className="h-[250px] w-full pt-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={unitPriceTrendData}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
+                        <defs>
+                          <linearGradient
+                            id="unitPriceFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="var(--chart-5)"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="var(--chart-5)"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={false}
@@ -635,6 +691,7 @@ export default function FuelPage() {
                           tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
                         />
                         <Tooltip
+                          cursor={{ stroke: "var(--chart-5)", strokeOpacity: 0.3 }}
                           contentStyle={{
                             borderRadius: "1rem",
                             border: "1px solid var(--border)",
@@ -646,9 +703,15 @@ export default function FuelPage() {
                           type="monotone"
                           dataKey="rate"
                           stroke="var(--chart-5)"
-                          fill="var(--chart-5)"
-                          fillOpacity={0.2}
+                          fill="url(#unitPriceFill)"
                           strokeWidth={2}
+                          dot={{
+                            r: 3,
+                            fill: "var(--chart-5)",
+                            strokeWidth: 2,
+                            stroke: "var(--card)",
+                          }}
+                          activeDot={{ r: 6 }}
                           name={`${profile.currency}/${unitPriceUnit}`}
                         />
                       </AreaChart>
@@ -662,8 +725,13 @@ export default function FuelPage() {
           {activeAnalysisMode === "charge" && rangeTrendData.length > 0 && (
             <MotionWrapper delay={0.6}>
               <Card className="overflow-hidden">
-                <CardHeader className="border-b border-white/5">
-                  <CardTitle>{ui.fuel.batteryRangeTrendTitle}</CardTitle>
+                <CardHeader className="border-b bg-gradient-to-br from-violet-500/[0.07] via-transparent to-transparent">
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/15 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
+                      <BatteryCharging className="h-4 w-4" />
+                    </span>
+                    {ui.fuel.batteryRangeTrendTitle}
+                  </CardTitle>
                   <CardDescription>
                     {ui.fuel.batteryRangeTrendDescription}
                   </CardDescription>
