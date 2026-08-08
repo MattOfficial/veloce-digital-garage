@@ -6,6 +6,17 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Nav — "Fuel History" no longer shown for an EV (2026-08-08)
+
+- The sidebar entry now follows the selected vehicle rather than the route: an EV gets
+  "Energy & Battery" with a battery icon, matching the page title. `/dashboard/fuel` renders a
+  completely different page for a pure EV, so a fixed label was always going to be wrong for
+  one of them.
+- Kept "Energy & Battery" over "Charge & Battery": charge *is* a property of a battery, so
+  that pairing is redundant, and "energy" covers the electricity bought as well as the
+  consumption figures. It also already matched the page heading.
+- Plug-in hybrids keep the fuel wording, because they keep the fuel page.
+
 ### Activity heatmap — new palette and a third category for charging (2026-08-08)
 
 - **The brown was arithmetic, not taste.** Cells were one colour at rising opacity, and amber

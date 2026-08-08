@@ -42,6 +42,8 @@ export const ui = {
     items: {
       dashboard: "Dashboard",
       fuelHistory: "Fuel History",
+      /** Matches the page title for a pure EV, which has no fuel history. */
+      energyBattery: "Energy & Battery",
       maintenance: "Maintenance",
       insights: "Trends",
     },
