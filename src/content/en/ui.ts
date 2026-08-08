@@ -715,6 +715,26 @@ export const ui = {
       empty:
         "Log two charges with the battery percentages and your real efficiency appears here.",
     },
+    overview: {
+      efficiency: "Efficiency",
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      saved: "Saved vs petrol",
+      totalCharged: "Total charged",
+      lifetime: "Lifetime",
+      chargingLoss: (percent: string) =>
+        `${percent} of what you pay for is lost in charging and never reaches the battery.`,
+      emptyTitle: "Nothing logged yet",
+      emptyDescription:
+        "Log your first charge and your efficiency, running cost and savings appear here.",
+    },
+    more: {
+      title: "More to unlock",
+      health: "Record a battery check-in — odometer and battery level — to track how much range your pack still has.",
+      capacity:
+        "Charge from under 50% all the way to full, with the units, to measure your battery's real capacity.",
+      mix: "Log a charge somewhere other than home to see where your energy comes from.",
+      care: "A few more check-ins and charges will unlock your battery care score.",
+    },
     history: {
       title: "Charging History",
       description: "Every session you have logged. Edit or remove any of them.",

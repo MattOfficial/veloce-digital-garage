@@ -89,8 +89,8 @@ describe("EV efficiency units", () => {
     expect(convertEvEfficiency(Number.NaN, 4, "Wh/km", "km")).toBeNull();
   });
 
-  it("defaults to the unit that matches the distance preference", () => {
-    expect(getDefaultEvEfficiencyUnit("km")).toBe("Wh/km");
+  it("defaults to distance per unit of energy, in the owner's distance unit", () => {
+    expect(getDefaultEvEfficiencyUnit("km")).toBe("km/kWh");
     expect(getDefaultEvEfficiencyUnit("miles")).toBe("mi/kWh");
   });
 

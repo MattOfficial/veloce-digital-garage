@@ -6,6 +6,28 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### EV page — one headline row, and cards that earn their place (2026-08-08)
+
+- **Bug:** the Running Cost card's "Efficiency" tile read `health.whPerKm`, which comes from
+  SoC check-ins, not from charges — so it stayed blank for anyone who logged charges but
+  never recorded a check-in. It now reads the charge-derived figure, which has a lifetime
+  fallback and works from the first session.
+- **Restructured the page around what an owner can see today.** Four headline tiles
+  (efficiency, cost per distance, saved vs petrol, total charged) and the charge history come
+  first, because those work from one logged session. Battery health, pack capacity, charging
+  mix and battery care now render *only* once they have something to say. An empty card in a
+  prominent position reads as a broken feature rather than a future one.
+- Dropped the standalone Running Cost and Charging Efficiency cards; they duplicated each
+  other and are now the headline tiles. Charging mix also needs at least two sources before
+  it appears — a single-bar chart says nothing.
+- Range Left moved into Battery Health, since both depend on check-ins.
+- Anything hidden is listed in one quiet "More to unlock" panel at the bottom, saying what
+  each metric needs. Chose this over a show/hide setting: it needs no configuration and no
+  understanding of the metrics before you have seen them.
+- Default EV efficiency unit is now km/kWh rather than Wh/km. Both units remain selectable in
+  the profile; the default now matches how owners reason about a charge, and stops kilometre
+  users getting a consumption unit while mile users get an economy one.
+
 ### EV page — charge history, working efficiency, real savings (2026-08-08)
 
 - **Charge history table.** The EV page returned early with only the analytics panel, so a
