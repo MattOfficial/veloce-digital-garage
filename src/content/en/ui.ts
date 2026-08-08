@@ -258,13 +258,16 @@ export const ui = {
       `${count} ${count === 1 ? "activity" : "activities"}`,
     fuelStops: (count: number) =>
       `${count} fuel ${count === 1 ? "stop" : "stops"}`,
+    charges: (count: number) =>
+      `${count} ${count === 1 ? "charge" : "charges"}`,
     maintenancePayments: (count: number) =>
       `${count} maintenance ${count === 1 ? "payment" : "payments"}`,
     loading: "Loading activity…",
     emptyTitle: "No activity yet",
     emptyDescription:
-      "Fuel stops and maintenance payments will appear here.",
+      "Fuel stops, charges and maintenance payments will appear here.",
     fuelLegend: "Fuel",
+    chargeLegend: "Charge",
     maintenanceLegend: "Maintenance",
     intensityLegend: "More activity = stronger color",
   },

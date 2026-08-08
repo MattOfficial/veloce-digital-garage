@@ -85,6 +85,42 @@ describe("activity heatmap", () => {
     expect(data.totalActivities).toBe(3);
   });
 
+  it("counts charge sessions separately from liquid fuel", () => {
+    const vehicle = {
+      fuel_logs: [
+        makeFuelLog({ id: "f1", date: "2025-06-10", energy_type: "fuel" }),
+        makeFuelLog({ id: "c1", date: "2025-06-10", energy_type: "charge" }),
+        makeFuelLog({ id: "c2", date: "2025-06-10", energy_type: "charge" }),
+      ],
+      maintenance_logs: [],
+    };
+
+    const day = findDay(buildActivityHeatmap([vehicle], endDate), "2025-06-10");
+
+    expect(day).toMatchObject({
+      fuelCount: 1,
+      chargeCount: 2,
+      maintenanceCount: 0,
+      totalCount: 3,
+    });
+  });
+
+  it("splits a plug-in hybrid's two streams onto the same day", () => {
+    // The split is on the log, not the vehicle, so a PHEV shows under both.
+    const phev = {
+      fuel_logs: [
+        makeFuelLog({ id: "f1", date: "2025-06-11", energy_type: "fuel" }),
+        makeFuelLog({ id: "c1", date: "2025-06-11", energy_type: "charge" }),
+      ],
+      maintenance_logs: [],
+    };
+
+    const day = findDay(buildActivityHeatmap([phev], endDate), "2025-06-11");
+
+    expect(day?.fuelCount).toBe(1);
+    expect(day?.chargeCount).toBe(1);
+  });
+
   it("caps intensity at four while retaining the full activity count", () => {
     const data = buildActivityHeatmap(
       [makeVehicle(Array.from({ length: 6 }, () => "2025-06-01"))],

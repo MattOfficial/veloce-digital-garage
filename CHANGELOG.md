@@ -6,6 +6,27 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Activity heatmap — new palette and a third category for charging (2026-08-08)
+
+- **The brown was arithmetic, not taste.** Cells were one colour at rising opacity, and amber
+  at 30% over the near-black card composites to `#563e19` — brown by construction. Since most
+  days carry one or two activities, most of the grid sat on the two brownest steps.
+- Replaced with four *solid* steps per category, defined in oklch in `globals.css` so each
+  theme picks its own lightness curve: dark mode brightens with activity, light mode deepens.
+- Chroma is set to a fraction of the most sRGB can display at each lightness, so the busiest
+  step is always the most saturated rather than washing out at the gamut ceiling.
+- The lightness range differs per hue, which is the part that actually fixes the brown: amber
+  has to stay light or it turns brown, violet has to stay darker or it turns white. A single
+  shared range cannot serve both.
+- **Third category.** Charging is now its own colour: fuel amber, charge teal-to-cyan,
+  maintenance violet. The split is on the log's `energy_type`, not the vehicle's powertrain,
+  so a plug-in hybrid correctly appears under both.
+- Days with more than one category show hard colour bands rather than a blend — two colours
+  faded together make a third that means nothing at 12px.
+- The legend gains Charge and shows the actual four-step ramp, so "stronger colour" has
+  something to refer to. Day summaries list only the categories present, so a petrol-only
+  garage never reads "0 charges".
+
 ### Styling — EV headline cards now match the petrol ones (2026-08-08)
 
 - The petrol page's summary cards had a coloured wash, an icon chip and a value in the

@@ -143,6 +143,50 @@
   --color-veloce-glow: rgba(59, 130, 246, 0.15);
 }
 
+/*
+ * Activity heatmap ramps.
+ *
+ * Four solid steps per category rather than one colour at rising opacity. Over
+ * a near-black card, a warm hue at low alpha composites straight into brown —
+ * the old amber-500/30 landed on #563e19 — and since most days carry one or two
+ * activities, most of the grid was brown.
+ *
+ * Chroma is set to a fraction of the most sRGB can show at each lightness, so
+ * the busiest step is always the most saturated. The lightness range differs per
+ * hue because each hue's gamut peaks in a different place: amber has to stay
+ * light or it goes brown, violet has to stay darker or it washes out to white.
+ */
+:root {
+  --heat-fuel-1: oklch(0.91 0.046 75);
+  --heat-fuel-2: oklch(0.83 0.119 75);
+  --heat-fuel-3: oklch(0.74 0.145 75);
+  --heat-fuel-4: oklch(0.65 0.137 75);
+  --heat-charge-1: oklch(0.91 0.085 196);
+  --heat-charge-2: oklch(0.82 0.112 196);
+  --heat-charge-3: oklch(0.72 0.114 196);
+  --heat-charge-4: oklch(0.61 0.104 196);
+  --heat-maint-1: oklch(0.91 0.029 292);
+  --heat-maint-2: oklch(0.82 0.079 292);
+  --heat-maint-3: oklch(0.71 0.154 292);
+  --heat-maint-4: oklch(0.58 0.253 292);
+}
+
+.dark {
+  /* Cells brighten with activity here; in light mode they deepen instead. */
+  --heat-fuel-1: oklch(0.71 0.093 75);
+  --heat-fuel-2: oklch(0.78 0.132 75);
+  --heat-fuel-3: oklch(0.84 0.129 75);
+  --heat-fuel-4: oklch(0.9 0.084 75);
+  --heat-charge-1: oklch(0.64 0.068 196);
+  --heat-charge-2: oklch(0.72 0.098 196);
+  --heat-charge-3: oklch(0.79 0.125 196);
+  --heat-charge-4: oklch(0.86 0.147 196);
+  --heat-maint-1: oklch(0.55 0.17 292);
+  --heat-maint-2: oklch(0.63 0.175 292);
+  --heat-maint-3: oklch(0.71 0.154 292);
+  --heat-maint-4: oklch(0.79 0.116 292);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
