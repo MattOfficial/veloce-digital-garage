@@ -32,8 +32,6 @@ import {
   BatteryCharging,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
 } from "lucide-react";
 import { EnergyBatteryPanel } from "@/components/ev/energy-battery-panel";
@@ -42,6 +40,7 @@ import { FuelLogModal } from "@/components/fuel-log-modal";
 import { FuelEditModal } from "@/components/fuel-edit-modal";
 import { FuelDeleteDialog } from "@/components/fuel-delete-dialog";
 import { PageHeader } from "@/components/page-header";
+import { TablePagination } from "@/components/table-pagination";
 import { Tabs, TabsList, TabsTrigger } from "@mattofficial/veloce-ui";
 import {
   LineChart,
@@ -67,11 +66,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@mattofficial/veloce-ui";
 
 const METRIC_OPTIONS = FUEL_EFFICIENCY_UNITS;
@@ -835,64 +829,13 @@ export default function FuelPage() {
               </table>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t gap-4">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-                <div className="flex items-center gap-2">
-                  <p>Rows per page</p>
-                  <Select
-                    value={pageSize.toString()}
-                    onValueChange={(value) => {
-                      setPageSize(Number(value));
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue placeholder={pageSize.toString()} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[10, 25, 50].map((size) => (
-                        <SelectItem key={size} value={size.toString()}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="hidden sm:block">
-                  Showing {(safePage - 1) * pageSize + 1} to {Math.min(safePage * pageSize, allLogs.length)} of {allLogs.length}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="sm:hidden text-sm text-muted-foreground">
-                  {safePage} / {totalPages}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={safePage === 1}
-                    className="h-8 px-2 lg:px-3 gap-1"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden lg:inline">Previous</span>
-                  </Button>
-                  <div className="hidden sm:block text-sm font-medium mx-2">
-                    Page {safePage} of {totalPages}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="h-8 px-2 lg:px-3 gap-1"
-                  >
-                    <span className="hidden lg:inline">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <TablePagination
+              page={safePage}
+              pageSize={pageSize}
+              totalItems={allLogs.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </Card>
         </>
       )}

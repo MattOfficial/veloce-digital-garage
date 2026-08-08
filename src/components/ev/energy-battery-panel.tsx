@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { BatteryCheckInModal } from "@/components/battery-check-in-modal";
+import { ChargeHistoryTable } from "@/components/ev/charge-history-table";
 import { FuelLogModal } from "@/components/fuel-log-modal";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { ui } from "@/content/en/ui";
@@ -660,6 +661,10 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
           </Card>
         </MotionWrapper>
       </div>
+
+      <MotionWrapper>
+        <ChargeHistoryTable vehicle={vehicle} />
+      </MotionWrapper>
     </div>
   );
 }

@@ -6,6 +6,27 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### EV page — charge history, working efficiency, real savings (2026-08-08)
+
+- **Charge history table.** The EV page returned early with only the analytics panel, so a
+  logged session could not be seen, corrected or removed. New `ChargeHistoryTable` lists every
+  session with where, how it was billed, energy, cost, effective rate and battery, and wires
+  edit and delete to the same modals the petrol page uses. SoC-derived energy is marked, so a
+  derived figure is never mistaken for a meter reading.
+- Pagination moved into a shared `TablePagination`; the petrol table now uses it too rather
+  than carrying its own copy.
+- **Efficiency shows from the first charge.** It needed two charge-to-charge segments, so a
+  single session displayed nothing. It now falls back to lifetime distance over lifetime
+  energy — capped at low confidence and labelled, because that ratio counts the charge still
+  in the battery as though it had been ridden.
+- **Savings compares against your own garage.** It previously needed a petrol price and
+  economy typed into the profile. It now measures the owner's petrol vehicles of the same
+  class, pooled by distance so a heavily-used vehicle counts for more, and never compares a
+  two-wheeler with a car. Plug-in hybrids are excluded (part grid energy); self-charging
+  hybrids count. Falls back to the profile reference, then to researched Indian averages —
+  ₹2.25/km for a two-wheeler and ₹8/km for a car — which are withheld from a garage priced in
+  another currency. The card always states which source it used.
+
 ### Fix — say when a save failed because a migration is pending (2026-08-08)
 
 - `submitFuelLog` returned a flat "Failed to save fuel log" and left the real cause in a

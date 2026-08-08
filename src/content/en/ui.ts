@@ -3,6 +3,14 @@ import { brand } from "./brand";
 export const ui = {
   common: {
     unexpectedError: "An unexpected error occurred.",
+    pagination: {
+      rowsPerPage: "Rows per page",
+      showing: (first: number, last: number, total: number) =>
+        `Showing ${first} to ${last} of ${total}`,
+      pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
+      previous: "Previous",
+      next: "Next",
+    },
     actions: {
       back: "Back",
       cancel: "Cancel",
@@ -706,6 +714,24 @@ export const ui = {
         `${count} ${count === 1 ? "session has" : "sessions have"} no reference point. Add the battery percentages, or mark a session as charged to 100%.`,
       empty:
         "Log two charges with the battery percentages and your real efficiency appears here.",
+    },
+    history: {
+      title: "Charging History",
+      description: "Every session you have logged. Edit or remove any of them.",
+      empty: "No charges logged yet.",
+      columns: {
+        date: "Date",
+        where: "Where",
+        billed: "Billed",
+        energy: "Energy",
+        cost: "Cost",
+        rate: "Per kWh",
+        battery: "Battery",
+        actions: "",
+      },
+      toFull: "to 100%",
+      socRange: (start: number, end: number) => `${start}% → ${end}%`,
+      derivedEnergy: "Worked out from the battery percentages",
     },
     capacity: {
       title: "Pack Capacity",
