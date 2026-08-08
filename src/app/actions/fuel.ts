@@ -2,12 +2,14 @@
 
 import { buildFuelAnalytics } from "@/utils/fuel-analytics";
 import type {
+    ChargeEnergyBasis,
+    ChargePricingMode,
     ChargeSource,
     FuelLog,
     FuelLogEnergyType,
     FuelLogFillType,
 } from "@/types/database";
-import { deriveEnergyFromSocDelta } from "@/utils/ev-energy-analytics";
+import { calculateSessionCost, resolveSessionEnergy } from "@/utils/charge-session";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
@@ -18,7 +20,11 @@ type FuelLogMutationPayload = {
     date: string;
     odometer: number;
     fuel_volume: number | null;
-    total_cost: number;
+    /**
+     * Null means "work it out from the rate components". Once resolved it is
+     * authoritative — see docs/ev-charging-redesign.md.
+     */
+    total_cost: number | null;
     energy_type: FuelLogEnergyType;
     /** ICE only. Charge rows carry null: "full charge" is not a meaningful concept. */
     fill_type: FuelLogFillType | null;
@@ -28,6 +34,21 @@ type FuelLogMutationPayload = {
     end_soc: number | null;
     charger_network: string | null;
     location: string | null;
+    pricing_mode: ChargePricingMode | null;
+    rate_per_unit: number | null;
+    duration_minutes: number | null;
+    session_fee: number | null;
+    idle_minutes: number | null;
+    idle_rate_per_minute: number | null;
+    tax_percent: number | null;
+    charged_to_full: boolean | null;
+};
+
+/** What actually reaches the table: energy, cost and basis all resolved. */
+type FuelLogInsertRow = Omit<FuelLogMutationPayload, "total_cost"> & {
+    fuel_volume: number;
+    total_cost: number;
+    energy_basis: ChargeEnergyBasis | null;
 };
 
 type FuelLogMutationResult = {
@@ -61,8 +82,20 @@ function normalizeChargeSource(value: FormDataEntryValue | null): ChargeSource {
     return "other";
 }
 
+function normalizePricingMode(value: FormDataEntryValue | null): ChargePricingMode {
+    if (value === "per_minute" || value === "flat" || value === "free") {
+        return value;
+    }
+
+    return "per_kwh";
+}
+
 function parseOptionalText(value: FormDataEntryValue | null): string | null {
     return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+function parseBooleanField(value: FormDataEntryValue | null): boolean {
+    return value === "true" || value === "on" || value === "1";
 }
 
 function isValidSoc(value: number | null): boolean {
@@ -85,11 +118,19 @@ function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null 
     if (
         typeof vehicle_id !== "string" ||
         typeof date !== "string" ||
-        total_cost == null ||
         odometer == null ||
-        odometer <= 0 ||
-        total_cost < 0
+        odometer <= 0
     ) {
+        return null;
+    }
+
+    // A liquid fill always states its cost. A charge session may instead state
+    // the tariff it was billed at, and let the server do the arithmetic.
+    if (total_cost != null && total_cost < 0) {
+        return null;
+    }
+
+    if (!isCharge && total_cost == null) {
         return null;
     }
 
@@ -121,23 +162,79 @@ function parseFuelLogPayload(formData: FormData): FuelLogMutationPayload | null 
         end_soc,
         charger_network: isCharge ? parseOptionalText(formData.get("charger_network")) : null,
         location: isCharge ? parseOptionalText(formData.get("location")) : null,
+        pricing_mode: isCharge ? normalizePricingMode(formData.get("pricing_mode")) : null,
+        rate_per_unit: isCharge ? parseNumericField(formData.get("rate_per_unit")) : null,
+        duration_minutes: isCharge ? parseNumericField(formData.get("duration_minutes")) : null,
+        session_fee: isCharge ? parseNumericField(formData.get("session_fee")) : null,
+        idle_minutes: isCharge ? parseNumericField(formData.get("idle_minutes")) : null,
+        idle_rate_per_minute: isCharge
+            ? parseNumericField(formData.get("idle_rate_per_minute"))
+            : null,
+        tax_percent: isCharge ? parseNumericField(formData.get("tax_percent")) : null,
+        charged_to_full: isCharge ? parseBooleanField(formData.get("charged_to_full")) : null,
     };
 }
 
 /**
- * Charge rows never carry a volume of null into the database: either the session
- * reported kWh or we reconstruct it from the SoC delta and the pack size.
+ * Resolves a payload into a row: energy from the meter or the SoC delta, and
+ * cost from what the user typed or, failing that, from the tariff components.
+ * Returns null when a charge session has no route to a kWh figure at all.
  */
-function resolveChargeVolume(
+function resolveChargeRow(
     payload: FuelLogMutationPayload,
     usableBatteryKwh: number | null,
-): number | null {
-    if (payload.fuel_volume != null) {
-        return payload.fuel_volume;
+): FuelLogInsertRow | null {
+    const isCharge = payload.energy_type === "charge";
+
+    if (!isCharge) {
+        return payload.fuel_volume != null && payload.total_cost != null
+            ? {
+                  ...payload,
+                  fuel_volume: payload.fuel_volume,
+                  total_cost: payload.total_cost,
+                  energy_basis: null,
+              }
+            : null;
     }
 
-    return deriveEnergyFromSocDelta(payload.start_soc, payload.end_soc, usableBatteryKwh);
+    const pricingMode = payload.pricing_mode ?? "per_kwh";
+    const { energyKwh, basis } = resolveSessionEnergy({
+        pricingMode,
+        energyKwh: payload.fuel_volume,
+        startSoc: payload.start_soc,
+        endSoc: payload.end_soc,
+        usableBatteryKwh,
+    });
+
+    if (energyKwh == null) {
+        return null;
+    }
+
+    // The user's own figure wins. The calculator only fills a gap, so a network
+    // with a tariff we cannot model is still logged accurately.
+    const total_cost =
+        payload.total_cost ??
+        calculateSessionCost({
+            pricingMode,
+            energyKwh,
+            ratePerUnit: payload.rate_per_unit,
+            durationMinutes: payload.duration_minutes,
+            sessionFee: payload.session_fee,
+            idleMinutes: payload.idle_minutes,
+            idleRatePerMinute: payload.idle_rate_per_minute,
+            taxPercent: payload.tax_percent,
+        }).total;
+
+    return {
+        ...payload,
+        fuel_volume: energyKwh,
+        total_cost,
+        energy_basis: basis,
+    };
 }
+
+const MISSING_ENERGY_ERROR =
+    "Enter the units consumed, or the start and end battery percentages with the battery size set on the vehicle.";
 
 async function deriveCalculatedEfficiency(
     supabase: Awaited<ReturnType<typeof createClient>>,
@@ -202,12 +299,9 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         return { success: false, error: "Vehicle not found or access denied." };
     }
 
-    const fuel_volume = resolveChargeVolume(payload, vehicle.usable_battery_kwh);
-    if (fuel_volume == null) {
-        return {
-            success: false,
-            error: "Enter the energy delivered, or a start and end state of charge with the battery size set on the vehicle.",
-        };
+    const row = resolveChargeRow(payload, vehicle.usable_battery_kwh);
+    if (row == null) {
+        return { success: false, error: MISSING_ENERGY_ERROR };
     }
 
     const candidateLog: FuelLog = {
@@ -215,8 +309,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         created_at: new Date().toISOString(),
         calculated_efficiency: null,
         is_estimated: false,
-        ...payload,
-        fuel_volume,
+        ...row,
     };
 
     const calculated_efficiency = await deriveCalculatedEfficiency(
@@ -227,8 +320,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
     );
 
     const { error } = await supabase.from("fuel_logs").insert({
-        ...payload,
-        fuel_volume,
+        ...row,
         calculated_efficiency,
     });
 
@@ -266,12 +358,9 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
 
     if (!vehicle) return { success: false, error: "Vehicle not found or access denied." };
 
-    const fuel_volume = resolveChargeVolume(payload, vehicle.usable_battery_kwh);
-    if (fuel_volume == null) {
-        return {
-            success: false,
-            error: "Enter the energy delivered, or a start and end state of charge with the battery size set on the vehicle.",
-        };
+    const row = resolveChargeRow(payload, vehicle.usable_battery_kwh);
+    if (row == null) {
+        return { success: false, error: MISSING_ENERGY_ERROR };
     }
 
     const { data: existingLog, error: existingLogError } = await supabase
@@ -286,8 +375,7 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
 
     const candidateLog: FuelLog = {
         ...(existingLog as unknown as FuelLog),
-        ...payload,
-        fuel_volume,
+        ...row,
         id: logId,
         created_at: existingLog.created_at ?? new Date().toISOString(),
         calculated_efficiency: null,
@@ -302,7 +390,7 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
 
     const { error } = await supabase
         .from("fuel_logs")
-        .update({ ...payload, fuel_volume, calculated_efficiency })
+        .update({ ...row, calculated_efficiency })
         .eq("id", logId);
 
     if (error) {

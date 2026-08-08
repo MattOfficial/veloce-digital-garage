@@ -1,28 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { buildFuelAnalytics } from "@/utils/fuel-analytics";
 import type { FuelLog } from "@/types/database";
+import { makeFuelLog } from "@/__tests__/factories";
 
 function makeLog(overrides: Partial<FuelLog> = {}): FuelLog {
-    return {
+    return makeFuelLog({
         id: "log-1",
-        vehicle_id: "v-1",
         date: "2024-01-01",
         odometer: 1000,
-        fuel_volume: 10,
-        total_cost: 20,
-        calculated_efficiency: null,
-        energy_type: "fuel",
-        fill_type: "full",
-        estimated_range: null,
-        charge_source: null,
-        start_soc: null,
-        end_soc: null,
-        is_estimated: false,
-        charger_network: null,
-        location: null,
         created_at: "2024-01-01T10:00:00Z",
         ...overrides,
-    };
+    });
 }
 
 describe("buildFuelAnalytics", () => {

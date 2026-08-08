@@ -6,82 +6,47 @@ import {
   buildEvLifetimeEnergySummary,
   deriveEnergyFromSocDelta,
 } from "@/utils/ev-energy-analytics";
+import * as factories from "@/__tests__/factories";
 
 const CURRENT_DATE = new Date("2026-07-31T00:00:00Z");
 
 function makeSnapshot(overrides: Partial<VehicleSnapshot> = {}): VehicleSnapshot {
-  return {
+  return factories.makeSnapshot({
     id: "snap-1",
-    vehicle_id: "v-1",
     date: "2026-07-01",
     odometer: 1000,
-    soc_percent: null,
-    displayed_range: null,
-    source: "manual",
-    notes: null,
     created_at: "2026-07-01T10:00:00Z",
     ...overrides,
-  };
+  });
 }
 
 function makeChargeLog(overrides: Partial<FuelLog> = {}): FuelLog {
-  return {
-    id: "charge-1",
-    vehicle_id: "v-1",
+  return factories.makeChargeLog({
     date: "2026-07-10",
     odometer: 1250,
     fuel_volume: 6,
     total_cost: 90,
-    calculated_efficiency: null,
-    energy_type: "charge",
-    fill_type: null,
-    estimated_range: null,
     charge_source: "dc_fast",
+    rate_per_unit: 15,
     start_soc: 20,
     end_soc: 80,
-    is_estimated: false,
     charger_network: "Ather Grid",
     location: "Indiranagar",
     created_at: "2026-07-10T10:00:00Z",
     ...overrides,
-  };
+  });
 }
 
 function makeVehicle(overrides: Partial<VehicleWithLogs> = {}): VehicleWithLogs {
-  return {
-    id: "v-1",
-    user_id: "u-1",
-    make: "Ather",
-    model: "450X",
-    year: 2024,
-    baseline_odometer: 1000,
+  return factories.makeEvVehicle({
     current_odometer: 1600,
-    image_url: null,
-    vin: null,
-    license_plate: null,
-    color: null,
-    nickname: null,
-    engine_type: null,
-    transmission: null,
-    notes: null,
-    custom_fields: null,
-    tyre_info: null,
-    vehicle_type: "motorcycle",
-    powertrain: "ev",
-    battery_capacity_kwh: 3.7,
-    usable_battery_kwh: 3.7,
     rated_range_km: 150,
     baseline_range_km: 110,
     battery_warranty_years: 3,
     battery_warranty_km: 30000,
     created_at: "2026-01-01T00:00:00Z",
-    fuel_logs: [],
-    maintenance_logs: [],
-    custom_logs: [],
-    service_reminders: [],
-    vehicle_snapshots: [],
     ...overrides,
-  };
+  });
 }
 
 /** 600 km covered across the trailing 30 days, with one deep discharge. */

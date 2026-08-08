@@ -6,6 +6,7 @@ import {
   normalizeActivityDate,
   toLocalDateKey,
 } from "@/utils/activity-heatmap";
+import { makeFuelLog, makeMaintenanceLog } from "@/__tests__/factories";
 
 type ActivityVehicle = Pick<
   VehicleWithLogs,
@@ -17,35 +18,26 @@ function makeVehicle(
   maintenanceDates: string[] = [],
 ): ActivityVehicle {
   return {
-    fuel_logs: fuelDates.map((date, index) => ({
-      id: `fuel-${index}`,
-      vehicle_id: "vehicle-1",
-      date,
-      odometer: 10_000 + index,
-      fuel_volume: 20,
-      total_cost: 1_000,
-      calculated_efficiency: null,
-      energy_type: "fuel",
-      fill_type: "full",
-      charge_source: null,
-      start_soc: null,
-      end_soc: null,
-      is_estimated: false,
-      charger_network: null,
-      location: null,
-      estimated_range: null,
-      created_at: `${date}T12:00:00Z`,
-    })),
-    maintenance_logs: maintenanceDates.map((date, index) => ({
-      id: `maintenance-${index}`,
-      vehicle_id: "vehicle-1",
-      date,
-      service_type: "Service",
-      cost: 2_000,
-      odometer: 10_000 + index,
-      notes: null,
-      created_at: `${date}T12:00:00Z`,
-    })),
+    fuel_logs: fuelDates.map((date, index) =>
+      makeFuelLog({
+        id: `fuel-${index}`,
+        vehicle_id: "vehicle-1",
+        date,
+        odometer: 10_000 + index,
+        fuel_volume: 20,
+        total_cost: 1_000,
+        created_at: `${date}T12:00:00Z`,
+      }),
+    ),
+    maintenance_logs: maintenanceDates.map((date, index) =>
+      makeMaintenanceLog({
+        id: `maintenance-${index}`,
+        vehicle_id: "vehicle-1",
+        date,
+        odometer: 10_000 + index,
+        created_at: `${date}T12:00:00Z`,
+      }),
+    ),
   };
 }
 

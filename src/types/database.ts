@@ -69,12 +69,35 @@ export type FuelLogFillType = 'full' | 'partial';
 export type FuelLogEnergyType = 'fuel' | 'charge';
 export type ChargeSource = 'home' | 'ac_public' | 'dc_fast' | 'other';
 
+/**
+ * How a charge session was billed. These are presets over the four OCPI tariff
+ * dimensions rather than a taxonomy of their own — see
+ * docs/ev-charging-redesign.md. Tiered, time-of-use, dynamic and membership
+ * pricing are all modifiers over the same dimensions, so they need no new mode.
+ */
+export type ChargePricingMode = 'per_kwh' | 'per_minute' | 'flat' | 'free';
+
+export const CHARGE_PRICING_MODES: ChargePricingMode[] = [
+  'per_kwh',
+  'per_minute',
+  'flat',
+  'free',
+];
+
+/**
+ * Metered kWh comes off a meter and includes charging losses; SoC-derived kWh
+ * is what reached the pack. They are different denominators, so a row has to
+ * declare which efficiency figure it is allowed to feed.
+ */
+export type ChargeEnergyBasis = 'metered' | 'soc_derived';
+
 export type FuelLog = {
   id: string;
   vehicle_id: string;
   date: string;
   odometer: number;
   fuel_volume: number; // For EVs this represents kWh. Legacy name kept for DB column mapping context.
+  /** Authoritative. Rate x quantity is a UI calculator; this is the record. */
   total_cost: number;
   calculated_efficiency: number | null;
   energy_type: FuelLogEnergyType;
@@ -83,10 +106,21 @@ export type FuelLog = {
   charge_source: ChargeSource | null;
   start_soc: number | null;
   end_soc: number | null;
-  /** True for inferred home-charging rows, which must be labelled as estimates in the UI. */
+  /** True only for app-generated cold-start rows, never for a session the user typed. */
   is_estimated: boolean;
   charger_network: string | null;
   location: string | null;
+  pricing_mode: ChargePricingMode | null;
+  /** Currency per kWh or per minute, depending on `pricing_mode`. */
+  rate_per_unit: number | null;
+  duration_minutes: number | null;
+  session_fee: number | null;
+  idle_minutes: number | null;
+  idle_rate_per_minute: number | null;
+  tax_percent: number | null;
+  /** The efficiency anchor for sessions logged without a state of charge. */
+  charged_to_full: boolean | null;
+  energy_basis: ChargeEnergyBasis | null;
   created_at: string;
 };
 
