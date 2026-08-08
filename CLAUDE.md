@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Agreement
+
+These apply to every session, without being asked.
+
+**Commit at each milestone.** Do not accumulate a session's worth of work into one commit.
+A milestone is a coherent, reviewable unit — a migration, an analytics module, a UI surface.
+Branch first if on `main`.
+
+**Tests ship with the code, not after it.** Before every commit, the code and its tests must
+both be written and `bun run test` must pass. New logic in `src/utils/` needs unit tests in
+`src/__tests__/utils/`; coverage threshold is 80%. A commit with failing or missing tests is
+not a milestone.
+
+**Update `CHANGELOG.md` in the same commit.** Every commit adds an entry under `## Unreleased`
+describing what changed and why — not a restatement of the diff. Newest first.
+
+**Run `bun run lint` before committing.**
+
 ## Overview
 
 Veloce Digital Garage is a Next.js 16 vehicle ownership tracker for logging fuel, maintenance, and hybrid AI-assisted garage workflows. It uses a monorepo structure with the main app in `src/` and a shared UI component package in `packages/veloce-ui/`.
