@@ -39,6 +39,7 @@ import {
   buildFuelAnalytics,
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
+import { canChooseEnergyType } from "@/utils/energy-type";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 import { formatMoneyCompact, formatMoneyExact } from "@/utils/formatting";
 import {
@@ -152,8 +153,7 @@ export function CostTrendsPanel({
     [vehicle],
   );
 
-  const canToggleAnalysisMode =
-    vehicle.powertrain === "phev" || vehicle.powertrain === "rex";
+  const canToggleAnalysisMode = canChooseEnergyType(vehicle.powertrain);
   const defaultAnalysisMode: FuelAnalyticsMode =
     vehicle.powertrain === "ev" ? "charge" : "fuel";
   const hasFuelLogs = analytics.fuel.logs.length > 0;

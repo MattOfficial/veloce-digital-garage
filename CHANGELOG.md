@@ -6,6 +6,24 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Fix — petrol vehicles were shown the EV charge form (2026-08-09)
+
+- **Bug:** after viewing an EV, switching to a petrol vehicle and opening "Log Fill-Up" gave
+  the charge form — units in kWh, charger type, "Charged to 100%" — with no way to record a
+  litre. Any fill-up logged that way would have been stored as a charge session.
+- **Cause:** `FuelLogModal` seeded its energy type with
+  `useState(isEV ? "charge" : "fuel")`. A `useState` initialiser runs once, and the modal
+  keeps its place in the tree across a vehicle switch, so the value stayed on `charge` from
+  the EV. The header read the powertrain directly, which is why it correctly said "Log
+  Fill-Up" above a charge form.
+- **Fix:** the energy type is derived from the powertrain on every render via new
+  `resolveEnergyType`. Stored preference is consulted only for plug-in hybrids, the one case
+  where the owner is actually offered a choice, so a petrol vehicle cannot reach the charge
+  form whatever the state holds.
+- Swept the codebase for the same pattern: `fuel/page.tsx` and `cost-trends-panel.tsx` were
+  already safe because both gate their stored mode behind a powertrain check at read time.
+  Their duplicated `phev || rex` predicates now share `canChooseEnergyType`.
+
 ### Nav — "Fuel History" no longer shown for an EV (2026-08-08)
 
 - The sidebar entry now follows the selected vehicle rather than the route: an EV gets
