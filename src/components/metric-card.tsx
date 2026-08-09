@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@mattofficial/veloce-u
  * A headline metric card: a wash of the metric's own colour, an icon chip and
  * the value in that same hue.
  *
- * Shared between the petrol and EV pages so the two cannot drift apart — they
- * sit one vehicle-switch away from each other, and a flat grey tile next to a
- * coloured one reads as unfinished rather than different.
+ * The one headline-metric surface in the app. Petrol and EV sit one
+ * vehicle-switch away from each other and the dashboard, maintenance and
+ * insights pages are one click apart, so every bespoke stat tile was a chance
+ * for them to drift — a flat grey tile next to a coloured one reads as
+ * unfinished rather than different.
  */
 
 /**
@@ -42,6 +44,16 @@ const METRIC_TONES = {
     wash: "from-violet-500/10",
     chip: "bg-violet-500/15 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300",
     value: "text-violet-700 dark:text-violet-300",
+  },
+  teal: {
+    wash: "from-teal-500/10",
+    chip: "bg-teal-500/15 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300",
+    value: "text-teal-700 dark:text-teal-300",
+  },
+  sky: {
+    wash: "from-sky-500/10",
+    chip: "bg-sky-500/15 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300",
+    value: "text-sky-700 dark:text-sky-300",
   },
 } as const;
 
@@ -94,7 +106,9 @@ export function MetricCard({
       <CardContent className="relative z-10 px-5">
         <div
           className={cn(
-            "text-3xl font-semibold tracking-tight tabular-nums",
+            // Some values are words rather than numbers — a month name, an
+            // "Unavailable" — and must not push the card wider than its column.
+            "break-words text-3xl font-semibold tracking-tight tabular-nums",
             tones.value,
           )}
         >

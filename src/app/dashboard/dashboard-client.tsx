@@ -35,6 +35,7 @@ import {
 
 import { AddMaintenanceModal } from "@/components/add-maintenance-modal";
 import { FuelLogModal } from "@/components/fuel-log-modal";
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
 import {
@@ -62,12 +63,10 @@ import {
 } from "@/utils/battery-health";
 import { createTrailingDayRange, getVehicleDistanceSummary } from "@/utils/distance-analytics";
 import {
-  convertEvEfficiency,
   convertFuelEfficiency,
-  getDefaultEvEfficiencyUnit,
   getDefaultFuelEfficiencyUnit,
-  getEvEfficiencyPrecision,
 } from "@/utils/efficiency-units";
+import { getEvEfficiencyDisplay } from "@/utils/ev-efficiency-display";
 import { buildFuelAnalytics, type FuelAnalyticsMode } from "@/utils/fuel-analytics";
 import {
   formatMoney,
@@ -180,7 +179,7 @@ export default function DashboardClient({
 }) {
   const { vehicles, isLoading } = useVehicleStore();
   const selectedVehicle = useVehicleStore((state) => state.getSelectedVehicle());
-  const { profile, getVolumeUnit } = useUserStore();
+  const { profile, getVolumeUnit, getEvEfficiencyUnit } = useUserStore();
 
   const analytics = useMemo(
     () =>
@@ -247,8 +246,9 @@ export default function DashboardClient({
       : "fuel";
   const activeStream = analytics[analysisMode];
 
-  // An EV's efficiency and readiness come from state-of-charge check-ins, not
-  // from charge sessions — most of its energy is never logged at all.
+  // How much riding is left comes from state-of-charge check-ins; efficiency
+  // does not. It is the same charge-session derivation the Energy & Battery page
+  // shows, so the two surfaces cannot disagree.
   const isEv = selectedVehicle.powertrain === "ev";
   const batteryHealth = summarizeBatteryHealth(
     selectedVehicle.vehicle_snapshots ?? [],
@@ -258,16 +258,10 @@ export default function DashboardClient({
       baselineRangeKm: selectedVehicle.baseline_range_km,
     },
   );
-  const evEfficiencyUnit = getDefaultEvEfficiencyUnit(distanceUnit);
-  const evEfficiency =
-    batteryHealth.whPerKm != null
-      ? convertEvEfficiency(
-          1,
-          batteryHealth.whPerKm / 1000,
-          evEfficiencyUnit,
-          distanceUnit,
-        )
-      : null;
+  const evEfficiency = getEvEfficiencyDisplay(selectedVehicle, {
+    unit: getEvEfficiencyUnit(),
+    distanceUnit,
+  });
   const latestSocSnapshot = getLatestSocSnapshot(
     selectedVehicle.vehicle_snapshots ?? [],
   );
@@ -551,53 +545,40 @@ export default function DashboardClient({
 
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
           <MotionWrapper delay={0.1}>
-            <Card className="h-full gap-4 rounded-3xl py-5 shadow-sm">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5">
-                <div>
-                  <CardTitle className="text-base">Efficiency pulse</CardTitle>
-                  <CardDescription>
-                    {isEv
-                      ? "Measured from battery check-ins"
-                      : "Weighted from closed sessions"}
-                  </CardDescription>
-                </div>
-                <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
-                  <Gauge className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent className="px-5">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-3xl font-semibold tracking-tight tabular-nums">
-                      {isEv
-                        ? evEfficiency == null
-                          ? ui.common.emptyValue
-                          : evEfficiency.toFixed(
-                              getEvEfficiencyPrecision(evEfficiencyUnit),
-                            )
-                        : averageEfficiency == null
-                          ? ui.common.emptyValue
-                          : averageEfficiency.toFixed(2)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {isEv ? evEfficiencyUnit : efficiencyUnit}
-                    </p>
-                  </div>
-                  {!isEv && efficiencyDirection != null && (
-                    <div
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        efficiencyDirection >= 0
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                          : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                      }`}
-                    >
-                      {efficiencyDirection >= 0 ? "↑" : "↓"}{" "}
-                      {Math.abs(efficiencyDirection).toFixed(1)}% latest
-                    </div>
+            <MetricCard
+              tone="emerald"
+              icon={<Gauge className="h-4 w-4" />}
+              label="Efficiency pulse"
+              value={
+                isEv
+                  ? evEfficiency.value == null
+                    ? ui.common.emptyValue
+                    : evEfficiency.value.toFixed(evEfficiency.precision)
+                  : averageEfficiency == null
+                    ? ui.common.emptyValue
+                    : averageEfficiency.toFixed(2)
+              }
+              hint={
+                <>
+                  <span>{isEv ? evEfficiency.unit : efficiencyUnit}</span>
+                  {isEv && evEfficiency.basis != null && (
+                    <span>· {ui.ev.efficiency.basis[evEfficiency.basis]}</span>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                  {!isEv && efficiencyDirection != null && (
+                    <span
+                      className={
+                        efficiencyDirection >= 0
+                          ? "text-emerald-700 dark:text-emerald-300"
+                          : "text-rose-700 dark:text-rose-300"
+                      }
+                    >
+                      · {efficiencyDirection >= 0 ? "↑" : "↓"}{" "}
+                      {Math.abs(efficiencyDirection).toFixed(1)}% latest
+                    </span>
+                  )}
+                </>
+              }
+            />
           </MotionWrapper>
 
           <MotionWrapper delay={0.15}>

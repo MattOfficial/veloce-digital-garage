@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ElementType } from "react";
+import { useMemo, useState } from "react";
 import { format, isValid, parseISO } from "date-fns";
 import {
   CalendarClock,
@@ -20,6 +20,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import {
   ChartConfig,
@@ -55,54 +56,6 @@ type CostTrendsPanelProps = {
   currencySymbol: string;
   distanceUnit: string;
 };
-
-type MetricCardProps = {
-  label: string;
-  value: string;
-  detail: string;
-  icon: ElementType;
-  accent?: "primary" | "emerald" | "amber" | "violet";
-};
-
-const accentStyles = {
-  primary: "bg-primary/10 text-primary ring-primary/15",
-  emerald: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/15",
-  amber: "bg-amber-500/10 text-amber-500 ring-amber-500/15",
-  violet: "bg-violet-500/10 text-violet-500 ring-violet-500/15",
-};
-
-function MetricCard({
-  label,
-  value,
-  detail,
-  icon: Icon,
-  accent = "primary",
-}: MetricCardProps) {
-  return (
-    <Card className="h-full min-w-0 rounded-3xl border-border/60 bg-card/80 shadow-sm">
-      <CardContent className="flex h-full flex-col justify-between gap-5 p-5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {label}
-          </p>
-          <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ring-1 ${accentStyles[accent]}`}
-          >
-            <Icon className="h-4 w-4" />
-          </span>
-        </div>
-        <div className="min-w-0">
-          <p className="break-words text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
-            {value}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {detail}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function parseDate(value: string) {
   const date = parseISO(value.slice(0, 10));
@@ -284,21 +237,24 @@ export function CostTrendsPanel({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MotionWrapper delay={0.05} className="min-w-0">
           <MetricCard
+            tone="blue"
+            icon={<CircleDollarSign className="h-4 w-4" />}
             label={ui.insights.trackedSpend}
             value={formatCurrency(costSummary.totalCost)}
-            detail={ui.insights.trackedSpendDescription}
-            icon={CircleDollarSign}
+            hint={ui.insights.trackedSpendDescription}
           />
         </MotionWrapper>
         <MotionWrapper delay={0.1} className="min-w-0">
           <MetricCard
+            tone="emerald"
+            icon={<ReceiptText className="h-4 w-4" />}
             label={ui.insights.peakCostMonth}
             value={
               peakMonth
                 ? formatCurrency(peakMonth.total)
                 : ui.common.emptyValue
             }
-            detail={
+            hint={
               peakMonth && peakDriver
                 ? ui.insights.peakCostMonthDescription(
                     format(parseISO(`${peakMonth.key}-01`), "MMMM yyyy"),
@@ -306,33 +262,37 @@ export function CostTrendsPanel({
                   )
                 : ui.insights.noCostDataDescription
             }
-            icon={ReceiptText}
-            accent="emerald"
           />
         </MotionWrapper>
         <MotionWrapper delay={0.15} className="min-w-0">
           <MetricCard
+            tone="violet"
+            icon={<CalendarClock className="h-4 w-4" />}
             label={ui.insights.averageMonthlySpend}
             value={formatCurrency(monthlyBaseline)}
-            detail={ui.insights.recentMonthlyBaselineDescription(trackedMonths)}
-            icon={CalendarClock}
-            accent="violet"
+            hint={ui.insights.recentMonthlyBaselineDescription(trackedMonths)}
           />
         </MotionWrapper>
         <MotionWrapper delay={0.2} className="min-w-0">
           <MetricCard
+            tone="amber"
+            icon={
+              activeAnalysisMode === "charge" ? (
+                <Sparkles className="h-4 w-4" />
+              ) : (
+                <Fuel className="h-4 w-4" />
+              )
+            }
             label={ui.insights.energyCostPerDistance(activeAnalysisMode, distanceUnit)}
             value={
               energyCostPerDistance == null
                 ? ui.common.emptyValue
                 : formatCurrency(energyCostPerDistance)
             }
-            detail={ui.insights.energyCostPerDistanceDescription(
+            hint={ui.insights.energyCostPerDistanceDescription(
               activeAnalysisMode,
               recentSegments.length,
             )}
-            icon={activeAnalysisMode === "charge" ? Sparkles : Fuel}
-            accent="amber"
           />
         </MotionWrapper>
       </div>

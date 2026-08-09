@@ -22,7 +22,10 @@ import {
   Bot,
   Trophy,
   Route,
+  CalendarDays,
+  Gauge,
 } from "lucide-react";
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { getUserBadges } from "@/app/actions/badges";
 import { BADGE_REGISTRY } from "@/lib/badges";
@@ -382,7 +385,7 @@ export default function ProfilePage() {
 
               const getTierStyles = () => {
                 if (!isEarned)
-                  return "opacity-50 grayscale border-white/5 bg-white/5";
+                  return "opacity-50 grayscale border-border bg-muted/40 dark:border-white/5 dark:bg-white/5";
                 switch (badge.tier) {
                   case "bronze":
                     return "border-[#cd7f32]/50 bg-gradient-to-br from-[#cd7f32]/20 to-transparent text-[#cd7f32] shadow-[0_0_15px_-3px_rgba(205,127,50,0.3)]";
@@ -437,18 +440,29 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { key: "last30Days", label: ui.profile.distanceLastThirtyDays },
-              {
-                key: "last12Months",
-                label: ui.profile.distanceLastTwelveMonths,
-              },
-              { key: "lifetime", label: ui.profile.lifetimeDistance },
-            ].map(({ key, label }) => {
-              const summary =
-                garageDistanceMetrics[
-                  key as keyof typeof garageDistanceMetrics
-                ];
+            {(
+              [
+                {
+                  key: "last30Days",
+                  label: ui.profile.distanceLastThirtyDays,
+                  tone: "teal",
+                  icon: <CalendarDays className="h-4 w-4" />,
+                },
+                {
+                  key: "last12Months",
+                  label: ui.profile.distanceLastTwelveMonths,
+                  tone: "emerald",
+                  icon: <Route className="h-4 w-4" />,
+                },
+                {
+                  key: "lifetime",
+                  label: ui.profile.lifetimeDistance,
+                  tone: "blue",
+                  icon: <Gauge className="h-4 w-4" />,
+                },
+              ] as const
+            ).map(({ key, label, tone, icon }) => {
+              const summary = garageDistanceMetrics[key];
               const helperText = summary.hasSufficientData
                 ? summary.coverage === "partial"
                   ? ui.profile.distancePartialCoverage(
@@ -457,28 +471,27 @@ export default function ProfilePage() {
                     )
                   : ui.profile.distanceFullCoverageDescription
                 : ui.profile.distanceUnavailableDescription;
+              const isWaitingOnGarage =
+                isVehiclesLoading && vehicles.length === 0;
 
               return (
-                <div
+                <MetricCard
                   key={key}
-                  className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {label}
-                  </p>
-                  <div className="mt-3 text-3xl font-black">
-                    {isVehiclesLoading && vehicles.length === 0
+                  tone={tone}
+                  icon={icon}
+                  label={label}
+                  value={
+                    isWaitingOnGarage
                       ? ui.common.emptyValue
                       : summary.hasSufficientData && summary.value != null
-                        ? formatDistance(summary.value, resolvedProfile.distanceUnit)
-                        : ui.profile.distanceUnavailable}
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {isVehiclesLoading && vehicles.length === 0
-                      ? ui.dashboard.loading
-                      : helperText}
-                  </p>
-                </div>
+                        ? formatDistance(
+                            summary.value,
+                            resolvedProfile.distanceUnit,
+                          )
+                        : ui.profile.distanceUnavailable
+                  }
+                  hint={isWaitingOnGarage ? ui.dashboard.loading : helperText}
+                />
               );
             })}
           </div>
@@ -1014,7 +1027,7 @@ export default function ProfilePage() {
                       name="make"
                       placeholder={ui.profile.makePlaceholder}
                       required
-                      className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50"
+                      className="h-11 rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1024,7 +1037,7 @@ export default function ProfilePage() {
                       name="model"
                       placeholder={ui.profile.modelPlaceholder}
                       required
-                      className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50"
+                      className="h-11 rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1033,7 +1046,7 @@ export default function ProfilePage() {
                         {ui.profile.vehicleType}
                       </Label>
                       <Select name="vehicle_type" defaultValue="car">
-                        <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
+                        <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10">
                           <SelectValue
                             placeholder={ui.profile.vehicleTypePlaceholder}
                           />
@@ -1060,7 +1073,7 @@ export default function ProfilePage() {
                         value={selectedPowertrain}
                         onValueChange={setSelectedPowertrain}
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-white/10 focus:border-primary/50">
+                        <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10">
                           <SelectValue
                             placeholder={ui.profile.powertrainPlaceholder}
                           />
@@ -1096,7 +1109,7 @@ export default function ProfilePage() {
                         max={new Date().getFullYear() + 1}
                         placeholder="2020"
                         required
-                        className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="h-11 rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1113,7 +1126,7 @@ export default function ProfilePage() {
                         step="any"
                         placeholder="0"
                         required
-                        className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="h-11 rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                   </div>
@@ -1134,7 +1147,7 @@ export default function ProfilePage() {
                         min="0"
                         step="any"
                         placeholder={ui.profile.batteryCapacityPlaceholder}
-                        className="h-11 rounded-xl bg-muted/50 border-white/10 focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="h-11 rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                   )}
