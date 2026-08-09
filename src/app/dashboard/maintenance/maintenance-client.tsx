@@ -32,6 +32,7 @@ import { AddTrackerModal } from "@/components/add-tracker-modal";
 import { CustomTrackerWidget } from "@/components/custom-tracker-widget";
 import { TyreTrackerWidget } from "@/components/tyre-tracker-widget";
 import { MaintenanceLogActions } from "@/components/maintenance-log-actions";
+import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { DocumentUploader } from "@/components/document-uploader";
 import { OcrReviewModal } from "@/components/ocr-review-modal";
@@ -249,91 +250,53 @@ export default function MaintenanceClient({
           {/* Vitals Row */}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 grid-auto-rows-[1fr] items-stretch">
             <MotionWrapper delay={0.1} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.maintenance.lifetimeMaintenanceCost}
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-rose-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-rose-500 shadow-rose-500/20 drop-shadow-md">
-                    {formatCurrency(totalSpend)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.maintenance.lifetimeMaintenanceCostDescription}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="rose"
+                icon={<DollarSign className="h-4 w-4" />}
+                label={ui.maintenance.lifetimeMaintenanceCost}
+                value={formatCurrency(totalSpend)}
+                hint={ui.maintenance.lifetimeMaintenanceCostDescription}
+              />
             </MotionWrapper>
 
             <MotionWrapper delay={0.2} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.maintenance.thirtyDayMaintenanceSpend}
-                  </CardTitle>
-                  <CalendarDays className="h-4 w-4 text-violet-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-violet-500 shadow-violet-500/20 drop-shadow-md">
-                    {formatCurrency(thirtyDaySpend)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.maintenance.thirtyDayMaintenanceSpendDescription}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="violet"
+                icon={<CalendarDays className="h-4 w-4" />}
+                label={ui.maintenance.thirtyDayMaintenanceSpend}
+                value={formatCurrency(thirtyDaySpend)}
+                hint={ui.maintenance.thirtyDayMaintenanceSpendDescription}
+              />
             </MotionWrapper>
 
             <MotionWrapper delay={0.3} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.maintenance.maintenanceCostPerDistance(distanceUnit)}
-                  </CardTitle>
-                  <Activity className="h-4 w-4 text-amber-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-amber-500 shadow-amber-500/20 drop-shadow-md">
-                    {costPerDistance > 0
-                      ? formatCurrency(costPerDistance)
-                      : "--"}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.maintenance.maintenanceCostPerDistanceDescription}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="amber"
+                icon={<Activity className="h-4 w-4" />}
+                label={ui.maintenance.maintenanceCostPerDistance(distanceUnit)}
+                value={
+                  costPerDistance > 0
+                    ? formatCurrency(costPerDistance)
+                    : ui.common.emptyValue
+                }
+                hint={ui.maintenance.maintenanceCostPerDistanceDescription}
+              />
             </MotionWrapper>
 
             <MotionWrapper delay={0.4} className="h-full">
-              <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {ui.maintenance.servicesLogged}
-                  </CardTitle>
-                  <FileText className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black text-primary shadow-primary/20 drop-shadow-md">
-                    {logs.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">
-                    {ui.maintenance.totalServiceRecords}
-                  </p>
-                </CardContent>
-              </Card>
+              <MetricCard
+                tone="blue"
+                icon={<FileText className="h-4 w-4" />}
+                label={ui.maintenance.servicesLogged}
+                value={String(logs.length)}
+                hint={ui.maintenance.totalServiceRecords}
+              />
             </MotionWrapper>
           </div>
 
           {!hasLogs ? (
             <MotionWrapper delay={0.5}>
-              <Card className="bg-white/5 border-dashed border-2 border-white/10">
+              <Card className="rounded-[2rem] border-2 border-dashed">
                 <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                   <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
                   <h3 className="text-xl font-semibold tracking-tight">
@@ -351,7 +314,7 @@ export default function MaintenanceClient({
               <div className="grid gap-6 md:grid-cols-5">
                 <MotionWrapper delay={0.6} className="md:col-span-2">
                   <Card className="h-full overflow-hidden">
-                    <CardHeader className="border-b border-white/5">
+                    <CardHeader className="border-b border-border/60">
                       <CardTitle>{ui.maintenance.spendByCategory}</CardTitle>
                     </CardHeader>
                     <CardContent className="h-[250px] w-full pb-4 pt-6">
@@ -398,7 +361,7 @@ export default function MaintenanceClient({
 
                 <MotionWrapper delay={0.7} className="md:col-span-3">
                   <Card className="h-full overflow-hidden">
-                    <CardHeader className="border-b border-white/5">
+                    <CardHeader className="border-b border-border/60">
                       <CardTitle>
                         {ui.maintenance.maintenanceTimeline}
                       </CardTitle>
@@ -466,7 +429,7 @@ export default function MaintenanceClient({
           {/* Service History Table */}
           <MotionWrapper delay={0.1}>
             <Card className="overflow-hidden">
-              <CardHeader className="bg-white/5 border-b border-white/5 pb-4">
+              <CardHeader className="border-b border-border/60 bg-muted/30 pb-4">
                 <CardTitle>{ui.maintenance.serviceLogTitle}</CardTitle>
                 <CardDescription>
                   {ui.maintenance.serviceLogDescription}
@@ -485,7 +448,7 @@ export default function MaintenanceClient({
                   </div>
                 ) : (
                   <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-muted-foreground uppercase bg-black/20 border-b border-white/5">
+                    <thead className="border-b bg-gradient-to-r from-muted/40 via-muted/20 to-transparent text-xs uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-6 py-4 font-medium">
                           {ui.maintenance.columns.date}
@@ -507,11 +470,11 @@ export default function MaintenanceClient({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 bg-transparent">
+                    <tbody className="divide-y divide-border/60">
                       {tableLogs.map((log) => (
                         <tr
                           key={log.id}
-                          className="hover:bg-white/5 transition-colors"
+                          className="group transition-colors even:bg-muted/[0.12] hover:bg-primary/[0.05] dark:even:bg-white/[0.02]"
                         >
                           <td className="px-6 py-4 font-medium whitespace-nowrap">
                             {new Date(log.date).toLocaleDateString()}

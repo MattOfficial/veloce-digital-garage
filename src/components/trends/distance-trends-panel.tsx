@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ElementType } from "react";
+import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import {
   ArrowDownRight,
@@ -26,6 +26,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import {
   ChartConfig,
@@ -64,36 +65,7 @@ type DistanceTrendsPanelProps = {
 
 type RangeMonths = 6 | 12 | 24;
 
-type SummaryMetricProps = {
-  label: string;
-  value: string;
-  detail: string;
-  icon: ElementType;
-};
-
 const RANGE_OPTIONS = [6, 12, 24] as const;
-
-function SummaryMetric({
-  label,
-  value,
-  detail,
-  icon: Icon,
-}: SummaryMetricProps) {
-  return (
-    <div className="min-w-0 p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-teal-500" />
-        <span>{label}</span>
-      </div>
-      <p className="mt-3 break-words text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
-        {value}
-      </p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        {detail}
-      </p>
-    </div>
-  );
-}
 
 function CoverageBadge({
   coverage,
@@ -272,54 +244,62 @@ export function DistanceTrendsPanel({
 
   return (
     <div className="w-full max-w-full min-w-0 space-y-5 overflow-hidden">
-      <MotionWrapper delay={0.05}>
-        <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
-          <div className="grid divide-y divide-border/50 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
-            <SummaryMetric
-              label={ui.insights.distanceTrends.currentMonth}
-              value={formatDistanceValue(currentMonth?.totalDistance ?? null)}
-              detail={
-                currentMonth?.hasData
-                  ? ui.insights.distanceTrends.estimatedThrough(
-                      format(now, "d MMM"),
-                    )
-                  : ui.insights.distanceTrends.noCurrentCoverage
-              }
-              icon={CalendarDays}
-            />
-            <SummaryMetric
-              label={ui.insights.distanceTrends.typicalMonth}
-              value={formatDistanceValue(typicalMonth)}
-              detail={ui.insights.distanceTrends.medianAcross(
-                completedMonths.length,
-              )}
-              icon={CircleGauge}
-            />
-            <SummaryMetric
-              label={ui.insights.distanceTrends.trailingTotal(rangeMonths)}
-              value={formatDistanceValue(
-                monthsWithData.length > 0 ? trailingDistance : null,
-              )}
-              detail={ui.insights.distanceTrends.basedOnCoveredMonths(
-                monthsWithData.length,
-              )}
-              icon={Route}
-            />
-            <SummaryMetric
-              label={ui.insights.distanceTrends.busiestMonth}
-              value={formatDistanceValue(peakMonth?.totalDistance ?? null)}
-              detail={
-                peakMonth
-                  ? ui.insights.distanceTrends.busiestMonthDescription(
-                      format(parseISO(`${peakMonth.key}-01`), "MMMM yyyy"),
-                    )
-                  : ui.insights.distanceTrends.notEnoughEvidence
-              }
-              icon={MapPinned}
-            />
-          </div>
-        </Card>
-      </MotionWrapper>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MotionWrapper delay={0.05} className="min-w-0">
+          <MetricCard
+            tone="teal"
+            icon={<CalendarDays className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.currentMonth}
+            value={formatDistanceValue(currentMonth?.totalDistance ?? null)}
+            hint={
+              currentMonth?.hasData
+                ? ui.insights.distanceTrends.estimatedThrough(
+                    format(now, "d MMM"),
+                  )
+                : ui.insights.distanceTrends.noCurrentCoverage
+            }
+          />
+        </MotionWrapper>
+        <MotionWrapper delay={0.1} className="min-w-0">
+          <MetricCard
+            tone="emerald"
+            icon={<CircleGauge className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.typicalMonth}
+            value={formatDistanceValue(typicalMonth)}
+            hint={ui.insights.distanceTrends.medianAcross(
+              completedMonths.length,
+            )}
+          />
+        </MotionWrapper>
+        <MotionWrapper delay={0.15} className="min-w-0">
+          <MetricCard
+            tone="blue"
+            icon={<Route className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.trailingTotal(rangeMonths)}
+            value={formatDistanceValue(
+              monthsWithData.length > 0 ? trailingDistance : null,
+            )}
+            hint={ui.insights.distanceTrends.basedOnCoveredMonths(
+              monthsWithData.length,
+            )}
+          />
+        </MotionWrapper>
+        <MotionWrapper delay={0.2} className="min-w-0">
+          <MetricCard
+            tone="violet"
+            icon={<MapPinned className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.busiestMonth}
+            value={formatDistanceValue(peakMonth?.totalDistance ?? null)}
+            hint={
+              peakMonth
+                ? ui.insights.distanceTrends.busiestMonthDescription(
+                    format(parseISO(`${peakMonth.key}-01`), "MMMM yyyy"),
+                  )
+                : ui.insights.distanceTrends.notEnoughEvidence
+            }
+          />
+        </MotionWrapper>
+      </div>
 
       <MotionWrapper delay={0.1} className="min-w-0">
         <Card className="min-w-0 overflow-hidden rounded-3xl border-border/60 bg-card/80 shadow-sm">
@@ -522,94 +502,67 @@ export function DistanceTrendsPanel({
 
       <div className="grid gap-4 md:grid-cols-3">
         <MotionWrapper delay={0.15} className="min-w-0">
-          <Card className="h-full rounded-3xl border-border/60 bg-card/80 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {ui.insights.distanceTrends.paceTitle}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold">
-                    {format(parseISO(`${selected.key}-01`), "MMMM yyyy")}
-                  </p>
-                </div>
-                <span className="grid h-9 w-9 place-items-center rounded-2xl bg-teal-500/10 text-teal-500">
-                  <ComparisonDirectionIcon
-                    direction={trends.comparison.direction}
-                  />
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {comparisonText}
-              </p>
-              <button
-                type="button"
-                className="mt-4 text-xs font-semibold text-teal-600 hover:text-teal-500 dark:text-teal-400"
-                onClick={() => openMonth(effectiveMonthKey)}
-              >
-                {ui.insights.distanceTrends.openDailyView} →
-              </button>
-            </CardContent>
-          </Card>
+          <MetricCard
+            tone="teal"
+            icon={
+              <ComparisonDirectionIcon
+                direction={trends.comparison.direction}
+              />
+            }
+            label={ui.insights.distanceTrends.paceTitle}
+            value={format(parseISO(`${selected.key}-01`), "MMMM yyyy")}
+            hint={
+              <>
+                <span>{comparisonText}</span>
+                <button
+                  type="button"
+                  className="font-semibold text-teal-700 hover:underline dark:text-teal-300"
+                  onClick={() => openMonth(effectiveMonthKey)}
+                >
+                  {ui.insights.distanceTrends.openDailyView} →
+                </button>
+              </>
+            }
+          />
         </MotionWrapper>
 
         <MotionWrapper delay={0.2} className="min-w-0">
-          <Card className="h-full rounded-3xl border-border/60 bg-card/80 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {ui.insights.distanceTrends.coverageTitle}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {Math.round(overallCoverage * 100)}%
-                  </p>
-                </div>
-                <span className="grid h-9 w-9 place-items-center rounded-2xl bg-violet-500/10 text-violet-500">
-                  <DatabaseZap className="h-4 w-4" />
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {ui.insights.distanceTrends.coverageDescription(
-                  coveredDays,
-                  availableDays,
-                )}
-              </p>
-            </CardContent>
-          </Card>
+          <MetricCard
+            tone="violet"
+            icon={<DatabaseZap className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.coverageTitle}
+            value={`${Math.round(overallCoverage * 100)}%`}
+            hint={ui.insights.distanceTrends.coverageDescription(
+              coveredDays,
+              availableDays,
+            )}
+          />
         </MotionWrapper>
 
         <MotionWrapper delay={0.25} className="min-w-0">
-          <Card className="h-full rounded-3xl border-border/60 bg-card/80 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {ui.insights.distanceTrends.evidenceTitle}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {trends.dataQuality.usableReadingDays}
-                  </p>
-                </div>
-                <span className="grid h-9 w-9 place-items-center rounded-2xl bg-sky-500/10 text-sky-500">
-                  <Sparkles className="h-4 w-4" />
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {ui.insights.distanceTrends.evidenceDescription(
-                  trends.dataQuality.fuelObservations,
-                  trends.dataQuality.maintenanceObservations,
-                )}
-              </p>
-              {trends.dataQuality.discardedDecreasingReadings > 0 && (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  {ui.insights.distanceTrends.decreasingReadings(
-                    trends.dataQuality.discardedDecreasingReadings,
+          <MetricCard
+            tone="sky"
+            icon={<Sparkles className="h-4 w-4" />}
+            label={ui.insights.distanceTrends.evidenceTitle}
+            value={String(trends.dataQuality.usableReadingDays)}
+            hint={
+              <>
+                <span>
+                  {ui.insights.distanceTrends.evidenceDescription(
+                    trends.dataQuality.fuelObservations,
+                    trends.dataQuality.maintenanceObservations,
                   )}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                </span>
+                {trends.dataQuality.discardedDecreasingReadings > 0 && (
+                  <span className="text-amber-700 dark:text-amber-300">
+                    {ui.insights.distanceTrends.decreasingReadings(
+                      trends.dataQuality.discardedDecreasingReadings,
+                    )}
+                  </span>
+                )}
+              </>
+            }
+          />
         </MotionWrapper>
       </div>
 

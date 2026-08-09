@@ -36,7 +36,7 @@ import {
   getLatestSocSnapshot,
   summarizeBatteryHealth,
 } from "@/utils/battery-health";
-import { convertEvEfficiency, getEvEfficiencyPrecision } from "@/utils/efficiency-units";
+import { getEvEfficiencyDisplay } from "@/utils/ev-efficiency-display";
 import { buildEvEnergySummary } from "@/utils/ev-energy-analytics";
 import { buildEvSavings } from "@/utils/ev-savings";
 import { formatMoney } from "@/utils/formatting";
@@ -139,27 +139,22 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
           ? ui.ev.savings.benchmark["profile-reference"]
           : ui.ev.savings.benchmark.unavailable;
 
-  // Efficiency is what the meter bought, not what the pack drew. It used to be
-  // read off battery health, which meant it stayed blank for anyone who logged
-  // charges but never recorded a state-of-charge check-in.
-  const displayedEfficiency =
-    energy.efficiency.distancePerKwh != null
-      ? convertEvEfficiency(
-          energy.efficiency.distancePerKwh,
-          1,
-          efficiencyUnit,
-          distanceUnit,
-        )
-      : null;
+  // Efficiency is what the meter bought, not what the pack drew. Shared with the
+  // dashboard's pulse card, which used to read it off battery health and so
+  // stayed blank for anyone who logged charges but never recorded a check-in.
+  const displayedEfficiency = useMemo(
+    () =>
+      getEvEfficiencyDisplay(vehicle, {
+        unit: efficiencyUnit,
+        distanceUnit,
+      }),
+    [distanceUnit, efficiencyUnit, vehicle],
+  );
 
   const efficiencyHint =
-    energy.efficiency.basis === "lifetime"
-      ? ui.ev.overview.lifetime
-      : energy.efficiency.method != null
-        ? ui.ev.efficiency.method[energy.efficiency.method]
-        : energy.efficiency.basis === "segments"
-          ? ui.ev.efficiency.methodMixed
-          : null;
+    displayedEfficiency.basis != null
+      ? ui.ev.efficiency.basis[displayedEfficiency.basis]
+      : null;
 
   const latestSnapshot = getLatestSocSnapshot(vehicle.vehicle_snapshots ?? []);
   const averageDailyDistance =
@@ -225,9 +220,9 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                 icon={<Activity className="h-4 w-4" />}
                 label={ui.ev.overview.efficiency}
                 value={
-                  displayedEfficiency != null
-                    ? displayedEfficiency.toFixed(
-                        getEvEfficiencyPrecision(efficiencyUnit),
+                  displayedEfficiency.value != null
+                    ? displayedEfficiency.value.toFixed(
+                        displayedEfficiency.precision,
                       )
                     : ui.common.emptyValue
                 }

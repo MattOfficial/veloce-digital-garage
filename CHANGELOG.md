@@ -6,6 +6,30 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Efficiency pulse was blank for EVs, and one metric card for the whole app (2026-08-09)
+
+- **Bug:** an EV showed a real efficiency figure on Energy & Battery and an em dash on the
+  dashboard. Two surfaces, two derivations: the dashboard read `whPerKm` off battery health,
+  which is measured from state-of-charge check-ins, while the EV page measured distance per
+  unit *bought* from charge sessions. An owner who logs charges but has never recorded a
+  check-in had the first and not the second.
+- **Fix:** new `getEvEfficiencyDisplay` is the single derivation behind both, so they cannot
+  disagree again. The dashboard also now honours the owner's chosen efficiency unit instead of
+  defaulting from the distance unit, and names what the number was measured from — "Lifetime",
+  "From your battery percentages" — the way the EV page already did.
+- `ui.ev.efficiency.method` / `methodMixed` collapsed into one `basis` record keyed by the
+  same values the util returns, so a new basis cannot be added without copy for it.
+- **Cards:** the coloured wash, icon chip and tinted value from the EV page's headline row is
+  now the app's only headline-metric surface. The dashboard's Efficiency pulse, the
+  maintenance vitals row, both insights panels and the profile's distance snapshot all render
+  `MetricCard`; the two near-identical private copies of it in `cost-trends-panel` and
+  `distance-trends-panel` are gone. Added `teal` and `sky` tones to cover distance and data
+  quality, and long values now wrap rather than widen their column.
+- Maintenance had drifted furthest — `font-black` numbers with a coloured drop shadow, and a
+  service table using `bg-white/5` on `bg-black/20`, which in light mode is white on white
+  under a dark wash. It now matches the fuel table it sits one click away from. Same for the
+  profile form inputs, whose `border-white/10` was invisible against a light background.
+
 ### Fix — petrol vehicles were shown the EV charge form (2026-08-09)
 
 - **Bug:** after viewing an EV, switching to a petrol vehicle and opening "Log Fill-Up" gave

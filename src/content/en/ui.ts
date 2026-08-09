@@ -706,11 +706,13 @@ export const ui = {
       description: "Distance covered per unit you paid for.",
       perKwh: (unit: string) => `${unit}/kWh`,
       costPerDistance: (unit: string) => `Cost per ${unit}`,
-      method: {
+      /** Sub-label under an efficiency figure, keyed by how it was measured. */
+      basis: {
+        lifetime: "Lifetime",
         "soc-corrected": "From your battery percentages",
         "full-charge-anchor": "Between full charges",
+        "mixed-segments": "From a mix of full charges and battery percentages",
       },
-      methodMixed: "From a mix of full charges and battery percentages",
       lifetimeBasis:
         "Lifetime distance over every unit bought. Rough — it counts the charge still in your battery as though you had ridden it — and it sharpens once you have logged two charges.",
       segmentsUsed: (count: number) =>
