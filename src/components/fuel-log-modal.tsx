@@ -8,7 +8,8 @@ import { submitFuelLog } from "@/app/actions/fuel";
 import { useUserStore } from "@/store/user-store";
 
 import { Plus } from "lucide-react";
-import { VehicleWithLogs } from "@/types/database";
+import type { FuelLogEnergyType, VehicleWithLogs } from "@/types/database";
+import { canChooseEnergyType, resolveEnergyType } from "@/utils/energy-type";
 import { ui } from "@/content/en/ui";
 import { ChargeSessionForm } from "@/components/ev/charge-session-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -59,10 +60,15 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
   const [open, setOpen] = useState(false);
 
   const isEV = vehicle.powertrain === "ev";
-  const isPHEV = vehicle.powertrain === "phev" || vehicle.powertrain === "rex";
-  const [energyType, setEnergyType] = useState<"fuel" | "charge">(
-    isEV ? "charge" : "fuel",
-  );
+  const isPHEV = canChooseEnergyType(vehicle.powertrain);
+
+  // Only the plug-in hybrid tabs write this, and only they read it back.
+  // Seeding it from the powertrain instead would strand the first value: a
+  // useState initialiser runs once, and this modal is never unmounted when the
+  // owner switches vehicle, so a petrol car inherited the EV's charge form.
+  const [preferredEnergyType, setPreferredEnergyType] =
+    useState<FuelLogEnergyType>("fuel");
+  const energyType = resolveEnergyType(vehicle.powertrain, preferredEnergyType);
   const isCharge = energyType === "charge";
 
   return (
@@ -102,7 +108,7 @@ export function FuelLogModal({ vehicle }: { vehicle: VehicleWithLogs }) {
           <Tabs
             value={energyType}
             onValueChange={(value: string) =>
-              setEnergyType(value === "charge" ? "charge" : "fuel")
+              setPreferredEnergyType(value === "charge" ? "charge" : "fuel")
             }
             className="w-full"
           >

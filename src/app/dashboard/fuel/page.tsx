@@ -22,6 +22,7 @@ import {
   formatMoneyExact,
   formatTableDate,
 } from "@/utils/formatting";
+import { canChooseEnergyType } from "@/utils/energy-type";
 import { getUnitPriceSummary } from "@/utils/unit-price";
 
 import {
@@ -146,8 +147,7 @@ export default function FuelPage() {
   );
 
   const selectedPowertrain = selectedVehicle?.powertrain;
-  const canToggleAnalysisMode =
-    selectedPowertrain === "phev" || selectedPowertrain === "rex";
+  const canToggleAnalysisMode = canChooseEnergyType(selectedPowertrain);
   const defaultAnalysisMode: FuelAnalyticsMode =
     selectedPowertrain === "ev" ? "charge" : "fuel";
   const hasFuelLogs = analytics.fuel.logs.length > 0;
