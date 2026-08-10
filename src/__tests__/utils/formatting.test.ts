@@ -8,6 +8,7 @@ import {
   formatMoneyExact,
   formatNumber,
   formatTableDate,
+  getCurrencyCode,
   getCurrencySymbol,
 } from "@/utils/formatting";
 
@@ -77,5 +78,26 @@ describe("date formatting", () => {
 
   it("renders a day-first table date regardless of locale", () => {
     expect(formatTableDate("2026-03-12T00:00:00Z")).toBe("12/03/2026");
+  });
+});
+
+describe("getCurrencyCode", () => {
+  it("resolves a stored symbol back to its ISO code", () => {
+    expect(getCurrencyCode("₹")).toBe("INR");
+    expect(getCurrencyCode("£")).toBe("GBP");
+  });
+
+  it("passes a code straight through", () => {
+    expect(getCurrencyCode("USD")).toBe("USD");
+    expect(getCurrencyCode("eur")).toBe("EUR");
+  });
+
+  it("defaults to the app's own currency", () => {
+    expect(getCurrencyCode(null)).toBe("INR");
+    expect(getCurrencyCode("  ")).toBe("INR");
+  });
+
+  it("keeps an unrecognised value rather than inventing one", () => {
+    expect(getCurrencyCode("AUD")).toBe("AUD");
   });
 });

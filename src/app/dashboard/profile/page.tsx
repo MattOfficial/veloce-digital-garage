@@ -14,6 +14,7 @@ import {
   Lock,
   CheckCircle2,
   Flag,
+  Flame,
   Droplet,
   Wrench,
   Fuel,
@@ -46,6 +47,12 @@ import {
   getGarageLifetimeDistanceSummary,
 } from "@/utils/distance-analytics";
 import { ui } from "@/content/en/ui";
+import { cn } from "@/lib/utils";
+import { FUEL_TYPES, type VehicleWithLogs } from "@/types/database";
+import {
+  getVehicleEnergySummary,
+  type VehicleEnergyKind,
+} from "@/utils/vehicle-energy";
 import { formatDistance } from "@/utils/formatting";
 import {
   EV_EFFICIENCY_UNITS,
@@ -104,6 +111,52 @@ function createProfileDraft(
     petrolPriceReference: profile.petrolPriceReference?.toString() ?? "",
     iceReferenceEfficiency: profile.iceReferenceEfficiency?.toString() ?? "",
   };
+}
+
+/**
+ * Every vehicle now says how it is powered, not just the electric and hybrid
+ * ones. A petrol car used to carry no badge at all, which read as missing data
+ * next to an EV sitting beside it in the same garage.
+ *
+ * Each kind gets its own colour, but the badge is always labelled — colour
+ * alone never has to carry the meaning.
+ */
+const ENERGY_BADGE_STYLES: Record<VehicleEnergyKind, string> = {
+  ev: "bg-blue-500/80 border-blue-400/30",
+  hybrid: "bg-emerald-500/80 border-emerald-400/30",
+  petrol: "bg-amber-600/85 border-amber-400/30",
+  diesel: "bg-orange-700/85 border-orange-500/30",
+  cng: "bg-cyan-600/85 border-cyan-400/30",
+  lpg: "bg-violet-600/85 border-violet-400/30",
+  combustion: "bg-slate-600/85 border-slate-400/30",
+};
+
+function EnergyBadgeIcon({ kind }: { kind: VehicleEnergyKind }) {
+  if (kind === "ev") return <Zap className="h-3 w-3" />;
+  if (kind === "hybrid") return <Leaf className="h-3 w-3" />;
+  if (kind === "cng" || kind === "lpg") return <Flame className="h-3 w-3" />;
+  return <Fuel className="h-3 w-3" />;
+}
+
+function EnergyBadge({ vehicle }: { vehicle: VehicleWithLogs }) {
+  const energy = getVehicleEnergySummary(vehicle);
+  const packSize =
+    energy.kind === "ev" && vehicle.battery_capacity_kwh
+      ? ` | ${vehicle.battery_capacity_kwh}kWh`
+      : "";
+
+  return (
+    <div
+      className={cn(
+        "text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm border backdrop-blur-md flex items-center gap-1",
+        ENERGY_BADGE_STYLES[energy.kind],
+      )}
+    >
+      <EnergyBadgeIcon kind={energy.kind} />
+      {energy.label}
+      {packSize}
+    </div>
+  );
 }
 
 export default function ProfilePage() {
@@ -1098,6 +1151,29 @@ export default function ProfilePage() {
                       </Select>
                     </div>
                   </div>
+                  {/* An electric vehicle burns nothing, so it is never asked. */}
+                  {selectedPowertrain !== "ev" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="fuel_type">{ui.profile.fuelType}</Label>
+                      <Select name="fuel_type" defaultValue="petrol">
+                        <SelectTrigger className="h-11 w-full rounded-xl bg-muted/50 border-input focus:border-primary/50 dark:border-white/10">
+                          <SelectValue
+                            placeholder={ui.profile.fuelTypePlaceholder}
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {FUEL_TYPES.map((fuel) => (
+                            <SelectItem key={fuel} value={fuel}>
+                              {ui.profile.fuelTypeOptions[fuel]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {ui.profile.fuelTypeDescription}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="year">{ui.profile.year}</Label>
@@ -1244,22 +1320,7 @@ export default function ProfilePage() {
                       <div className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-primary/20 backdrop-blur-md">
                         {vehicle.year}
                       </div>
-                      {vehicle.powertrain === "ev" && (
-                        <div className="bg-blue-500/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-blue-400/30 backdrop-blur-md flex items-center gap-1">
-                          <Zap className="h-3 w-3" /> EV{" "}
-                          {vehicle.battery_capacity_kwh
-                            ? `| ${vehicle.battery_capacity_kwh}kWh`
-                            : ""}
-                        </div>
-                      )}
-                      {(vehicle.powertrain === "phev" ||
-                        vehicle.powertrain === "hev" ||
-                        vehicle.powertrain === "rex") && (
-                        <div className="bg-emerald-500/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-emerald-400/30 backdrop-blur-md flex items-center gap-1">
-                          <Leaf className="h-3 w-3" />{" "}
-                          {vehicle.powertrain.toUpperCase()}
-                        </div>
-                      )}
+                      <EnergyBadge vehicle={vehicle} />
                     </div>
                   </div>
 

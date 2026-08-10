@@ -5,6 +5,7 @@ import {
   BarChart2,
   BatteryCharging,
   Car,
+  FileText,
   Fuel,
   LayoutDashboard,
   LogOut,
@@ -67,6 +68,11 @@ function buildNavigation(isEv: boolean) {
       name: ui.sidebar.items.insights,
       href: "/dashboard/insights",
       icon: BarChart2,
+    },
+    {
+      name: ui.sidebar.items.reports,
+      href: "/dashboard/reports",
+      icon: FileText,
     },
   ];
 }

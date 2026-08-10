@@ -131,6 +131,7 @@ export function makeVehicle(
     tyre_info: null,
     vehicle_type: "car",
     powertrain: "ice",
+    fuel_type: null,
     battery_capacity_kwh: null,
     usable_battery_kwh: null,
     rated_range_km: null,

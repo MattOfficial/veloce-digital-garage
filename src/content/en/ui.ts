@@ -46,6 +46,7 @@ export const ui = {
       energyBattery: "Energy & Battery",
       maintenance: "Maintenance",
       insights: "Trends",
+      reports: "Reports",
     },
   },
   auth: {
@@ -1464,6 +1465,17 @@ export const ui = {
       hev: "Hybrid (HEV)",
       rex: "Range Extender (REX)",
     },
+    fuelType: "Fuel",
+    fuelTypePlaceholder: "Select fuel",
+    /** Only asked for on a powertrain that burns something. */
+    fuelTypeDescription: "What the engine runs on. Shown on reports and in your garage.",
+    fuelTypeOptions: {
+      petrol: "Petrol",
+      diesel: "Diesel",
+      cng: "CNG",
+      lpg: "LPG",
+    },
+    fuelTypeUnset: "Not set",
     year: "Year",
     baselineDistance: (unit: string) => `Initial Distance (${unit})`,
     batteryCapacity: "Battery Capacity (kWh)",
@@ -1485,5 +1497,240 @@ export const ui = {
       { value: "€", label: "Euro (€)" },
       { value: "¥", label: "Japanese Yen (¥)" },
     ],
+  },
+  reports: {
+    /** Column headings shared by the CSV ledger and the Excel sheets. */
+    columns: {
+      vehicle: "Vehicle",
+      date: "Date",
+      recordType: "Record type",
+      detail: "Detail",
+      odometer: (unit: string) => `Odometer (${unit})`,
+      quantity: "Quantity",
+      quantityUnit: "Unit",
+      unitPrice: (currency: string) => `Unit price (${currency})`,
+      cost: (currency: string) => `Cost (${currency})`,
+      efficiency: "Efficiency",
+      efficiencyUnit: "Efficiency unit",
+      location: "Location",
+      notes: "Notes",
+      batteryPercent: "Battery %",
+      displayedRange: (unit: string) => `Displayed range (${unit})`,
+      source: "Source",
+      network: "Network",
+      estimated: "Estimated",
+    },
+    recordType: {
+      fuel: "Fuel",
+      charge: "Charge",
+      maintenance: "Service",
+      snapshot: "Odometer reading",
+    },
+    fillType: {
+      full: "Full fill",
+      partial: "Partial fill",
+    },
+    chargeSource: {
+      home: "Home",
+      ac_public: "Public AC",
+      dc_fast: "DC fast",
+      other: "Other",
+    },
+    snapshotSource: {
+      manual: "Manual entry",
+      ocr: "Scanned receipt",
+      api: "Synced",
+      /** Derived from a charge session rather than entered on its own. */
+      charge: "From a charge",
+    },
+    yes: "Yes",
+    no: "No",
+    rangeLabels: {
+      "last-30-days": "Last 30 days",
+      "last-3-months": "Last 3 months",
+      "last-6-months": "Last 6 months",
+      "last-12-months": "Last 12 months",
+      "year-to-date": "Year to date",
+      "all-time": "All time",
+      custom: "Custom range",
+    },
+    customRangeLabel: (from: string, to: string) => `${from} – ${to}`,
+    sheets: {
+      summary: "Summary",
+      energy: "Fuel & Charging",
+      maintenance: "Maintenance",
+      snapshots: "Odometer",
+      vehicles: "Vehicles",
+      tyres: "Tyres",
+    },
+    summary: {
+      generated: (date: string) => `Generated ${date}`,
+      totalsHeading: "Totals",
+      totalSpent: "Total spent",
+      /**
+       * Custom-tracker costs are not part of a report, so this figure is lower
+       * than the one on Trends. Saying what it counts is cheaper than letting
+       * someone find the discrepancy themselves.
+       */
+      totalSpentNote: "Fuel, charging and service records only",
+      fuel: "Fuel",
+      charging: "Charging",
+      service: "Service & repairs",
+      drivingHeading: "Driving",
+      distanceCovered: "Distance covered",
+      costPerDistance: (unit: string) => `Cost per ${unit}`,
+      fuelEfficiency: "Fuel efficiency",
+      chargeEfficiency: "Charge efficiency",
+      recordsHeading: "Records",
+      vehicles: "Vehicles",
+      fuelLogs: "Fill-ups",
+      chargeLogs: "Charge sessions",
+      maintenanceLogs: "Services",
+      snapshots: "Odometer readings",
+      noRecords: "No records in this period.",
+    },
+    vehicleColumns: {
+      make: "Make",
+      model: "Model",
+      year: "Year",
+      registration: "Registration",
+      vin: "VIN",
+      color: "Colour",
+      type: "Type",
+      powertrain: "Powertrain",
+      engine: "Engine",
+      transmission: "Transmission",
+      batteryCapacity: "Battery (kWh)",
+      usableBattery: "Usable (kWh)",
+      odometerStart: (unit: string) => `Odometer start (${unit})`,
+      odometerEnd: (unit: string) => `Odometer end (${unit})`,
+      distanceCovered: (unit: string) => `Distance (${unit})`,
+    },
+    tyreColumns: {
+      position: "Position",
+      brand: "Brand",
+      fitted: "Fitted",
+      fittedOdometer: (unit: string) => `Fitted at (${unit})`,
+      treadDepth: "Tread (mm)",
+      dotCode: "DOT code",
+    },
+    tyrePosition: {
+      all: "All wheels",
+      front_left: "Front left",
+      front_right: "Front right",
+      rear_left: "Rear left",
+      rear_right: "Rear right",
+    },
+    /**
+     * A two-wheeler has one tyre per axle. The tyre tracker stores them in the
+     * left-hand fields rather than adding columns, so a report reading those
+     * fields literally called them "Front left" and "Rear left" on a scooter.
+     */
+    tyrePositionTwoWheeler: {
+      all: "All wheels",
+      front_left: "Front",
+      front_right: "Front",
+      rear_left: "Rear",
+      rear_right: "Rear",
+    },
+    vehicleType: {
+      car: "Car",
+      motorcycle: "Motorcycle",
+      truck: "Truck",
+    },
+    powertrain: {
+      ice: "Petrol / Diesel",
+      ev: "Electric",
+      hev: "Hybrid",
+      phev: "Plug-in hybrid",
+      rex: "Range extender",
+    },
+    page: {
+      title: "Reports",
+      description:
+        "Download your records as a PDF, an Excel workbook or a CSV, for any period you choose.",
+      scope: {
+        label: "Coverage",
+        vehicle: "This vehicle",
+        garage: "Whole garage",
+        vehiclesLabel: "Vehicles in this report",
+        selectAll: "Select all",
+        noneSelected: "Choose at least one vehicle.",
+      },
+      range: {
+        label: "Period",
+        preset: "Date range",
+        pickDates: "Choose dates",
+        clearDates: "Clear",
+      },
+      sections: {
+        label: "Records to include",
+        energy: "Fuel & charging",
+        energyDescription: "Fill-ups and charge sessions, with cost and efficiency",
+        maintenance: "Service history",
+        maintenanceDescription: "Services and repairs, with cost and notes",
+        vehicleProfile: "Vehicle details & odometer",
+        vehicleProfileDescription: "Registration, VIN, tyres and odometer readings",
+        noneSelected: "Choose at least one type of record.",
+      },
+      format: {
+        label: "Format",
+        pdf: "PDF",
+        pdfDescription: "A designed document with charts and tables",
+        xlsx: "Excel",
+        xlsxDescription: "A sheet per record type, ready to pivot",
+        csv: "CSV",
+        csvDescription: "One flat ledger that opens anywhere",
+      },
+      preview: {
+        label: "In this report",
+        empty: "Nothing was logged in this period.",
+        emptyHint: "The file will still download, with its totals at zero.",
+        records: (count: number) => (count === 1 ? "1 record" : `${count} records`),
+      },
+      download: "Download report",
+      generating: "Preparing your report...",
+      error: "Could not generate the report. Please try again.",
+      noVehiclesTitle: "No vehicles yet",
+      noVehiclesDescription: "Add a vehicle to your garage before generating a report.",
+    },
+    pdf: {
+      documentTitle: (title: string) => `${title} — Veloce report`,
+      charts: {
+        monthlySpend: "Monthly spend",
+        monthlySpendCaption: "Fuel, charging and service costs by month.",
+        costMix: "Where the money went",
+        spendByVehicle: "Spend by vehicle",
+        /** Vehicles past the palette's third slot, folded into one residual. */
+        otherVehicles: (count: number) => `${count} other vehicles`,
+        efficiency: "Efficiency over time",
+        efficiencyCaption: (unit: string, mode: "fuel" | "charge") =>
+          mode === "charge"
+            ? `${unit}, measured between charges`
+            : `${unit}, measured between fill-ups`,
+      },
+      sections: {
+        energy: "Fuel & charging",
+        fuel: "Fuel",
+        charging: "Charging",
+        maintenance: "Service history",
+        snapshots: "Battery & odometer check-ins",
+        /**
+         * Every state reading, however it was captured. A charge session
+         * records an odometer and the level charged to, so it counts as a
+         * check-in whether or not the owner also filled the check-in form.
+         */
+        snapshotsCaption:
+          "Your check-ins, plus the odometer and battery level recorded with each charge.",
+        vehicle: "Vehicle details",
+        tyres: "Tyres",
+      },
+      emptyTitle: "Nothing logged in this period",
+      emptyDescription:
+        "There are no records between these dates. Try a wider date range.",
+      noRowsInSection: "No records of this type in this period.",
+      page: (current: number, total: number) => `Page ${current} of ${total}`,
+      footer: "Generated by Veloce Digital Garage",
+    },
   },
 } as const;

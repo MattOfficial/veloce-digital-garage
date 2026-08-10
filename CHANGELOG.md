@@ -6,6 +6,261 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Vehicles record what they burn (2026-08-10)
+
+- **The report claimed a distinction the app could not make.** Every combustion vehicle was
+  labelled "Petrol / Diesel", because `powertrain` only says whether an engine is involved —
+  nothing anywhere recorded which fuel, and `engine_type` is free text for "2.0L Inline-4".
+- New nullable `fuel_type` on vehicles (petrol / diesel / CNG / LPG, constrained in the
+  database), asked for in vehicle setup and in the specs editor, and only on powertrains that
+  burn something. CNG and LPG are in from the start because they are ordinary here.
+- Nullable on purpose: existing vehicles predate the question, so they stay unanswered and
+  every surface falls back to the setup form's own wording rather than guessing petrol. A
+  wrong fuel on a report is worse than no fuel. Switching a vehicle to electric clears it, so
+  a converted row cannot keep showing a stale "Diesel".
+- **Every vehicle now gets a garage badge**, not just electric and hybrid ones — a petrol car
+  previously had none at all, which read as missing data beside an EV in the same garage. Each
+  kind has its own colour and icon, and every badge carries its label, so colour never has to
+  carry the meaning alone.
+- `getVehicleEnergySummary` is the single source for all of it, so the garage badge and the
+  report cannot drift apart the way they just did.
+- **Two-wheeler tyres said "Front left" and "Rear left".** The tyre tracker stores a
+  two-wheeler's tyres in the left-hand fields rather than adding columns for them, and the
+  report read those fields literally. It now asks the vehicle how many wheels it has.
+
+### Distance dropped every kilometre before the first logged record (2026-08-10)
+
+- **Bug:** distance was measured between the highest and lowest *logged* odometer readings in
+  the window, and never looked at the vehicle's own `baseline_odometer`. A new scooter sitting
+  at 159 km whose first charge was logged at 46 km reported 113 km — and then divided its
+  entire energy bill by that short distance, showing 18.8 km/kWh where the app showed 26.5.
+- **Fix:** the starting odometer is a reading like any other, dated to when the vehicle was
+  added. A window covering a vehicle's whole life now measures from zero and agrees with the
+  lifetime figure the rest of the app shows.
+- It is deliberately only counted when it falls inside the window. Anchoring on a two-year-old
+  baseline would charge a one-month report with every kilometre since the vehicle was bought,
+  which is the opposite error. A window narrower than the vehicle's life still measures only
+  what happened inside it, and will read lower than the app's lifetime number — correctly.
+- The odometer floor moved from `> 0` to `>= 0`, since a brand-new vehicle starts at zero.
+
+### Reports: an EV's own data was missing from its report (2026-08-10)
+
+- **Check-ins now include every charge.** The section listed `vehicle_snapshots` only, so an
+  owner who logs charges saw a near-empty table directly below a charging table full of
+  odometer readings. Each session already records an odometer and the level charged to, which
+  is the same reading a check-in captures, so it now becomes one — labelled "From a charge" to
+  keep it distinguishable from a hand-entered row. A session logged as charged-to-full without
+  a percentage pins the state at 100, since that is what full means. Flows through the PDF,
+  Excel and CSV alike; the type change made the compiler find all three.
+- This is the same correction as the battery-health fix one entry down, applied to the surface
+  rather than the analytics — the earlier pass fixed the derivation and left the report still
+  reading the raw table.
+- **The efficiency card was empty on a vehicle whose figures were both known.** Charge
+  efficiency came only from state-of-charge segments, and top-ups logged without percentages
+  anchor none. It now falls back to distance over energy bought across the window — the same
+  ratio `getEvEfficiencyDisplay` falls back to lifetime-wide. Coarser, because energy still in
+  the battery counts against distance not yet ridden, but it is the number the rest of the app
+  shows and it beats a dash. A measured segment still wins where one exists.
+- An empty efficiency card on an electric vehicle no longer calls itself "Fuel efficiency".
+- Fixed while verifying the above: a single-vehicle report with no measurable efficiency fell
+  through to the spend-by-vehicle pie and drew one slice at 100%. That chart is the
+  multi-vehicle stand-in for the efficiency line, not a general fallback.
+
+### Battery health ignored the readings owners actually record (2026-08-10)
+
+- **Bug:** state of health, usable range and days-of-range-left were measured only from manual
+  battery check-ins. A charge session already records an odometer and both percentages — the
+  charge left on plugging in, the charge reached on unplugging — which is exactly a discharge
+  measurement, and logging a charge is the primary EV action while a check-in is an extra
+  deliberate one. An owner who logged every charge and never opened the check-in form saw no
+  figure at all, despite the app holding everything the measurement needs. Found while
+  investigating why an EV's report showed a nearly empty odometer table.
+- **Fix:** `toChargeSocObservations` turns each session into the two readings it contains, and
+  `collectSocObservations` merges those with check-ins into one ordered history. The existing
+  segment builder then works unchanged — a plug-in-to-unplug pair is a rise at a standstill
+  and is already rejected as `charged-between`, leaving the real discharge between sessions.
+- The ordering detail that makes it correct: the two readings share a date *and* an odometer,
+  so the sort's last tiebreak is all that separates them. Plug-in is stamped to sort first;
+  reversed, every session would read as a discharge and every ride as a charge.
+- App-generated estimated rows are excluded — those are the cold-start guess, not a reading.
+- Applied at all three call sites (dashboard, Energy & Battery, copilot analytics) so the
+  surfaces cannot disagree, and `getLatestSocSnapshot` now sees charges too, which makes
+  "days of range left" reflect the last charge rather than the last manual check-in.
+
+### Reports: the PDF now adapts to what it is describing (2026-08-10)
+
+- **A garage no longer claims one efficiency.** The summary's efficiency card appears only on
+  a single-vehicle report — averaging a hatchback against a scooter describes neither. The
+  efficiency-over-time line is likewise single-vehicle only; a multi-vehicle report gets a
+  spend-by-vehicle pie in its place, because spend is spend whatever the vehicle burns.
+- The vehicle pie caps at three hues plus a neutral "Other". That is a measured limit, not a
+  taste one: run through the palette validator, a fourth slot drops the orange/yellow pair to
+  a normal-vision ΔE of 13.7, under the floor of 15 that no amount of labelling excuses. It
+  only folds when at least two vehicles would go into the residual, since folding one tells
+  the reader strictly less than showing it.
+- **Per-vehicle sections lead with four cards** — type, powertrain, distance, and that
+  vehicle's own efficiency — instead of eight fields of mostly-static text. Registration, VIN,
+  colour, engine and transmission stay in the Excel and CSV exports, where a wide row is free.
+- **The energy table takes its shape from the rows.** A petrol car gets "Fuel" and no
+  record-type column repeating "Fuel" on every line; an EV gets "Charging" with no efficiency
+  column, which is a full-tank measure with no per-session meaning for a charge; only a
+  plug-in hybrid needs both. Efficiency headers now name their unit, and Location is gone —
+  it was never being captured.
+- **"Odometer readings" was a lie of omission.** It listed only manual check-ins while every
+  fill-up and charge carries its own odometer, so an EV owner who logs charges saw a nearly
+  empty table and reasonably concluded data was missing. Renamed to "Battery & odometer
+  check-ins" and captioned with where the numbers come from.
+- **Every em dash in every PDF was rendering as nothing.** Same root cause as the rupee sign —
+  the built-in fonts carry WinAnsi and drop what is outside it silently. Since
+  `ui.common.emptyValue` is an em dash, *every empty cell in every report so far has been
+  blank*. New `toPdfText` substitutes dashes, smart quotes, bullets and ellipses at the point
+  of render, so copy stays typographically correct everywhere else.
+- Word-splitting turned "Plug-in hybrid" into "Plug-in hy-/brid" in a narrow card; hyphenation
+  is now off. And a single-vehicle EV was showing km/kWh under a card labelled "Fuel
+  efficiency" — the label follows the figure now.
+
+### Reports: the builder page (2026-08-10)
+
+- `/dashboard/reports` with a new sidebar entry. Coverage (this vehicle / whole garage with
+  per-vehicle switches), period (seven presets plus a custom range on the existing `Calendar`),
+  which records to include, and the output format.
+- **The preview runs the real builder, not an estimate.** The panel calls `buildReportDataset`
+  over the store's copy of the data with the same options the request will carry, so the
+  counts and the total on screen are the ones the file will contain. An estimate that can
+  disagree with the download is worse than no preview.
+- Garage selection defaults to null rather than to a list of today's vehicle ids, so a vehicle
+  added later is included by default instead of silently missing from the next report.
+- Custom dates convert with a local-calendar helper rather than `toISOString`, which would
+  hand the server the UTC day and shift an evening selection to the day after.
+- `docs/reports.md` documents the module map, the one-dataset rule, the three format-specific
+  hazards, and the known limits — custom-tracker costs being out of scope, PostgREST row
+  limits on very large garages, pinned number grouping, and one energy type per chart.
+
+### Reports: the export endpoint (2026-08-10)
+
+- `POST /api/reports/export` validates the request with zod, re-reads the vehicles under RLS,
+  resolves units the way the user store does, builds the dataset and streams back a PDF, XLSX
+  or CSV with a `Content-Disposition` filename.
+- **Generation is server-side on purpose.** The PDF and spreadsheet libraries are megabytes
+  the browser never needs; the data is re-read from the database rather than trusted from the
+  client's store; and a POST body keeps vehicle ids out of URLs and request logs.
+- The vehicle query is scoped with `.eq("user_id", user.id)` on top of RLS, so a guessed id
+  returns nothing rather than someone else's service history. Ids are validated only as
+  plausible keys — ownership is enforced by the query, not by the shape of the string.
+- A 500 returns a fixed message and logs the detail. A renderer stack trace says more about
+  the server than about the user's report.
+
+### Reports: the PDF document (2026-08-10)
+
+- `report-document.tsx` renders the report with `@react-pdf/renderer` — header, four summary
+  stats, the three charts, then a section per vehicle with details, tyres, fuel and charging,
+  service history and odometer readings. Reads the same `ReportDataset` as the other two
+  writers, so the total on the cover cannot disagree with the tables under it.
+- **The rupee sign does not exist in the built-in PDF fonts.** The standard 14 fonts carry
+  WinAnsi, which predates U+20B9, so `₹` falls through to .notdef and renders as *nothing* —
+  on an India-first app that is every amount in the report silently losing its currency.
+  Verified by comparing against a Devanagari glyph Helvetica certainly lacks: the rupee
+  behaves like that one, not like the euro. Rather than bundle a typeface for one character,
+  unsupported currencies print their ISO code ("INR 4,500.00"), which is what a financial
+  document would do anyway. `$`, `£`, `€` and `¥` are drawable and pass through unchanged.
+- Number grouping is pinned to one locale rather than the host's. This renders on a server
+  whose locale is an accident of deployment, and a report whose separators change between
+  environments is a report nobody trusts.
+- Chart colours are slots 1–3 of the validated categorical order, checked with the palette
+  validator at three slots against a light surface (worst all-pairs CVD ΔE 9.2, normal-vision
+  24.0). Aqua sits below 3:1 on white, so it carries the required relief: every series is
+  named in a legend with its value, and the same figures appear in the tables below.
+- Three things found by rendering the thing and looking at it, rather than by it compiling:
+  table columns collided so a row read "14.35Shell, MG Road" (padding on a width-constrained
+  `Text` does not inset it — cells are now a box with the text inside); a forced page break
+  before *every* vehicle left an almost-empty page after the charts (now only between
+  vehicles); and the vehicle subtitle repeated its own heading when there was no nickname.
+
+### Reports: chart geometry (2026-08-10)
+
+- `report-charts.ts` turns the dataset's series into SVG geometry — stacked bars for monthly
+  spend, pie arcs for the cost mix, a polyline for efficiency over time — plus nice-rounded
+  axis scales and gridlines. Recharts renders to the DOM, so none of the app's charting stack
+  works on the server; these are drawn from raw primitives.
+- The maths lives in a tested module rather than inline in the renderer because every failure
+  mode here is *invisible*: an arc that sweeps a full turn ends where it started and SVG draws
+  nothing, so a petrol-only garage would have got a blank circle where its pie should be. That
+  case now emits two half-arcs, and a test pins the path.
+- Same class of bug covered elsewhere: a flat series has no range to scale against and would
+  divide by zero; a single reading makes a polyline that renders nothing, so it is drawn as a
+  bare dot; axis labels are built by multiplication rather than repeated addition, which is
+  what stops a gridline reading 1.0999999999999999.
+- Efficiency points sit at their true position in time, not at even intervals. Three fills in
+  one week and a fourth six months later is a fact about the driving, and evenly spacing them
+  would hide it.
+
+### Reports: the Excel workbook (2026-08-10)
+
+- `report-xlsx.ts` builds a sheet per record type — Summary, Fuel & Charging, Maintenance,
+  Odometer, Vehicles, and Tyres when there are any — with frozen headers, autofilter, column
+  widths and per-column number formats. Sheets appear only for the sections that were picked,
+  and the tyre tab is skipped entirely rather than shipped as bare headings.
+- **No apostrophe guard here, deliberately.** A string written to `.xlsx` is stored as a
+  shared string and Excel never evaluates one, so the injection that makes CSV dangerous does
+  not exist in this format — while adding the prefix anyway would show the apostrophe as part
+  of the value and corrupt the notes it was meant to protect. A test pins the behaviour, so if
+  exceljs ever starts promoting a leading `=` into a formula cell we find out.
+- **Dates are anchored at local noon.** Excel stores a date as a day number and the conversion
+  runs through the host timezone; midday means no offset within ±12h can land the value on the
+  day before or after. That is a silent off-by-one on every fill logged at midnight.
+- Cost columns total with a live `SUM` carrying a cached result, so the figure is right in
+  readers that do not recalculate and still correct after the user deletes a row.
+- The Summary sheet states that the headline total counts fuel, charging and service only —
+  custom-tracker costs are outside a report, so it is lower than the figure on Trends, and
+  saying so beats letting someone find the discrepancy themselves.
+
+### Reports: the CSV ledger (2026-08-10)
+
+- `report-csv.ts` writes one flat, chronological ledger across fuel, charging, service and
+  odometer records rather than a file per type, so it opens anywhere and pivots without
+  preparation. Excel will get the per-type sheets; this is the lowest common denominator.
+- **Free text is treated as hostile.** `notes`, `location`, `charger_network` and
+  `service_type` are all user-typed, and a cell starting `=`, `+`, `-`, `@`, tab or CR
+  executes as a formula when the file is opened in Excel. Those are prefixed with an
+  apostrophe. Only *text* cells go through the guard — running numbers through it would turn
+  every negative amount into text.
+- Costs are written as raw numbers, not formatted money: a spreadsheet cannot sum "₹1,200.00".
+  The currency and distance units are named in the column headers instead.
+- The file opens with a UTF-8 BOM. Without one, Excel on Windows reads the file as the system
+  codepage and every ₹ arrives as mojibake.
+- `report-format.ts` builds download filenames. The slug is an allowlist of `[a-z0-9-]`, which
+  is what makes it safe to interpolate into `Content-Disposition` — a nickname holding a
+  quote, a newline or `../` cannot travel into the header. A title with no Latin characters
+  slugs to nothing, so the scope stands in rather than the file arriving called `-`.
+- Report copy added to `ui.ts` under `reports`, shared by the CSV and the coming Excel writer.
+
+### Reports: the range and dataset core (2026-08-10)
+
+- First step of downloadable PDF/Excel/CSV reports. `report-range.ts` resolves the seven
+  window presets into a pair of inclusive `YYYY-MM-DD` bounds, and `report-dataset.ts` turns
+  vehicles plus a window into the one structure all three formats will walk.
+- **Why one dataset rather than three writers:** three independent readings of "total spent"
+  is three chances to disagree. Every cost figure is derived from the rows the dataset emits,
+  so a report always totals exactly what it shows — including when a section is switched off.
+  Distance is the deliberate exception, and the module says why.
+- **Ranges stay in string space.** Log dates are bare calendar dates; parsing them into `Date`
+  to compare would reintroduce a timezone the data never had, and a fill logged on the 1st
+  would drop out of a window starting on the 1st for anyone west of UTC.
+- **Efficiency is measured over full history, then filtered by closing date.** Building
+  segments from the windowed logs alone restates every segment straddling the window's start,
+  because the fill that sets its odometer baseline sits outside. On the test fixture that is
+  the difference between 20 km/L and 40 km/L. Both energy modes go through the same path —
+  fuel via `closed_segments`, charge via `buildChargeSegments`.
+- Averages are distance-weighted; a 600 km segment says more about economy than a 40 km one.
+- A garage mixing petrol and electric has two efficiency units and no shared axis. Rather than
+  drop the chart, the mode with more measured segments wins and the series names the vehicles
+  it covers, so the caption can say what was left out.
+- `resolveFuelVolumeUnit` added next to its siblings in `efficiency-units.ts`: nothing stores
+  the volume unit, and the report needs the same miles-plus-pounds-means-imperial rule the
+  user store applies. The store still has its own copy — worth collapsing separately.
+- `@react-pdf/renderer` and `exceljs` installed and marked external, so ~3MB of server-only
+  machinery stays out of the client bundle.
+
 ### Efficiency pulse was blank for EVs, and one metric card for the whole app (2026-08-09)
 
 - **Bug:** an EV showed a real efficiency figure on Energy & Battery and an em dash on the

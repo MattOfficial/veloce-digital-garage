@@ -1,5 +1,6 @@
 "use server";
 
+import { isFuelType } from "@/types/database";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
@@ -23,6 +24,13 @@ export async function addVehicle(formData: FormData) {
     const vehicle_type = formData.get("vehicle_type")?.toString() || 'car';
     const powertrain = formData.get("powertrain")?.toString() || 'ice';
     const batteryCapacityStr = formData.get("battery_capacity_kwh")?.toString();
+
+    // Only stored when it means something and the owner actually chose it: a
+    // wrong fuel on a vehicle is worse than no fuel, and null reads as "not yet
+    // answered" everywhere downstream.
+    const fuelTypeValue = formData.get("fuel_type")?.toString() ?? "";
+    const fuel_type =
+        powertrain !== 'ev' && isFuelType(fuelTypeValue) ? fuelTypeValue : null;
 
     if (!make || !model || !yearStr || !odometerStr) {
         return { error: "Please fill out all required fields." };
@@ -48,6 +56,7 @@ export async function addVehicle(formData: FormData) {
             image_url,
             vehicle_type,
             powertrain,
+            fuel_type,
             battery_capacity_kwh
         })
         .select()
@@ -107,6 +116,16 @@ export async function updateVehicle(id: string, formData: FormData) {
             updates[field] = formData.get(field)?.toString() || null;
         }
     });
+
+    // Validated rather than passed through, and cleared outright when the
+    // vehicle becomes electric — a stale "diesel" on a converted row would
+    // otherwise keep showing up on reports and garage pills.
+    if (formData.has("fuel_type") || formData.has("powertrain")) {
+        const submitted = formData.get("fuel_type")?.toString() ?? "";
+        const powertrain = updates.powertrain;
+        updates.fuel_type =
+            powertrain !== "ev" && isFuelType(submitted) ? submitted : null;
+    }
 
     if (formData.has("year")) {
         const yearStr = formData.get("year")?.toString();

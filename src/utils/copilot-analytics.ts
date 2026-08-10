@@ -5,7 +5,7 @@ import type {
     CopilotAnalyticsResult,
 } from "@/types/ai";
 import { isElectricPowertrain, type VehicleWithLogs } from "@/types/database";
-import { summarizeBatteryHealth } from "@/utils/battery-health";
+import { collectSocObservations, summarizeBatteryHealth } from "@/utils/battery-health";
 import { getVehicleCurrentOdometer } from "@/utils/vehicle-metrics";
 
 type AnalyticsProfile = {
@@ -203,10 +203,13 @@ function getFuelEfficiencyResult(
     for (const vehicle of vehicles) {
         if (isElectricPowertrain(vehicle.powertrain)) {
             const usableBatteryKwh = vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh;
-            const health = summarizeBatteryHealth(vehicle.vehicle_snapshots ?? [], {
-                usableBatteryKwh,
-                baselineRangeKm: vehicle.baseline_range_km,
-            });
+            const health = summarizeBatteryHealth(
+                collectSocObservations(vehicle.vehicle_snapshots ?? [], vehicle.fuel_logs ?? []),
+                {
+                    usableBatteryKwh,
+                    baselineRangeKm: vehicle.baseline_range_km,
+                },
+            );
 
             if (health.usableRangeKm != null && usableBatteryKwh != null && usableBatteryKwh > 0) {
                 electricRange += health.usableRangeKm;

@@ -44,6 +44,8 @@ export type Vehicle = {
   tyre_info: TyreInfo | null;
   vehicle_type: VehicleType;
   powertrain: Powertrain;
+  /** Null until the owner says; see `FuelType`. */
+  fuel_type: FuelType | null;
   battery_capacity_kwh: number | null;
   /** What the pack actually delivers between 100% and 0% indicated. Denominator for Wh/km. */
   usable_battery_kwh: number | null;
@@ -58,6 +60,26 @@ export type Vehicle = {
 export type VehicleType = 'car' | 'motorcycle' | 'truck';
 
 export type Powertrain = 'ice' | 'ev' | 'hev' | 'phev' | 'rex';
+
+/**
+ * What a combustion vehicle burns. `powertrain` only says whether an engine is
+ * involved, so without this a diesel and a petrol are indistinguishable.
+ *
+ * Null means unanswered, not petrol: the column was added after these vehicles
+ * were, and guessing would put a wrong fuel on a report.
+ */
+export type FuelType = 'petrol' | 'diesel' | 'cng' | 'lpg';
+
+export const FUEL_TYPES: FuelType[] = ['petrol', 'diesel', 'cng', 'lpg'];
+
+export function isFuelType(value: string): value is FuelType {
+  return (FUEL_TYPES as string[]).includes(value);
+}
+
+/** Powertrains that burn something, and so have a fuel type worth asking for. */
+export function burnsFuel(powertrain: Powertrain | null | undefined): boolean {
+  return powertrain != null && powertrain !== 'ev';
+}
 
 /**
  * Powertrains whose running cost is entirely liquid fuel, so they can stand as

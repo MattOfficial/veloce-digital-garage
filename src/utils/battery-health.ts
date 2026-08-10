@@ -1,6 +1,6 @@
 import { differenceInCalendarDays, format, isValid, parseISO, startOfMonth, subMonths } from "date-fns";
 
-import type { VehicleSnapshot } from "@/types/database";
+import type { FuelLog } from "@/types/database";
 import {
   consistencyScore as scoreConsistency,
   getOutlierBounds,
@@ -106,12 +106,84 @@ export interface BatteryHealthOptions {
   currentDate?: Date;
 }
 
+/**
+ * A state-of-charge reading with an odometer beside it.
+ *
+ * A manual check-in is one. So is each end of a charge session — plugging in
+ * records the charge left after a ride, unplugging records what it was topped
+ * up to — and those are the readings an owner produces most, because logging a
+ * charge is the primary EV action while a check-in is an extra deliberate one.
+ */
+export type SocObservation = {
+  id: string;
+  date: string;
+  odometer: number;
+  soc_percent: number | null;
+  created_at: string | null;
+};
+
 function parseSnapshotDate(value: string): Date | null {
   const parsed = parseISO(value.slice(0, 10));
   return isValid(parsed) ? parsed : null;
 }
 
-function sortSnapshots(snapshots: VehicleSnapshot[]): VehicleSnapshot[] {
+/**
+ * The readings a charge session already carries.
+ *
+ * Without these, state of health is measured only from manual check-ins: an
+ * owner who logs every charge with its percentages and never opens the check-in
+ * form gets no usable-range figure at all, despite the app holding exactly the
+ * data it needs. Estimated rows are excluded — those are the app's own
+ * cold-start guess, not something anybody read off a dashboard.
+ */
+export function toChargeSocObservations(logs: FuelLog[]): SocObservation[] {
+  const observations: SocObservation[] = [];
+
+  for (const log of logs) {
+    if (log.energy_type !== "charge" || log.is_estimated) continue;
+
+    const base = log.created_at || `${log.date}T00:00:00.000Z`;
+
+    // Plug-in and unplug share a date and an odometer, so the sort's only
+    // remaining tiebreak decides their order. Getting it backwards would read
+    // the session as a discharge and the ride before it as a charge.
+    if (log.start_soc != null && Number.isFinite(log.start_soc)) {
+      observations.push({
+        id: `charge:${log.id}:start`,
+        date: log.date,
+        odometer: log.odometer,
+        soc_percent: log.start_soc,
+        created_at: `${base}#0`,
+      });
+    }
+
+    if (log.end_soc != null && Number.isFinite(log.end_soc)) {
+      observations.push({
+        id: `charge:${log.id}:end`,
+        date: log.date,
+        odometer: log.odometer,
+        soc_percent: log.end_soc,
+        created_at: `${base}#1`,
+      });
+    }
+  }
+
+  return observations;
+}
+
+/**
+ * Every state-of-charge reading the app holds for a vehicle. Call sites pass
+ * the result to `summarizeBatteryHealth` and `getLatestSocSnapshot` so both
+ * read the same set.
+ */
+export function collectSocObservations(
+  snapshots: readonly SocObservation[] = [],
+  chargeLogs: readonly FuelLog[] = [],
+): SocObservation[] {
+  return [...snapshots, ...toChargeSocObservations([...chargeLogs])];
+}
+
+function sortSnapshots(snapshots: SocObservation[]): SocObservation[] {
   return [...snapshots].sort((left, right) => {
     const byDate = new Date(left.date).getTime() - new Date(right.date).getTime();
     if (byDate !== 0) return byDate;
@@ -129,7 +201,7 @@ function sortSnapshots(snapshots: VehicleSnapshot[]): VehicleSnapshot[] {
  * can explain why a reading was ignored.
  */
 export function buildDischargeSegments(
-  snapshots: VehicleSnapshot[],
+  snapshots: SocObservation[],
 ): BatteryDischargeSegment[] {
   const withSoc = sortSnapshots(snapshots).filter(
     (snapshot) => snapshot.soc_percent != null && Number.isFinite(snapshot.soc_percent),
@@ -284,7 +356,7 @@ function resolveConfidence(
 }
 
 export function summarizeBatteryHealth(
-  snapshots: VehicleSnapshot[],
+  snapshots: SocObservation[],
   options: BatteryHealthOptions = {},
 ): BatteryHealthSummary {
   const {
@@ -404,7 +476,7 @@ export function estimateDaysOfRangeLeft(
 }
 
 /** The most recent snapshot carrying a state-of-charge reading. */
-export function getLatestSocSnapshot(snapshots: VehicleSnapshot[]): VehicleSnapshot | null {
+export function getLatestSocSnapshot(snapshots: SocObservation[]): SocObservation | null {
   const withSoc = sortSnapshots(snapshots).filter((snapshot) => snapshot.soc_percent != null);
   return withSoc.length > 0 ? withSoc[withSoc.length - 1] : null;
 }

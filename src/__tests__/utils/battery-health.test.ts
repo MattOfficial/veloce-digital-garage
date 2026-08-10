@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { VehicleSnapshot } from "@/types/database";
+import type { FuelLog, VehicleSnapshot } from "@/types/database";
 import {
   buildDischargeSegments,
+  collectSocObservations,
   estimateDaysOfRangeLeft,
   getLatestSocSnapshot,
   summarizeBatteryHealth,
+  toChargeSocObservations,
 } from "@/utils/battery-health";
+import * as factories from "@/__tests__/factories";
 
 function makeSnapshot(overrides: Partial<VehicleSnapshot> = {}): VehicleSnapshot {
   return {
@@ -39,6 +42,185 @@ function makeCleanHistory(): VehicleSnapshot[] {
 }
 
 const CURRENT_DATE = new Date("2026-07-13T00:00:00Z");
+
+/**
+ * The same three clean segments, but recorded the way an owner who logs charge
+ * sessions and never opens the check-in form actually records them: each
+ * session carries the charge left on plugging in and the charge reached on
+ * unplugging, both at the odometer where it happened.
+ */
+function makeChargeOnlyHistory(): FuelLog[] {
+  return [
+    factories.makeChargeLog({
+      id: "c0",
+      date: "2026-07-01",
+      odometer: 1_000,
+      start_soc: 45,
+      end_soc: 100,
+      created_at: "2026-07-01T20:00:00Z",
+    }),
+    factories.makeChargeLog({
+      id: "c1",
+      date: "2026-07-04",
+      odometer: 1_060,
+      start_soc: 40,
+      end_soc: 100,
+      created_at: "2026-07-04T20:00:00Z",
+    }),
+    factories.makeChargeLog({
+      id: "c2",
+      date: "2026-07-08",
+      odometer: 1_122,
+      start_soc: 38,
+      end_soc: 100,
+      created_at: "2026-07-08T20:00:00Z",
+    }),
+    factories.makeChargeLog({
+      id: "c3",
+      date: "2026-07-12",
+      odometer: 1_180,
+      start_soc: 42,
+      end_soc: 100,
+      created_at: "2026-07-12T20:00:00Z",
+    }),
+  ];
+}
+
+describe("toChargeSocObservations", () => {
+  it("reads both ends of a charge session", () => {
+    const observations = toChargeSocObservations([
+      factories.makeChargeLog({ id: "c1", odometer: 1_060, start_soc: 40, end_soc: 100 }),
+    ]);
+
+    expect(observations).toHaveLength(2);
+    expect(observations[0]).toMatchObject({ soc_percent: 40, odometer: 1_060 });
+    expect(observations[1]).toMatchObject({ soc_percent: 100, odometer: 1_060 });
+  });
+
+  it("orders plug-in before unplug", () => {
+    // They share a date and an odometer, so the created_at tiebreak is the only
+    // thing keeping the session from reading backwards as a discharge.
+    const [plugIn, unplug] = toChargeSocObservations([
+      factories.makeChargeLog({ id: "c1", start_soc: 40, end_soc: 100 }),
+    ]);
+
+    expect(plugIn.created_at! < unplug.created_at!).toBe(true);
+  });
+
+  it("still orders a session with no created_at", () => {
+    const [plugIn, unplug] = toChargeSocObservations([
+      factories.makeChargeLog({ id: "c1", start_soc: 40, end_soc: 100, created_at: "" }),
+    ]);
+
+    expect(plugIn.created_at! < unplug.created_at!).toBe(true);
+  });
+
+  it("takes whichever end was recorded", () => {
+    expect(
+      toChargeSocObservations([
+        factories.makeChargeLog({ id: "c1", start_soc: 40, end_soc: null }),
+      ]),
+    ).toHaveLength(1);
+
+    expect(
+      toChargeSocObservations([
+        factories.makeChargeLog({ id: "c1", start_soc: null, end_soc: null }),
+      ]),
+    ).toHaveLength(0);
+  });
+
+  it("ignores fill-ups and the app's own estimates", () => {
+    expect(
+      toChargeSocObservations([
+        factories.makeFuelLog({ id: "f1", start_soc: 40, end_soc: 100 }),
+        factories.makeChargeLog({ id: "c1", start_soc: 40, end_soc: 100, is_estimated: true }),
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe("collectSocObservations", () => {
+  it("merges check-ins with charge sessions", () => {
+    const merged = collectSocObservations(
+      [makeSnapshot({ id: "s1" })],
+      [factories.makeChargeLog({ id: "c1", start_soc: 40, end_soc: 100 })],
+    );
+
+    expect(merged).toHaveLength(3);
+  });
+
+  it("copes with either side missing", () => {
+    expect(collectSocObservations()).toEqual([]);
+    expect(collectSocObservations([makeSnapshot()])).toHaveLength(1);
+  });
+});
+
+describe("battery health from charge sessions", () => {
+  /**
+   * The regression this guards. State of health was measured only from manual
+   * check-ins, so an owner who logged every charge — odometer and both
+   * percentages, everything the measurement needs — saw no figure at all.
+   */
+  it("measures discharge segments for an owner who only logs charges", () => {
+    const observations = collectSocObservations([], makeChargeOnlyHistory());
+    const usable = buildDischargeSegments(observations).filter((segment) => segment.usable);
+
+    // Each session's unplug pairs with the next one's plug-in: 1,000 -> 1,060
+    // on 100->40, then 1,060 -> 1,122 on 100->38, then 1,122 -> 1,180 on 100->42.
+    expect(usable).toHaveLength(3);
+    for (const segment of usable) {
+      expect(segment.kmPerPercent).toBeCloseTo(1, 6);
+    }
+  });
+
+  it("rejects the charge itself rather than counting it as a discharge", () => {
+    const segments = buildDischargeSegments(
+      collectSocObservations([], makeChargeOnlyHistory()),
+    );
+
+    // Plug-in to unplug is a rise at a standstill; both reasons are true, and
+    // the rising charge is the one that must be caught.
+    expect(
+      segments.filter((segment) => segment.rejection === "charged-between").length,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it("produces a usable range where before there was none", () => {
+    const chargeLogs = makeChargeOnlyHistory();
+
+    const before = summarizeBatteryHealth([], { currentDate: CURRENT_DATE });
+    const after = summarizeBatteryHealth(collectSocObservations([], chargeLogs), {
+      currentDate: CURRENT_DATE,
+      baselineRangeKm: 110,
+    });
+
+    expect(before.usableRangeKm).toBeNull();
+    expect(after.kmPerPercent).toBeCloseTo(1, 6);
+    expect(after.usableRangeKm).toBeCloseTo(100, 6);
+    expect(after.stateOfHealthPercent).toBeCloseTo(90.9, 1);
+  });
+
+  it("combines check-ins and charges into one history", () => {
+    const merged = collectSocObservations(
+      [makeSnapshot({ id: "s0", date: "2026-06-28", odometer: 960, soc_percent: 100 })],
+      makeChargeOnlyHistory(),
+    );
+
+    // The earlier check-in closes a further segment against the first plug-in,
+    // so a check-in and a charge sit in one ordered history rather than two.
+    const usable = buildDischargeSegments(merged).filter((segment) => segment.usable);
+
+    expect(usable).toHaveLength(4);
+    expect(usable[0]).toMatchObject({ startOdometer: 960, endOdometer: 1_000 });
+  });
+
+  it("reads the latest charge as the current state of charge", () => {
+    const latest = getLatestSocSnapshot(collectSocObservations([], makeChargeOnlyHistory()));
+
+    expect(latest?.soc_percent).toBe(100);
+    expect(latest?.odometer).toBe(1_180);
+  });
+});
 
 describe("buildDischargeSegments", () => {
   it("derives km per percent from a discharge between two snapshots", () => {

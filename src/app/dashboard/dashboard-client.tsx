@@ -58,6 +58,7 @@ import {
 } from "@/utils/cadence-predictions";
 import {
   estimateDaysOfRangeLeft,
+  collectSocObservations,
   getLatestSocSnapshot,
   summarizeBatteryHealth,
 } from "@/utils/battery-health";
@@ -250,21 +251,22 @@ export default function DashboardClient({
   // does not. It is the same charge-session derivation the Energy & Battery page
   // shows, so the two surfaces cannot disagree.
   const isEv = selectedVehicle.powertrain === "ev";
-  const batteryHealth = summarizeBatteryHealth(
+  // Charge sessions record the same odometer-plus-percentage reading a check-in
+  // does, and an owner logs far more of them.
+  const socObservations = collectSocObservations(
     selectedVehicle.vehicle_snapshots ?? [],
-    {
-      usableBatteryKwh:
-        selectedVehicle.usable_battery_kwh ?? selectedVehicle.battery_capacity_kwh,
-      baselineRangeKm: selectedVehicle.baseline_range_km,
-    },
+    selectedVehicle.fuel_logs ?? [],
   );
+  const batteryHealth = summarizeBatteryHealth(socObservations, {
+    usableBatteryKwh:
+      selectedVehicle.usable_battery_kwh ?? selectedVehicle.battery_capacity_kwh,
+    baselineRangeKm: selectedVehicle.baseline_range_km,
+  });
   const evEfficiency = getEvEfficiencyDisplay(selectedVehicle, {
     unit: getEvEfficiencyUnit(),
     distanceUnit,
   });
-  const latestSocSnapshot = getLatestSocSnapshot(
-    selectedVehicle.vehicle_snapshots ?? [],
-  );
+  const latestSocSnapshot = getLatestSocSnapshot(socObservations);
   const evDaysOfRangeLeft = estimateDaysOfRangeLeft(
     latestSocSnapshot?.soc_percent ?? null,
     batteryHealth.kmPerPercent,
