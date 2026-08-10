@@ -12,6 +12,24 @@ export function getCurrencySymbol(value?: string | null) {
   return CURRENCY_SYMBOLS[normalized.toUpperCase()] ?? normalized;
 }
 
+const CURRENCY_CODES: Record<string, string> = Object.fromEntries(
+  Object.entries(CURRENCY_SYMBOLS).map(([code, symbol]) => [symbol, code]),
+);
+
+/**
+ * ISO code for a stored currency, which is a code on some rows and a symbol on
+ * others. Needed wherever a symbol cannot be drawn — see `getPdfCurrencyLabel`.
+ */
+export function getCurrencyCode(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized) return "INR";
+
+  const upper = normalized.toUpperCase();
+  if (CURRENCY_SYMBOLS[upper]) return upper;
+
+  return CURRENCY_CODES[normalized] ?? upper;
+}
+
 export function formatMoney(
   value: number,
   currency?: string | null,

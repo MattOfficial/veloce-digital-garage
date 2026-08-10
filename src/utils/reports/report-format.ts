@@ -1,3 +1,4 @@
+import { getCurrencyCode, getCurrencySymbol } from "@/utils/formatting";
 import type { ReportRange } from "@/utils/reports/report-range";
 import type { ReportScope } from "@/utils/reports/report-dataset";
 
@@ -44,4 +45,51 @@ export function buildReportFilename(
   const slug = slugifyReportTitle(options.title, options.scope);
 
   return `veloce-${slug}-${options.range.from}-to-${options.range.to}.${format}`;
+}
+
+/**
+ * Currency symbols the PDF's built-in Helvetica can actually draw.
+ *
+ * The standard PDF fonts carry the WinAnsi character set, which predates the
+ * rupee sign — U+20B9 falls through to .notdef and renders as nothing at all,
+ * which on an India-first app means every amount in the report loses its
+ * currency. Verified against a Devanagari glyph Helvetica certainly lacks: the
+ * rupee behaves like that one, not like the euro. Rather than bundle a whole
+ * typeface for one character, unsupported currencies fall back to their ISO
+ * code, which is what a financial document would print anyway.
+ */
+const PDF_SAFE_CURRENCY_SYMBOLS = new Set(["$", "£", "€", "¥"]);
+
+export function getPdfCurrencyLabel(currency?: string | null): string {
+  const symbol = getCurrencySymbol(currency);
+
+  return PDF_SAFE_CURRENCY_SYMBOLS.has(symbol) ? symbol : getCurrencyCode(currency);
+}
+
+/**
+ * Grouping is pinned rather than left to the host. This runs on a server whose
+ * locale is an accident of deployment, and a report whose thousands separators
+ * change between environments is a report nobody trusts.
+ */
+const PDF_LOCALE = "en-GB";
+
+export function formatPdfNumber(
+  value: number,
+  options: Intl.NumberFormatOptions = {},
+): string {
+  return new Intl.NumberFormat(PDF_LOCALE, {
+    maximumFractionDigits: 0,
+    ...options,
+  }).format(value);
+}
+
+export function formatPdfMoney(value: number, currency?: string | null): string {
+  const label = getPdfCurrencyLabel(currency);
+  const amount = formatPdfNumber(value, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  // A code needs air around it; a symbol reads as part of the number.
+  return label.length > 1 ? `${label} ${amount}` : `${label}${amount}`;
 }

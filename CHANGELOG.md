@@ -6,6 +6,32 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the PDF document (2026-08-10)
+
+- `report-document.tsx` renders the report with `@react-pdf/renderer` — header, four summary
+  stats, the three charts, then a section per vehicle with details, tyres, fuel and charging,
+  service history and odometer readings. Reads the same `ReportDataset` as the other two
+  writers, so the total on the cover cannot disagree with the tables under it.
+- **The rupee sign does not exist in the built-in PDF fonts.** The standard 14 fonts carry
+  WinAnsi, which predates U+20B9, so `₹` falls through to .notdef and renders as *nothing* —
+  on an India-first app that is every amount in the report silently losing its currency.
+  Verified by comparing against a Devanagari glyph Helvetica certainly lacks: the rupee
+  behaves like that one, not like the euro. Rather than bundle a typeface for one character,
+  unsupported currencies print their ISO code ("INR 4,500.00"), which is what a financial
+  document would do anyway. `$`, `£`, `€` and `¥` are drawable and pass through unchanged.
+- Number grouping is pinned to one locale rather than the host's. This renders on a server
+  whose locale is an accident of deployment, and a report whose separators change between
+  environments is a report nobody trusts.
+- Chart colours are slots 1–3 of the validated categorical order, checked with the palette
+  validator at three slots against a light surface (worst all-pairs CVD ΔE 9.2, normal-vision
+  24.0). Aqua sits below 3:1 on white, so it carries the required relief: every series is
+  named in a legend with its value, and the same figures appear in the tables below.
+- Three things found by rendering the thing and looking at it, rather than by it compiling:
+  table columns collided so a row read "14.35Shell, MG Road" (padding on a width-constrained
+  `Text` does not inset it — cells are now a box with the text inside); a forced page break
+  before *every* vehicle left an almost-empty page after the charts (now only between
+  vehicles); and the vehicle subtitle repeated its own heading when there was no nickname.
+
 ### Reports: chart geometry (2026-08-10)
 
 - `report-charts.ts` turns the dataset's series into SVG geometry — stacked bars for monthly

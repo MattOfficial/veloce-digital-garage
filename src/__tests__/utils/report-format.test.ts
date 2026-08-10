@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildReportFilename,
+  formatPdfMoney,
+  formatPdfNumber,
+  getPdfCurrencyLabel,
   isReportFormat,
   REPORT_MIME_TYPES,
   slugifyReportTitle,
@@ -71,5 +74,46 @@ describe("buildReportFilename", () => {
     expect(
       buildReportFilename({ title: "Your Garage", scope: "garage", range: RANGE }, "xlsx"),
     ).toBe("veloce-your-garage-2026-01-01-to-2026-08-10.xlsx");
+  });
+});
+
+describe("getPdfCurrencyLabel", () => {
+  it("falls back to the ISO code for the rupee", () => {
+    // The standard PDF fonts carry WinAnsi, which predates U+20B9 — the glyph
+    // renders as nothing, so every amount would lose its currency.
+    expect(getPdfCurrencyLabel("INR")).toBe("INR");
+    expect(getPdfCurrencyLabel("₹")).toBe("INR");
+  });
+
+  it("keeps the symbols Helvetica can actually draw", () => {
+    expect(getPdfCurrencyLabel("USD")).toBe("$");
+    expect(getPdfCurrencyLabel("GBP")).toBe("£");
+    expect(getPdfCurrencyLabel("EUR")).toBe("€");
+    expect(getPdfCurrencyLabel("JPY")).toBe("¥");
+  });
+
+  it("falls back for anything it cannot vouch for", () => {
+    expect(getPdfCurrencyLabel("AUD")).toBe("AUD");
+  });
+});
+
+describe("formatPdfMoney", () => {
+  it("gives a code room to breathe and keeps a symbol tight", () => {
+    expect(formatPdfMoney(1_200.5, "INR")).toBe("INR 1,200.50");
+    expect(formatPdfMoney(1_200.5, "USD")).toBe("$1,200.50");
+  });
+
+  it("always shows both decimal places", () => {
+    expect(formatPdfMoney(1_200, "USD")).toBe("$1,200.00");
+  });
+});
+
+describe("formatPdfNumber", () => {
+  it("pins grouping so the same report reads the same on any server", () => {
+    expect(formatPdfNumber(1_234_567)).toBe("1,234,567");
+  });
+
+  it("honours a requested precision", () => {
+    expect(formatPdfNumber(14.27, { maximumFractionDigits: 1 })).toBe("14.3");
   });
 });
