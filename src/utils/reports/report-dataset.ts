@@ -566,6 +566,12 @@ function buildTyres(vehicle: VehicleWithLogs): ReportTyre[] {
  * would fold driving that happened earlier into the total, which is the
  * difference between a report and a guess. The cost is that a window holding
  * fewer than two readings reports no distance at all, which is the honest answer.
+ *
+ * The vehicle's own starting odometer counts as one of those readings, dated to
+ * when tracking began. So a window covering a vehicle's whole life measures
+ * from zero and agrees with the lifetime figure the rest of the app shows; a
+ * narrower window measures only what happened inside it, and will legitimately
+ * read lower than the app's lifetime number.
  */
 function buildVehicleProfile(
   vehicle: VehicleWithLogs,
@@ -576,6 +582,12 @@ function buildVehicleProfile(
   efficiencyByRow: Map<string, SegmentEfficiency>,
 ): ReportVehicleProfile {
   const readings = [
+    // The vehicle's starting odometer is a reading like any other, dated when
+    // tracking began. Leaving it out cost a new vehicle every kilometre before
+    // its first logged fill or charge: a scooter at 159 km whose first charge
+    // was logged at 46 reported 113 km, and then divided its whole energy bill
+    // by that short distance.
+    { date: vehicle.created_at, odometer: vehicle.baseline_odometer },
     ...(vehicle.fuel_logs ?? []).map((log) => ({ date: log.date, odometer: log.odometer })),
     ...(vehicle.maintenance_logs ?? []).map((log) => ({
       date: log.date,
@@ -588,7 +600,8 @@ function buildVehicleProfile(
   ]
     .filter((reading) => isDateInRange(reading.date, range))
     .map((reading) => finiteOrNull(reading.odometer))
-    .filter((odometer): odometer is number => odometer != null && odometer > 0);
+    // A brand-new vehicle starts at zero, so the floor is zero, not one.
+    .filter((odometer): odometer is number => odometer != null && odometer >= 0);
 
   const odometerStart = readings.length > 0 ? Math.min(...readings) : null;
   const odometerEnd = readings.length > 0 ? Math.max(...readings) : null;

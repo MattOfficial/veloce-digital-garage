@@ -349,6 +349,37 @@ describe("buildReportDataset — summary", () => {
     expect(dataset.summary.costPerDistance).toBeCloseTo(15, 6);
   });
 
+  it("counts from the vehicle's starting odometer when tracking began in the window", () => {
+    // The reported case: a new scooter at 159 km whose first charge was logged
+    // at 46 reported 113 km, dropping the first 46 km while still counting all
+    // the energy. Its starting odometer is a reading, dated to when it was added.
+    const newScooter = factories.makeEvVehicle({
+      id: "v-new",
+      baseline_odometer: 0,
+      created_at: "2026-08-01T09:00:00Z",
+      fuel_logs: [
+        factories.makeChargeLog({ id: "c1", vehicle_id: "v-new", date: "2026-08-04", odometer: 46, fuel_volume: 1.4 }),
+        factories.makeChargeLog({ id: "c2", vehicle_id: "v-new", date: "2026-08-10", odometer: 159, fuel_volume: 4.6 }),
+      ],
+    });
+
+    const dataset = buildReportDataset([newScooter], makeOptions());
+
+    expect(dataset.vehicles[0].odometerStart).toBe(0);
+    expect(dataset.vehicles[0].distanceCovered).toBe(159);
+    // 159 km on the 6 kWh bought — the same figure the app shows lifetime.
+    expect(dataset.vehicles[0].chargeEfficiency).toBeCloseTo(159 / 6, 6);
+  });
+
+  it("ignores a starting odometer from before the window", () => {
+    // Anchoring on a two-year-old baseline would charge the window with every
+    // kilometre since the vehicle was bought.
+    const dataset = buildReportDataset([makePetrolVehicle()], makeOptions());
+
+    expect(dataset.vehicles[0].odometerStart).toBe(10_500);
+    expect(dataset.vehicles[0].distanceCovered).toBe(500);
+  });
+
   it("reports no distance when the window holds a single reading", () => {
     const vehicle = makePetrolVehicle({ maintenance_logs: [] });
     const dataset = buildReportDataset([vehicle], makeOptions({

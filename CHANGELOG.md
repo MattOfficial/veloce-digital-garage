@@ -6,6 +6,21 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Distance dropped every kilometre before the first logged record (2026-08-10)
+
+- **Bug:** distance was measured between the highest and lowest *logged* odometer readings in
+  the window, and never looked at the vehicle's own `baseline_odometer`. A new scooter sitting
+  at 159 km whose first charge was logged at 46 km reported 113 km — and then divided its
+  entire energy bill by that short distance, showing 18.8 km/kWh where the app showed 26.5.
+- **Fix:** the starting odometer is a reading like any other, dated to when the vehicle was
+  added. A window covering a vehicle's whole life now measures from zero and agrees with the
+  lifetime figure the rest of the app shows.
+- It is deliberately only counted when it falls inside the window. Anchoring on a two-year-old
+  baseline would charge a one-month report with every kilometre since the vehicle was bought,
+  which is the opposite error. A window narrower than the vehicle's life still measures only
+  what happened inside it, and will read lower than the app's lifetime number — correctly.
+- The odometer floor moved from `> 0` to `>= 0`, since a brand-new vehicle starts at zero.
+
 ### Reports: an EV's own data was missing from its report (2026-08-10)
 
 - **Check-ins now include every charge.** The section listed `vehicle_snapshots` only, so an
