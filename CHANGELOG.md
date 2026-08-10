@@ -6,6 +6,20 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the export endpoint (2026-08-10)
+
+- `POST /api/reports/export` validates the request with zod, re-reads the vehicles under RLS,
+  resolves units the way the user store does, builds the dataset and streams back a PDF, XLSX
+  or CSV with a `Content-Disposition` filename.
+- **Generation is server-side on purpose.** The PDF and spreadsheet libraries are megabytes
+  the browser never needs; the data is re-read from the database rather than trusted from the
+  client's store; and a POST body keeps vehicle ids out of URLs and request logs.
+- The vehicle query is scoped with `.eq("user_id", user.id)` on top of RLS, so a guessed id
+  returns nothing rather than someone else's service history. Ids are validated only as
+  plausible keys — ownership is enforced by the query, not by the shape of the string.
+- A 500 returns a fixed message and logs the detail. A renderer stack trace says more about
+  the server than about the user's report.
+
 ### Reports: the PDF document (2026-08-10)
 
 - `report-document.tsx` renders the report with `@react-pdf/renderer` — header, four summary

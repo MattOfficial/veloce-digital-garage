@@ -1531,6 +1531,16 @@ export const ui = {
     },
     yes: "Yes",
     no: "No",
+    rangeLabels: {
+      "last-30-days": "Last 30 days",
+      "last-3-months": "Last 3 months",
+      "last-6-months": "Last 6 months",
+      "last-12-months": "Last 12 months",
+      "year-to-date": "Year to date",
+      "all-time": "All time",
+      custom: "Custom range",
+    },
+    customRangeLabel: (from: string, to: string) => `${from} – ${to}`,
     sheets: {
       summary: "Summary",
       energy: "Fuel & Charging",

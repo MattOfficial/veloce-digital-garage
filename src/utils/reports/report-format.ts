@@ -1,4 +1,5 @@
-import { getCurrencyCode, getCurrencySymbol } from "@/utils/formatting";
+import { ui } from "@/content/en/ui";
+import { formatTableDate, getCurrencyCode, getCurrencySymbol } from "@/utils/formatting";
 import type { ReportRange } from "@/utils/reports/report-range";
 import type { ReportScope } from "@/utils/reports/report-dataset";
 
@@ -45,6 +46,22 @@ export function buildReportFilename(
   const slug = slugifyReportTitle(options.title, options.scope);
 
   return `veloce-${slug}-${options.range.from}-to-${options.range.to}.${format}`;
+}
+
+/**
+ * What the window is called on the cover. A preset says what was asked for
+ * ("Last 6 months"); a custom window has to state its own dates, because
+ * "Custom range" tells the reader nothing.
+ */
+export function getReportRangeLabel(range: ReportRange): string {
+  if (range.preset === "custom") {
+    return ui.reports.customRangeLabel(
+      formatTableDate(range.from),
+      formatTableDate(range.to),
+    );
+  }
+
+  return ui.reports.rangeLabels[range.preset];
 }
 
 /**
