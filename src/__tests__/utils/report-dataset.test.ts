@@ -254,6 +254,47 @@ describe("buildReportDataset — efficiency", () => {
     expect(dataset.summary.fuelEfficiency).toBeNull();
   });
 
+  it("falls back to distance over energy when no segment can be measured", () => {
+    // Top-ups logged without percentages anchor no segment, which left the
+    // efficiency card empty on a vehicle whose distance and kWh were both known.
+    const scooter = factories.makeEvVehicle({
+      id: "v-ev",
+      baseline_odometer: 0,
+      fuel_logs: [
+        factories.makeChargeLog({ id: "c1", vehicle_id: "v-ev", date: "2026-08-04", odometer: 46, fuel_volume: 1.4 }),
+        factories.makeChargeLog({ id: "c2", vehicle_id: "v-ev", date: "2026-08-07", odometer: 86, fuel_volume: 2.6 }),
+        factories.makeChargeLog({ id: "c3", vehicle_id: "v-ev", date: "2026-08-08", odometer: 120, fuel_volume: 1 }),
+        factories.makeChargeLog({ id: "c4", vehicle_id: "v-ev", date: "2026-08-10", odometer: 159, fuel_volume: 1 }),
+      ],
+    });
+
+    const dataset = buildReportDataset([scooter], makeOptions());
+
+    // 159 - 46 = 113 km on 6 kWh bought.
+    expect(dataset.vehicles[0].distanceCovered).toBe(113);
+    expect(dataset.vehicles[0].chargeEfficiency).toBeCloseTo(113 / 6, 6);
+    expect(dataset.summary.chargeEfficiency).toBeCloseTo(113 / 6, 6);
+  });
+
+  it("prefers a measured segment over the whole-period ratio", () => {
+    // The EV fixture's sessions carry percentages, so segments exist and win.
+    const dataset = buildReportDataset([makeEvVehicle()], makeOptions());
+
+    expect(dataset.vehicles[0].chargeEfficiency).toBeCloseTo(30, 6);
+  });
+
+  it("has no charge efficiency without distance to divide", () => {
+    const scooter = factories.makeEvVehicle({
+      id: "v-ev",
+      baseline_odometer: 0,
+      fuel_logs: [
+        factories.makeChargeLog({ id: "c1", vehicle_id: "v-ev", date: "2026-08-04", odometer: 46, fuel_volume: 1.4 }),
+      ],
+    });
+
+    expect(buildReportDataset([scooter], makeOptions()).vehicles[0].chargeEfficiency).toBeNull();
+  });
+
   it("converts into the owner's chosen units", () => {
     const dataset = buildReportDataset(
       [makePetrolVehicle()],
@@ -502,6 +543,104 @@ describe("buildReportDataset — vehicle profile", () => {
     expect(buildReportDataset([makePetrolVehicle()], makeOptions()).vehicles[0].tyres).toEqual(
       [],
     );
+  });
+
+  it("treats each charge session as a check-in", () => {
+    // The odometer and the level charged to are already recorded; listing only
+    // hand-entered rows made an EV look like it had lost its readings.
+    const dataset = buildReportDataset([makeEvVehicle()], makeOptions());
+
+    expect(dataset.snapshotRows).toHaveLength(2);
+    expect(dataset.snapshotRows[0]).toMatchObject({
+      date: "2026-03-01",
+      odometer: 1_000,
+      socPercent: 100,
+      source: "charge",
+    });
+  });
+
+  it("reads a full charge as 100% even with no percentage typed", () => {
+    const vehicle = factories.makeEvVehicle({
+      id: "v-ev",
+      fuel_logs: [
+        factories.makeChargeLog({
+          id: "chg-full",
+          vehicle_id: "v-ev",
+          date: "2026-02-01",
+          odometer: 1_200,
+          end_soc: null,
+          charged_to_full: true,
+        }),
+      ],
+    });
+
+    expect(buildReportDataset([vehicle], makeOptions()).snapshotRows[0]).toMatchObject({
+      socPercent: 100,
+      source: "charge",
+    });
+  });
+
+  it("leaves the battery blank when the session says nothing about it", () => {
+    const vehicle = factories.makeEvVehicle({
+      id: "v-ev",
+      fuel_logs: [
+        factories.makeChargeLog({
+          id: "chg-quiet",
+          vehicle_id: "v-ev",
+          date: "2026-02-01",
+          odometer: 1_200,
+          end_soc: null,
+          charged_to_full: null,
+        }),
+      ],
+    });
+
+    expect(buildReportDataset([vehicle], makeOptions()).snapshotRows[0]).toMatchObject({
+      socPercent: null,
+      odometer: 1_200,
+    });
+  });
+
+  it("does not derive check-ins from fill-ups or from its own estimates", () => {
+    const vehicle = factories.makeVehicle({
+      id: "v-mixed",
+      baseline_odometer: 0,
+      fuel_logs: [
+        factories.makeFuelLog({ id: "f1", vehicle_id: "v-mixed", date: "2026-02-01" }),
+        factories.makeChargeLog({
+          id: "c1",
+          vehicle_id: "v-mixed",
+          date: "2026-02-02",
+          end_soc: 90,
+          is_estimated: true,
+        }),
+      ],
+    });
+
+    expect(buildReportDataset([vehicle], makeOptions()).snapshotRows).toEqual([]);
+  });
+
+  it("interleaves derived and hand-entered check-ins by date", () => {
+    const vehicle = factories.makeEvVehicle({
+      ...makeEvVehicle(),
+      vehicle_snapshots: [
+        factories.makeSnapshot({
+          id: "snap-a",
+          vehicle_id: "v-ev",
+          date: "2026-03-10",
+          odometer: 1_050,
+          soc_percent: 55,
+        }),
+      ],
+    });
+
+    const dataset = buildReportDataset([vehicle], makeOptions());
+
+    expect(dataset.snapshotRows.map((row) => [row.date, row.source])).toEqual([
+      ["2026-03-01", "charge"],
+      ["2026-03-10", "manual"],
+      ["2026-03-20", "charge"],
+    ]);
   });
 
   it("includes odometer snapshots with the profile section", () => {

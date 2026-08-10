@@ -6,6 +6,29 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: an EV's own data was missing from its report (2026-08-10)
+
+- **Check-ins now include every charge.** The section listed `vehicle_snapshots` only, so an
+  owner who logs charges saw a near-empty table directly below a charging table full of
+  odometer readings. Each session already records an odometer and the level charged to, which
+  is the same reading a check-in captures, so it now becomes one — labelled "From a charge" to
+  keep it distinguishable from a hand-entered row. A session logged as charged-to-full without
+  a percentage pins the state at 100, since that is what full means. Flows through the PDF,
+  Excel and CSV alike; the type change made the compiler find all three.
+- This is the same correction as the battery-health fix one entry down, applied to the surface
+  rather than the analytics — the earlier pass fixed the derivation and left the report still
+  reading the raw table.
+- **The efficiency card was empty on a vehicle whose figures were both known.** Charge
+  efficiency came only from state-of-charge segments, and top-ups logged without percentages
+  anchor none. It now falls back to distance over energy bought across the window — the same
+  ratio `getEvEfficiencyDisplay` falls back to lifetime-wide. Coarser, because energy still in
+  the battery counts against distance not yet ridden, but it is the number the rest of the app
+  shows and it beats a dash. A measured segment still wins where one exists.
+- An empty efficiency card on an electric vehicle no longer calls itself "Fuel efficiency".
+- Fixed while verifying the above: a single-vehicle report with no measurable efficiency fell
+  through to the spend-by-vehicle pie and drew one slice at 100%. That chart is the
+  multi-vehicle stand-in for the efficiency line, not a general fallback.
+
 ### Battery health ignored the readings owners actually record (2026-08-10)
 
 - **Bug:** state of health, usable range and days-of-range-left were measured only from manual

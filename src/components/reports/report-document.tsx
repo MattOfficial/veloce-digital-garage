@@ -281,6 +281,15 @@ function VehicleCards({
     // one card, so the row does not reflow between vehicles.
   ].filter((card): card is { label: string; value: string } => card != null);
 
+  // An empty card still has to be labelled for the right kind of energy — an
+  // electric scooter reading "Fuel efficiency" is wrong even with no figure.
+  const emptyEfficiencyCard = {
+    label: isElectricPowertrain(vehicle.powertrain)
+      ? summary.chargeEfficiency
+      : summary.fuelEfficiency,
+    value: ui.common.emptyValue,
+  };
+
   const cards = [
     { label: vehicleColumns.type, value: vehicleType[vehicle.vehicleType] },
     { label: vehicleColumns.powertrain, value: powertrain[vehicle.powertrain] },
@@ -291,9 +300,7 @@ function VehicleCards({
           ? ui.common.emptyValue
           : formatPdfNumber(vehicle.distanceCovered),
     },
-    ...(efficiencyCards.length > 0
-      ? efficiencyCards
-      : [{ label: summary.fuelEfficiency, value: ui.common.emptyValue }]),
+    ...(efficiencyCards.length > 0 ? efficiencyCards : [emptyEfficiencyCard]),
   ];
 
   return (
@@ -551,14 +558,20 @@ export function ReportDocument({ dataset }: { dataset: ReportDataset }) {
             <SummaryStats dataset={dataset} />
             <MonthlySpendChart charts={dataset.charts} units={dataset.units} />
             <CostMixChart charts={dataset.charts} units={dataset.units} />
+            {/*
+              The spend split is the multi-vehicle stand-in for the efficiency
+              line, not a general fallback: on a single-vehicle report it is one
+              slice at 100%, which says nothing. A lone vehicle with no
+              measurable efficiency simply gets no third chart.
+            */}
             {dataset.charts.efficiency ? (
               <EfficiencyChart series={dataset.charts.efficiency} />
-            ) : (
+            ) : dataset.vehicles.length > 1 ? (
               <VehicleSpendChart
                 slices={dataset.charts.spendByVehicle}
                 units={dataset.units}
               />
-            )}
+            ) : null}
 
             {dataset.vehicles.map((vehicle, index) => (
               <VehicleSection

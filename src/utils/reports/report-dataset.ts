@@ -2,6 +2,7 @@ import { eachMonthOfInterval, format, parseISO } from "date-fns";
 
 import type {
   ChargeSource,
+  FuelLog,
   FuelLogEnergyType,
   FuelLogFillType,
   Powertrain,
@@ -9,6 +10,7 @@ import type {
   VehicleSnapshotSource,
   VehicleWithLogs,
 } from "@/types/database";
+import { isFullChargeSession } from "@/utils/charge-session";
 import {
   convertEvEfficiency,
   convertFuelEfficiency,
@@ -108,6 +110,13 @@ export type ReportMaintenanceRow = {
   notes: string | null;
 };
 
+/**
+ * Where a state reading came from. `charge` is derived rather than stored: a
+ * charge session records an odometer and the percentage the owner stopped at,
+ * which is the same reading a check-in captures.
+ */
+export type ReportSnapshotSource = VehicleSnapshotSource | "charge";
+
 export type ReportSnapshotRow = {
   vehicleId: string;
   vehicleLabel: string;
@@ -115,7 +124,7 @@ export type ReportSnapshotRow = {
   odometer: number;
   socPercent: number | null;
   displayedRange: number | null;
-  source: VehicleSnapshotSource;
+  source: ReportSnapshotSource;
   notes: string | null;
 };
 
@@ -448,9 +457,52 @@ function buildSnapshotRows(
         notes: nonEmpty(snapshot.notes),
       });
     }
+
+    for (const log of vehicle.fuel_logs ?? []) {
+      const reading = toChargeStateReading(log);
+      if (reading == null || !isDateInRange(reading.date, range)) continue;
+
+      rows.push({
+        vehicleId: vehicle.id,
+        vehicleLabel: label,
+        ...reading,
+      });
+    }
   }
 
   return sortRows(rows);
+}
+
+/**
+ * The state reading a charge session already contains.
+ *
+ * Every session records an odometer, and the owner enters the percentage they
+ * stopped charging at — together that is exactly what a check-in captures.
+ * Without this the section listed only hand-entered rows, so an owner who logs
+ * charges saw a table missing the odometer readings sitting one table above it.
+ *
+ * A session logged as charged-to-full without a percentage still pins the state
+ * at 100, since that is what "full" means.
+ */
+function toChargeStateReading(
+  log: FuelLog,
+): Omit<ReportSnapshotRow, "vehicleId" | "vehicleLabel"> | null {
+  if (log.energy_type !== "charge" || log.is_estimated) return null;
+
+  const date = toIsoDate(log.date);
+  const odometer = finiteOrNull(log.odometer);
+  if (date == null || odometer == null) return null;
+
+  const socPercent = finiteOrNull(log.end_soc) ?? (isFullChargeSession(log) ? 100 : null);
+
+  return {
+    date,
+    odometer,
+    socPercent,
+    displayedRange: finiteOrNull(log.estimated_range),
+    source: "charge",
+    notes: null,
+  };
 }
 
 function sortRows<T extends { date: string; vehicleLabel: string }>(rows: T[]): T[] {
@@ -544,13 +596,20 @@ function buildVehicleProfile(
   const ownSegments = new Map(
     [...efficiencyByRow].filter(([, segment]) => segment.vehicleId === vehicle.id),
   );
+  const ownEnergyRows = energyRows.filter((row) => row.vehicleId === vehicle.id);
   const ownCost =
-    sum(
-      energyRows.filter((row) => row.vehicleId === vehicle.id).map((row) => row.cost),
-    ) +
+    sum(ownEnergyRows.map((row) => row.cost)) +
     sum(
       maintenanceRows.filter((row) => row.vehicleId === vehicle.id).map((row) => row.cost),
     );
+  const ownChargeKwh = sum(
+    ownEnergyRows.filter((row) => row.energyType === "charge").map((row) => row.quantity),
+  );
+
+  const distanceCovered =
+    readings.length >= 2 && odometerEnd != null && odometerStart != null
+      ? odometerEnd - odometerStart
+      : null;
 
   return {
     id: vehicle.id,
@@ -570,14 +629,13 @@ function buildVehicleProfile(
     usableBatteryKwh: finiteOrNull(vehicle.usable_battery_kwh),
     odometerStart,
     odometerEnd,
-    distanceCovered:
-      readings.length >= 2 && odometerEnd != null && odometerStart != null
-        ? odometerEnd - odometerStart
-        : null,
+    distanceCovered,
     tyres: buildTyres(vehicle),
     totalCost: ownCost,
     fuelEfficiency: averageEfficiency("fuel", ownSegments, units),
-    chargeEfficiency: averageEfficiency("charge", ownSegments, units),
+    chargeEfficiency:
+      averageEfficiency("charge", ownSegments, units) ??
+      wholePeriodChargeEfficiency(distanceCovered, ownChargeKwh, units),
   };
 }
 
@@ -615,7 +673,13 @@ function buildSummary(
     costPerDistance:
       distanceCovered != null && distanceCovered > 0 ? totalCost / distanceCovered : null,
     fuelEfficiency: averageEfficiency("fuel", efficiencyByRow, units),
-    chargeEfficiency: averageEfficiency("charge", efficiencyByRow, units),
+    chargeEfficiency:
+      averageEfficiency("charge", efficiencyByRow, units) ??
+      wholePeriodChargeEfficiency(
+        distanceCovered,
+        sum(chargeRows.map((row) => row.quantity)),
+        units,
+      ),
     counts: {
       vehicles: vehicles.length,
       fuelLogs: fuelRows.length,
@@ -624,6 +688,27 @@ function buildSummary(
       snapshots: snapshotRows.length,
     },
   };
+}
+
+/**
+ * Distance over energy bought across the whole window — the same fallback the
+ * app's own EV efficiency display uses when no segment can be measured.
+ *
+ * Segments need a state of charge at both ends of a stretch of riding, and an
+ * owner who logs top-ups without percentages never produces one. That left the
+ * efficiency card empty on a vehicle whose distance and kWh were both sitting
+ * right there. It is a coarser figure — energy still in the battery counts
+ * against distance not yet ridden — but it is the number the rest of the app
+ * shows, and a coarse figure beats a dash.
+ */
+function wholePeriodChargeEfficiency(
+  distance: number | null,
+  energyKwh: number,
+  units: ReportUnits,
+): number | null {
+  if (distance == null || distance <= 0 || energyKwh <= 0) return null;
+
+  return convertEvEfficiency(distance, energyKwh, units.evEfficiencyUnit, units.distanceUnit);
 }
 
 /**

@@ -1529,6 +1529,8 @@ export const ui = {
       manual: "Manual entry",
       ocr: "Scanned receipt",
       api: "Synced",
+      /** Derived from a charge session rather than entered on its own. */
+      charge: "From a charge",
     },
     yes: "Yes",
     no: "No",
@@ -1691,12 +1693,12 @@ export const ui = {
         maintenance: "Service history",
         snapshots: "Battery & odometer check-ins",
         /**
-         * Named and captioned so this never again reads as the odometer
-         * history. Charge and fill-up rows carry their own odometer; a check-in
-         * is a separate, deliberate reading.
+         * Every state reading, however it was captured. A charge session
+         * records an odometer and the level charged to, so it counts as a
+         * check-in whether or not the owner also filled the check-in form.
          */
         snapshotsCaption:
-          "Readings you recorded by hand. Fill-ups and charges carry their own odometer above.",
+          "Your check-ins, plus the odometer and battery level recorded with each charge.",
         vehicle: "Vehicle details",
         tyres: "Tyres",
       },
