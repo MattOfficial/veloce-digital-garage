@@ -49,10 +49,23 @@ numbers through the guard turns every negative into text. A string written to `.
 stored as a shared string that Excel never evaluates, so the same prefix there would show up
 as part of the value and corrupt the note. `report-xlsx.test.ts` pins that difference.
 
-**The PDF cannot draw a rupee sign.** The standard 14 PDF fonts carry WinAnsi, which predates
-U+20B9; the glyph falls through to `.notdef` and renders as nothing. Currencies whose symbol
-is not drawable print their ISO code instead — `INR 4,500.00`. `$`, `£`, `€` and `¥` pass
-through. See `getPdfCurrencyLabel`.
+**The PDF cannot draw a rupee sign — or an em dash.** The standard 14 PDF fonts carry WinAnsi;
+anything outside it falls through to `.notdef` and renders as *nothing*, with no warning.
+Currencies whose symbol is not drawable print their ISO code instead — `INR 4,500.00` — see
+`getPdfCurrencyLabel`. Everything else the report emits goes through `toPdfText`, which
+substitutes dashes, smart quotes, bullets and ellipses. That one matters more than it sounds:
+`ui.common.emptyValue` is an em dash, so before it existed every empty cell in every report
+rendered blank. Any string reaching a `<Text>` in the PDF should go through it.
+
+**A report never claims one figure across several vehicles.** The summary efficiency card and
+the efficiency-over-time line appear only when a single vehicle is in scope; a multi-vehicle
+report gets a spend-by-vehicle pie instead. km/L and km/kWh share no axis, and averaging a
+hatchback against a scooter describes neither.
+
+**The energy table's shape comes from its rows, not from `powertrain`.** Fuel rows only means
+"Fuel" and no record-type column; charge rows only means "Charging" and no efficiency column,
+which is a full-tank measure with no per-session meaning. A vehicle mis-typed in the garage
+still reads correctly.
 
 **Chart geometry is a tested module because its failures are silent.** An arc sweeping a full
 turn ends where it started and SVG draws nothing, so a petrol-only garage would open its
@@ -71,6 +84,14 @@ None of that throws.
   dashboard. Worth moving to per-table paged queries before anyone hits it.
 - **Number grouping is pinned to `en-GB`.** Deterministic across deployments, but it means an
   Indian user sees `1,200,000` rather than `12,00,000`.
-- **A mixed garage charts one energy type.** km/L and km/kWh have no shared axis, so the mode
-  with more measured segments wins and the caption names the vehicles it covers and how many
-  it left out.
+- **The spend-by-vehicle pie caps at three vehicles plus "Other".** A colour limit, not a
+  design preference: the palette validator puts a fourth categorical slot's orange/yellow pair
+  at a normal-vision ΔE of 13.7, below the floor of 15 that labelling does not excuse. The
+  exact per-vehicle figures are still in the sections below and in the other two formats.
+- **"Battery & odometer check-ins" lists check-ins only.** Fill-ups and charges carry their
+  own odometer on their own rows. The section used to be called "Odometer readings", which
+  made an EV's report look like it had lost data.
+- **Non-Latin text still will not render in the PDF.** `toPdfText` covers the characters the
+  app itself emits, but a note or nickname written in another script hits the same WinAnsi
+  wall and disappears. The real fix is bundling a font with wider coverage, which is a
+  deliberate ~400KB the repo does not carry today.
