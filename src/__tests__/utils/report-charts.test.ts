@@ -5,6 +5,7 @@ import {
   buildLineChart,
   buildPieSlices,
   buildStackedBarChart,
+  foldTopSlices,
   niceStep,
   type ChartBox,
 } from "@/utils/reports/report-charts";
@@ -174,6 +175,54 @@ describe("buildStackedBarChart", () => {
     expect(chart.gridLines).toHaveLength(chart.axis.values.length);
     expect(chart.gridLines[0]).toEqual({ value: 0, y: 170 });
     expect(chart.gridLines[chart.gridLines.length - 1]).toEqual({ value: 100, y: 10 });
+  });
+});
+
+describe("foldTopSlices", () => {
+  const slices = [
+    { key: "a", value: 10 },
+    { key: "b", value: 50 },
+    { key: "c", value: 30 },
+    { key: "d", value: 5 },
+    { key: "e", value: 5 },
+  ];
+
+  it("orders by value and folds the tail", () => {
+    const folded = foldTopSlices(slices, 3);
+
+    expect(folded.top.map((slice) => slice.key)).toEqual(["b", "c", "a"]);
+    expect(folded.otherValue).toBe(10);
+    expect(folded.otherCount).toBe(2);
+  });
+
+  it("shows a lone extra rather than hiding it behind 'Other'", () => {
+    // Folding one category tells the reader strictly less than showing it.
+    const folded = foldTopSlices(slices.slice(0, 4), 3);
+
+    expect(folded.top).toHaveLength(4);
+    expect(folded.otherCount).toBe(0);
+  });
+
+  it("folds nothing when everything fits", () => {
+    const folded = foldTopSlices(slices.slice(0, 2), 3);
+
+    expect(folded.top).toHaveLength(2);
+    expect(folded.otherValue).toBe(0);
+  });
+
+  it("never folds everything away", () => {
+    expect(foldTopSlices(slices, 0).top).toHaveLength(1);
+  });
+
+  it("leaves the caller's array alone", () => {
+    const input = [...slices];
+    foldTopSlices(input, 3);
+
+    expect(input.map((slice) => slice.key)).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("handles an empty set", () => {
+    expect(foldTopSlices([], 3)).toEqual({ top: [], otherValue: 0, otherCount: 0 });
   });
 });
 

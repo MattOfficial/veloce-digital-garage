@@ -6,6 +6,38 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the PDF now adapts to what it is describing (2026-08-10)
+
+- **A garage no longer claims one efficiency.** The summary's efficiency card appears only on
+  a single-vehicle report — averaging a hatchback against a scooter describes neither. The
+  efficiency-over-time line is likewise single-vehicle only; a multi-vehicle report gets a
+  spend-by-vehicle pie in its place, because spend is spend whatever the vehicle burns.
+- The vehicle pie caps at three hues plus a neutral "Other". That is a measured limit, not a
+  taste one: run through the palette validator, a fourth slot drops the orange/yellow pair to
+  a normal-vision ΔE of 13.7, under the floor of 15 that no amount of labelling excuses. It
+  only folds when at least two vehicles would go into the residual, since folding one tells
+  the reader strictly less than showing it.
+- **Per-vehicle sections lead with four cards** — type, powertrain, distance, and that
+  vehicle's own efficiency — instead of eight fields of mostly-static text. Registration, VIN,
+  colour, engine and transmission stay in the Excel and CSV exports, where a wide row is free.
+- **The energy table takes its shape from the rows.** A petrol car gets "Fuel" and no
+  record-type column repeating "Fuel" on every line; an EV gets "Charging" with no efficiency
+  column, which is a full-tank measure with no per-session meaning for a charge; only a
+  plug-in hybrid needs both. Efficiency headers now name their unit, and Location is gone —
+  it was never being captured.
+- **"Odometer readings" was a lie of omission.** It listed only manual check-ins while every
+  fill-up and charge carries its own odometer, so an EV owner who logs charges saw a nearly
+  empty table and reasonably concluded data was missing. Renamed to "Battery & odometer
+  check-ins" and captioned with where the numbers come from.
+- **Every em dash in every PDF was rendering as nothing.** Same root cause as the rupee sign —
+  the built-in fonts carry WinAnsi and drop what is outside it silently. Since
+  `ui.common.emptyValue` is an em dash, *every empty cell in every report so far has been
+  blank*. New `toPdfText` substitutes dashes, smart quotes, bullets and ellipses at the point
+  of render, so copy stays typographically correct everywhere else.
+- Word-splitting turned "Plug-in hybrid" into "Plug-in hy-/brid" in a narrow card; hyphenation
+  is now off. And a single-vehicle EV was showing km/kWh under a card labelled "Fuel
+  efficiency" — the label follows the figure now.
+
 ### Reports: the builder page (2026-08-10)
 
 - `/dashboard/reports` with a new sidebar entry. Coverage (this vehicle / whole garage with

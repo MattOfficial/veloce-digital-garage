@@ -149,6 +149,14 @@ export type ReportVehicleProfile = {
   odometerEnd: number | null;
   distanceCovered: number | null;
   tyres: ReportTyre[];
+  /**
+   * This vehicle's own figures. A garage report cannot show one efficiency
+   * across a hatchback and a scooter, so the per-vehicle number is the only
+   * one that means anything once more than one vehicle is in scope.
+   */
+  totalCost: number;
+  fuelEfficiency: number | null;
+  chargeEfficiency: number | null;
 };
 
 export type ReportSummary = {
@@ -198,16 +206,24 @@ export type ReportEfficiencySeries = {
   mode: FuelLogEnergyType;
   unit: string;
   points: ReportEfficiencyPoint[];
-  /** Which vehicles the line actually covers, for the caption. */
-  vehicleLabels: string[];
-  /** Vehicles in the report the chart had to leave out, on a mixed garage. */
-  omittedVehicleCount: number;
+};
+
+export type ReportVehicleSpendSlice = {
+  vehicleId: string;
+  label: string;
+  value: number;
 };
 
 export type ReportCharts = {
   monthlySpend: ReportMonthlySpendPoint[];
   /** Zero-valued slices are dropped rather than drawn as invisible wedges. */
   costMix: ReportCostMixSlice[];
+  /**
+   * Only meaningful once the report covers more than one vehicle, which is
+   * exactly when the efficiency line stops being meaningful — a garage cannot
+   * put km/L and km/kWh on one axis, but it can always compare spend.
+   */
+  spendByVehicle: ReportVehicleSpendSlice[];
   efficiency: ReportEfficiencySeries | null;
 };
 
@@ -269,6 +285,7 @@ type SegmentEfficiency = {
   distance: number;
   quantity: number;
   mode: FuelLogEnergyType;
+  vehicleId: string;
 };
 
 /**
@@ -306,6 +323,7 @@ function buildEfficiencyByLogId(
       distance: segment.distance,
       quantity: segment.volume,
       mode: "fuel",
+      vehicleId: vehicle.id,
     });
   }
 
@@ -325,6 +343,7 @@ function buildEfficiencyByLogId(
       distance: segment.distance,
       quantity: segment.energyKwh,
       mode: "charge",
+      vehicleId: vehicle.id,
     });
   }
 
@@ -499,6 +518,10 @@ function buildTyres(vehicle: VehicleWithLogs): ReportTyre[] {
 function buildVehicleProfile(
   vehicle: VehicleWithLogs,
   range: ReportRange,
+  units: ReportUnits,
+  energyRows: ReportEnergyRow[],
+  maintenanceRows: ReportMaintenanceRow[],
+  efficiencyByRow: Map<string, SegmentEfficiency>,
 ): ReportVehicleProfile {
   const readings = [
     ...(vehicle.fuel_logs ?? []).map((log) => ({ date: log.date, odometer: log.odometer })),
@@ -517,6 +540,17 @@ function buildVehicleProfile(
 
   const odometerStart = readings.length > 0 ? Math.min(...readings) : null;
   const odometerEnd = readings.length > 0 ? Math.max(...readings) : null;
+
+  const ownSegments = new Map(
+    [...efficiencyByRow].filter(([, segment]) => segment.vehicleId === vehicle.id),
+  );
+  const ownCost =
+    sum(
+      energyRows.filter((row) => row.vehicleId === vehicle.id).map((row) => row.cost),
+    ) +
+    sum(
+      maintenanceRows.filter((row) => row.vehicleId === vehicle.id).map((row) => row.cost),
+    );
 
   return {
     id: vehicle.id,
@@ -541,6 +575,9 @@ function buildVehicleProfile(
         ? odometerEnd - odometerStart
         : null,
     tyres: buildTyres(vehicle),
+    totalCost: ownCost,
+    fuelEfficiency: averageEfficiency("fuel", ownSegments, units),
+    chargeEfficiency: averageEfficiency("charge", ownSegments, units),
   };
 }
 
@@ -671,14 +708,12 @@ function buildMonthlySpend(
 }
 
 /**
- * A garage mixing petrol and electric has two efficiency units and no shared
- * axis to draw them on. Rather than omit the chart entirely, the mode with more
- * measured segments wins and the series names the vehicles it covers, so the
- * caption can say what was left out instead of the reader assuming nothing was.
+ * Single-vehicle reports only — see the call site. A plug-in hybrid can still
+ * produce both kinds of segment, and km/L and km/kWh share no axis, so the mode
+ * with more measured segments wins.
  */
 function buildEfficiencySeries(
   energyRows: ReportEnergyRow[],
-  vehicleCount: number,
   units: ReportUnits,
 ): ReportEfficiencySeries | null {
   const withEfficiency = energyRows.filter(
@@ -693,8 +728,6 @@ function buildEfficiencySeries(
     fuelPoints.length >= chargePoints.length ? "fuel" : "charge";
   const selected = mode === "fuel" ? fuelPoints : chargePoints;
 
-  const vehicleLabels = [...new Set(selected.map((row) => row.vehicleLabel))].sort();
-
   return {
     mode,
     unit: mode === "fuel" ? units.fuelEfficiencyUnit : units.evEfficiencyUnit,
@@ -704,8 +737,6 @@ function buildEfficiencySeries(
       vehicleId: row.vehicleId,
       vehicleLabel: row.vehicleLabel,
     })),
-    vehicleLabels,
-    omittedVehicleCount: Math.max(0, vehicleCount - vehicleLabels.length),
   };
 }
 
@@ -727,7 +758,11 @@ export function buildReportDataset(
   const maintenanceRows = includesMaintenance ? buildMaintenanceRows(vehicles, range) : [];
   const snapshotRows = includesProfile ? buildSnapshotRows(vehicles, range) : [];
 
-  const profiles = vehicles.map((vehicle) => buildVehicleProfile(vehicle, range));
+  // Profiles come after the rows because each one carries its own spend and
+  // efficiency, and those are derived from the rows the report emits.
+  const profiles = vehicles.map((vehicle) =>
+    buildVehicleProfile(vehicle, range, units, energyRows, maintenanceRows, efficiencyByRow),
+  );
 
   const summary = buildSummary(
     profiles,
@@ -746,6 +781,15 @@ export function buildReportDataset(
     ] as ReportCostMixSlice[]
   ).filter((slice) => slice.value > 0);
 
+  const spendByVehicle: ReportVehicleSpendSlice[] = profiles
+    .map((vehicle) => ({
+      vehicleId: vehicle.id,
+      label: vehicle.label,
+      value: vehicle.totalCost,
+    }))
+    .filter((slice) => slice.value > 0)
+    .sort((left, right) => right.value - left.value);
+
   return {
     title,
     scope,
@@ -762,7 +806,10 @@ export function buildReportDataset(
     charts: {
       monthlySpend: buildMonthlySpend(range, energyRows, maintenanceRows),
       costMix,
-      efficiency: buildEfficiencySeries(energyRows, profiles.length, units),
+      spendByVehicle,
+      // One vehicle is the only case where a single efficiency line is honest.
+      // Past that the garage gets the spend split instead.
+      efficiency: profiles.length === 1 ? buildEfficiencySeries(energyRows, units) : null,
     },
     isEmpty:
       energyRows.length === 0 && maintenanceRows.length === 0 && snapshotRows.length === 0,

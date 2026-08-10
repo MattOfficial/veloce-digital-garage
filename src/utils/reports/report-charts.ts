@@ -204,6 +204,44 @@ export function buildStackedBarChart(
   };
 }
 
+export type FoldedSlices<T> = {
+  top: T[];
+  /** Combined value of everything past the cap; zero when nothing was folded. */
+  otherValue: number;
+  otherCount: number;
+};
+
+/**
+ * Keeps the largest few categories and folds the rest into one residual.
+ *
+ * The cap is a colour constraint, not an aesthetic one: only three hues of the
+ * categorical order clear the all-pairs legibility floors, and a fourth
+ * generated hue is never the answer. The residual is drawn in a neutral, which
+ * is not a categorical slot, and the exact per-category figures still appear in
+ * the report's tables.
+ */
+export function foldTopSlices<T extends { value: number }>(
+  slices: T[],
+  maxSlices: number,
+): FoldedSlices<T> {
+  const ordered = [...slices].sort((left, right) => right.value - left.value);
+  const cap = Math.max(1, Math.floor(maxSlices));
+
+  // Folding one category into "Other" tells the reader less than just showing
+  // it would, so the cap only bites when at least two would be folded.
+  if (ordered.length <= cap + 1) {
+    return { top: ordered, otherValue: 0, otherCount: 0 };
+  }
+
+  const rest = ordered.slice(cap);
+
+  return {
+    top: ordered.slice(0, cap),
+    otherValue: rest.reduce((total, slice) => total + slice.value, 0),
+    otherCount: rest.length,
+  };
+}
+
 export type PieInput = { key: string; value: number };
 
 export type PieSlice = {

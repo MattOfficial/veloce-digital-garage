@@ -1675,19 +1675,28 @@ export const ui = {
         monthlySpend: "Monthly spend",
         monthlySpendCaption: "Fuel, charging and service costs by month.",
         costMix: "Where the money went",
+        spendByVehicle: "Spend by vehicle",
+        /** Vehicles past the palette's third slot, folded into one residual. */
+        otherVehicles: (count: number) => `${count} other vehicles`,
         efficiency: "Efficiency over time",
-        efficiencyCaption: (unit: string, vehicles: string) =>
-          `${unit}, measured between fill-ups · ${vehicles}`,
-        /** A mixed garage can only chart one energy type at a time. */
-        efficiencyOmitted: (count: number) =>
-          count === 1
-            ? "1 vehicle uses a different energy type and is not shown"
-            : `${count} vehicles use a different energy type and are not shown`,
+        efficiencyCaption: (unit: string, mode: "fuel" | "charge") =>
+          mode === "charge"
+            ? `${unit}, measured between charges`
+            : `${unit}, measured between fill-ups`,
       },
       sections: {
         energy: "Fuel & charging",
+        fuel: "Fuel",
+        charging: "Charging",
         maintenance: "Service history",
-        snapshots: "Odometer readings",
+        snapshots: "Battery & odometer check-ins",
+        /**
+         * Named and captioned so this never again reads as the odometer
+         * history. Charge and fill-up rows carry their own odometer; a check-in
+         * is a separate, deliberate reading.
+         */
+        snapshotsCaption:
+          "Readings you recorded by hand. Fill-ups and charges carry their own odometer above.",
         vehicle: "Vehicle details",
         tyres: "Tyres",
       },

@@ -84,6 +84,38 @@ export function getPdfCurrencyLabel(currency?: string | null): string {
 }
 
 /**
+ * Substitutes for characters the built-in PDF fonts cannot draw.
+ *
+ * Same root cause as the rupee sign: the standard 14 fonts carry WinAnsi, and
+ * anything outside it is dropped silently rather than shown as a box. That made
+ * every em dash vanish — including `ui.common.emptyValue`, so every empty cell
+ * in every report rendered blank rather than as a dash.
+ *
+ * Typography stays correct everywhere else; only the PDF degrades, and only to
+ * the nearest character that actually exists.
+ */
+const PDF_TEXT_SUBSTITUTIONS: Array<[RegExp, string]> = [
+  [/[‐-―]/g, "-"], // hyphens and dashes of every width
+  [/[‘’‛]/g, "'"],
+  [/[“”]/g, '"'],
+  [/•/g, "*"],
+  [/…/g, "..."],
+  [/₹/g, "INR "],
+];
+
+/**
+ * Makes a string safe to render in the PDF. Applied at the leaves — table
+ * cells, stat tiles, headings — so user-typed notes and nicknames go through it
+ * too, not just the app's own copy.
+ */
+export function toPdfText(value: string): string {
+  return PDF_TEXT_SUBSTITUTIONS.reduce(
+    (text, [pattern, replacement]) => text.replace(pattern, replacement),
+    value,
+  );
+}
+
+/**
  * Grouping is pinned rather than left to the host. This runs on a server whose
  * locale is an accident of deployment, and a report whose thousands separators
  * change between environments is a report nobody trusts.

@@ -33,3 +33,17 @@ export const REPORT_COLORS = {
 
 /** A 2px gap in the page colour keeps adjacent fills from reading as one mark. */
 export const SERIES_GAP = 2;
+
+/**
+ * Hues for the per-vehicle spend split, in the same fixed categorical order.
+ *
+ * Three is the cap the palette can actually carry: validated at four slots the
+ * orange/yellow pair falls to a normal-vision ΔE of 13.7, below the floor of 15
+ * that no amount of labelling excuses. Vehicles past the third fold into a
+ * neutral residual, which is not a categorical slot and so does not compete.
+ */
+export const REPORT_VEHICLE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a"] as const;
+
+export const MAX_VEHICLE_SLICES = REPORT_VEHICLE_COLORS.length;
+
+export const REPORT_OTHER_COLOR = "#8a8985";

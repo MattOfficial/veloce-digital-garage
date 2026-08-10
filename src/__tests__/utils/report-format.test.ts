@@ -6,6 +6,7 @@ import {
   formatPdfNumber,
   getPdfCurrencyLabel,
   getReportRangeLabel,
+  toPdfText,
   isReportFormat,
   REPORT_MIME_TYPES,
   slugifyReportTitle,
@@ -106,6 +107,30 @@ describe("getPdfCurrencyLabel", () => {
 
   it("falls back for anything it cannot vouch for", () => {
     expect(getPdfCurrencyLabel("AUD")).toBe("AUD");
+  });
+});
+
+describe("toPdfText", () => {
+  it("replaces the dashes the built-in fonts drop", () => {
+    // These vanish rather than showing as boxes, which is how every empty cell
+    // in the report — an em dash — came out blank.
+    expect(toPdfText("2026-01-01 – 2026-08-10")).toBe("2026-01-01 - 2026-08-10");
+    expect(toPdfText("a — b")).toBe("a - b");
+    expect(toPdfText("—")).toBe("-");
+  });
+
+  it("replaces smart quotes, bullets and ellipses", () => {
+    expect(toPdfText("“quoted” and ‘single’")).toBe('"quoted" and \'single\'');
+    expect(toPdfText("• item")).toBe("* item");
+    expect(toPdfText("more…")).toBe("more...");
+  });
+
+  it("spells out a rupee sign found in free text", () => {
+    expect(toPdfText("paid ₹500 cash")).toBe("paid INR 500 cash");
+  });
+
+  it("leaves drawable characters alone", () => {
+    expect(toPdfText("Shell, MG Road · £20 · 100%")).toBe("Shell, MG Road · £20 · 100%");
   });
 });
 

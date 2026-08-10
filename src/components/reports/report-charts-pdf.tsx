@@ -6,17 +6,26 @@ import type {
   ReportCharts,
   ReportEfficiencySeries,
   ReportUnits,
+  ReportVehicleSpendSlice,
 } from "@/utils/reports/report-dataset";
 import {
   buildLineChart,
   buildPieSlices,
   buildStackedBarChart,
+  foldTopSlices,
   type ChartBox,
 } from "@/utils/reports/report-charts";
-import { formatPdfMoney, formatPdfNumber } from "@/utils/reports/report-format";
 import {
+  formatPdfMoney,
+  formatPdfNumber,
+  toPdfText,
+} from "@/utils/reports/report-format";
+import {
+  MAX_VEHICLE_SLICES,
   REPORT_COLORS,
+  REPORT_OTHER_COLOR,
   REPORT_SERIES_COLORS,
+  REPORT_VEHICLE_COLORS,
   SERIES_GAP,
   type ReportSeriesKey,
 } from "@/components/reports/report-theme";
@@ -56,10 +65,10 @@ function ChartHeading({ title, caption }: { title: string; caption?: string }) {
   return (
     <View style={{ marginBottom: 6 }}>
       <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold", color: REPORT_COLORS.text }}>
-        {title}
+        {toPdfText(title)}
       </Text>
       {caption ? (
-        <Text style={{ fontSize: 8, color: REPORT_COLORS.muted, marginTop: 2 }}>{caption}</Text>
+        <Text style={{ fontSize: 8, color: REPORT_COLORS.muted, marginTop: 2 }}>{toPdfText(caption)}</Text>
       ) : null}
     </View>
   );
@@ -89,7 +98,7 @@ function Legend({
             }}
           />
           <Text style={{ fontSize: 8, color: REPORT_COLORS.secondary }}>
-            {seriesLabel(entry.key)}
+            {toPdfText(seriesLabel(entry.key))}
           </Text>
           <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: REPORT_COLORS.text }}>
             {formatPdfMoney(entry.value, currency)}
@@ -231,7 +240,7 @@ export function CostMixChart({
                 }}
               />
               <Text style={{ fontSize: 9, color: REPORT_COLORS.secondary, width: 96 }}>
-                {seriesLabel(slice.key as ReportSeriesKey)}
+                {toPdfText(seriesLabel(slice.key as ReportSeriesKey))}
               </Text>
               <Text
                 style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: REPORT_COLORS.text }}
@@ -257,14 +266,11 @@ export function EfficiencyChart({ series }: { series: ReportEfficiencySeries }) 
 
   if (chart.points.length === 0) return null;
 
-  const caption = ui.reports.pdf.charts.efficiencyCaption(
-    series.unit,
-    series.vehicleLabels.join(", "),
-  );
+  const caption = ui.reports.pdf.charts.efficiencyCaption(series.unit, series.mode);
 
   return (
     <View wrap={false} style={{ marginBottom: 18 }}>
-      <ChartHeading title={ui.reports.pdf.charts.efficiency} caption={caption} />
+      <ChartHeading title={ui.reports.pdf.charts.efficiency} caption={toPdfText(caption)} />
       <Svg width={LINE_BOX.width} height={LINE_BOX.height}>
         <G>
           {chart.gridLines.map((line) => (
@@ -324,11 +330,97 @@ export function EfficiencyChart({ series }: { series: ReportEfficiencySeries }) 
           ))}
         </G>
       </Svg>
-      {series.omittedVehicleCount > 0 ? (
-        <Text style={{ fontSize: 8, color: REPORT_COLORS.muted, marginTop: 6 }}>
-          {ui.reports.pdf.charts.efficiencyOmitted(series.omittedVehicleCount)}
-        </Text>
-      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Where the garage's money went, by vehicle. Replaces the efficiency line on a
+ * multi-vehicle report: one line cannot carry two energy units, but spend is
+ * spend whatever the vehicle burns.
+ */
+export function VehicleSpendChart({
+  slices,
+  units,
+}: {
+  slices: ReportVehicleSpendSlice[];
+  units: ReportUnits;
+}) {
+  const radius = PIE_SIZE / 2 - 4;
+  const folded = foldTopSlices(slices, MAX_VEHICLE_SLICES);
+
+  const entries = [
+    ...folded.top.map((slice, index) => ({
+      key: slice.vehicleId,
+      label: slice.label,
+      value: slice.value,
+      color: REPORT_VEHICLE_COLORS[index] as string,
+    })),
+    ...(folded.otherCount > 0
+      ? [
+          {
+            key: "__other__",
+            label: ui.reports.pdf.charts.otherVehicles(folded.otherCount),
+            value: folded.otherValue,
+            color: REPORT_OTHER_COLOR,
+          },
+        ]
+      : []),
+  ];
+
+  const geometry = buildPieSlices(
+    entries.map((entry) => ({ key: entry.key, value: entry.value })),
+    { cx: PIE_SIZE / 2, cy: PIE_SIZE / 2, radius },
+  );
+
+  if (geometry.length === 0) return null;
+
+  const colorByKey = new Map(entries.map((entry) => [entry.key, entry.color]));
+  const labelByKey = new Map(entries.map((entry) => [entry.key, entry.label]));
+
+  return (
+    <View wrap={false} style={{ marginBottom: 18 }}>
+      <ChartHeading title={ui.reports.pdf.charts.spendByVehicle} />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 22 }}>
+        <Svg width={PIE_SIZE} height={PIE_SIZE}>
+          <G>
+            {geometry.map((slice) => (
+              <Path
+                key={slice.key}
+                d={slice.path}
+                fill={colorByKey.get(slice.key) ?? REPORT_OTHER_COLOR}
+                stroke={REPORT_COLORS.surface}
+                strokeWidth={SERIES_GAP}
+              />
+            ))}
+          </G>
+        </Svg>
+        <View style={{ gap: 7 }}>
+          {geometry.map((slice) => (
+            <View key={slice.key} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 2,
+                  backgroundColor: colorByKey.get(slice.key) ?? REPORT_OTHER_COLOR,
+                }}
+              />
+              <Text style={{ fontSize: 9, color: REPORT_COLORS.secondary, width: 130 }}>
+                {toPdfText(labelByKey.get(slice.key) ?? "")}
+              </Text>
+              <Text
+                style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: REPORT_COLORS.text }}
+              >
+                {formatPdfMoney(slice.value, units.currency)}
+              </Text>
+              <Text style={{ fontSize: 9, color: REPORT_COLORS.muted }}>
+                {`${Math.round(slice.share * 100)}%`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }

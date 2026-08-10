@@ -375,17 +375,47 @@ describe("buildReportDataset — charts", () => {
     ]);
   });
 
-  it("picks the energy mode with more segments and names who it covers", () => {
+  it("charts efficiency for a single vehicle", () => {
+    const dataset = buildReportDataset([makePetrolVehicle()], makeOptions());
+
+    expect(dataset.charts.efficiency?.mode).toBe("fuel");
+    expect(dataset.charts.efficiency?.unit).toBe("km/L");
+    expect(dataset.charts.efficiency?.points).toHaveLength(2);
+  });
+
+  it("drops the efficiency line once a second vehicle is in scope", () => {
+    // A hatchback and a scooter share no efficiency axis, and averaging them
+    // would produce a number that describes neither.
     const dataset = buildReportDataset(
       [makePetrolVehicle(), makeEvVehicle()],
       makeOptions({ scope: "garage" }),
     );
 
-    // Two petrol segments against one charge segment.
-    expect(dataset.charts.efficiency?.mode).toBe("fuel");
-    expect(dataset.charts.efficiency?.unit).toBe("km/L");
-    expect(dataset.charts.efficiency?.vehicleLabels).toEqual(["2024 Honda City"]);
-    expect(dataset.charts.efficiency?.omittedVehicleCount).toBe(1);
+    expect(dataset.charts.efficiency).toBeNull();
+  });
+
+  it("splits spend by vehicle, largest first", () => {
+    const dataset = buildReportDataset(
+      [makePetrolVehicle(), makeEvVehicle()],
+      makeOptions({ scope: "garage" }),
+    );
+
+    expect(dataset.charts.spendByVehicle).toEqual([
+      { vehicleId: "v-petrol", label: "2024 Honda City", value: 7_500 },
+      { vehicleId: "v-ev", label: "2024 Ather 450X", value: 60 },
+    ]);
+  });
+
+  it("leaves a vehicle that cost nothing out of the split", () => {
+    const idle = factories.makeVehicle({ id: "v-idle", make: "Tata", model: "Nexon" });
+    const dataset = buildReportDataset(
+      [makePetrolVehicle(), idle],
+      makeOptions({ scope: "garage" }),
+    );
+
+    expect(dataset.charts.spendByVehicle.map((slice) => slice.vehicleId)).toEqual([
+      "v-petrol",
+    ]);
   });
 
   it("has no efficiency series when nothing closed a segment", () => {
@@ -448,6 +478,24 @@ describe("buildReportDataset — vehicle profile", () => {
         dotCode: null,
       },
     ]);
+  });
+
+  it("carries each vehicle's own spend and efficiency", () => {
+    const dataset = buildReportDataset(
+      [makePetrolVehicle(), makeEvVehicle()],
+      makeOptions({ scope: "garage" }),
+    );
+
+    const [petrol, ev] = dataset.vehicles;
+
+    expect(petrol.totalCost).toBe(7_500);
+    expect(petrol.fuelEfficiency).toBeCloseTo(1_000 / 45, 6);
+    expect(petrol.chargeEfficiency).toBeNull();
+
+    // The scooter's figures must not be contaminated by the car's.
+    expect(ev.totalCost).toBe(60);
+    expect(ev.fuelEfficiency).toBeNull();
+    expect(ev.chargeEfficiency).toBeCloseTo(30, 6);
   });
 
   it("has no tyres to report when none were recorded", () => {
