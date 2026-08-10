@@ -6,6 +6,26 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the Excel workbook (2026-08-10)
+
+- `report-xlsx.ts` builds a sheet per record type — Summary, Fuel & Charging, Maintenance,
+  Odometer, Vehicles, and Tyres when there are any — with frozen headers, autofilter, column
+  widths and per-column number formats. Sheets appear only for the sections that were picked,
+  and the tyre tab is skipped entirely rather than shipped as bare headings.
+- **No apostrophe guard here, deliberately.** A string written to `.xlsx` is stored as a
+  shared string and Excel never evaluates one, so the injection that makes CSV dangerous does
+  not exist in this format — while adding the prefix anyway would show the apostrophe as part
+  of the value and corrupt the notes it was meant to protect. A test pins the behaviour, so if
+  exceljs ever starts promoting a leading `=` into a formula cell we find out.
+- **Dates are anchored at local noon.** Excel stores a date as a day number and the conversion
+  runs through the host timezone; midday means no offset within ±12h can land the value on the
+  day before or after. That is a silent off-by-one on every fill logged at midnight.
+- Cost columns total with a live `SUM` carrying a cached result, so the figure is right in
+  readers that do not recalculate and still correct after the user deletes a row.
+- The Summary sheet states that the headline total counts fuel, charging and service only —
+  custom-tracker costs are outside a report, so it is lower than the figure on Trends, and
+  saying so beats letting someone find the discrepancy themselves.
+
 ### Reports: the CSV ledger (2026-08-10)
 
 - `report-csv.ts` writes one flat, chronological ledger across fuel, charging, service and
