@@ -6,6 +6,33 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the range and dataset core (2026-08-10)
+
+- First step of downloadable PDF/Excel/CSV reports. `report-range.ts` resolves the seven
+  window presets into a pair of inclusive `YYYY-MM-DD` bounds, and `report-dataset.ts` turns
+  vehicles plus a window into the one structure all three formats will walk.
+- **Why one dataset rather than three writers:** three independent readings of "total spent"
+  is three chances to disagree. Every cost figure is derived from the rows the dataset emits,
+  so a report always totals exactly what it shows — including when a section is switched off.
+  Distance is the deliberate exception, and the module says why.
+- **Ranges stay in string space.** Log dates are bare calendar dates; parsing them into `Date`
+  to compare would reintroduce a timezone the data never had, and a fill logged on the 1st
+  would drop out of a window starting on the 1st for anyone west of UTC.
+- **Efficiency is measured over full history, then filtered by closing date.** Building
+  segments from the windowed logs alone restates every segment straddling the window's start,
+  because the fill that sets its odometer baseline sits outside. On the test fixture that is
+  the difference between 20 km/L and 40 km/L. Both energy modes go through the same path —
+  fuel via `closed_segments`, charge via `buildChargeSegments`.
+- Averages are distance-weighted; a 600 km segment says more about economy than a 40 km one.
+- A garage mixing petrol and electric has two efficiency units and no shared axis. Rather than
+  drop the chart, the mode with more measured segments wins and the series names the vehicles
+  it covers, so the caption can say what was left out.
+- `resolveFuelVolumeUnit` added next to its siblings in `efficiency-units.ts`: nothing stores
+  the volume unit, and the report needs the same miles-plus-pounds-means-imperial rule the
+  user store applies. The store still has its own copy — worth collapsing separately.
+- `@react-pdf/renderer` and `exceljs` installed and marked external, so ~3MB of server-only
+  machinery stays out of the client bundle.
+
 ### Efficiency pulse was blank for EVs, and one metric card for the whole app (2026-08-09)
 
 - **Bug:** an EV showed a real efficiency figure on Energy & Battery and an em dash on the

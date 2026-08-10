@@ -1,3 +1,5 @@
+import { getCurrencySymbol } from "@/utils/formatting";
+
 export const FUEL_EFFICIENCY_UNITS = [
   "km/L",
   "L/100km",
@@ -27,6 +29,22 @@ export function isFuelEfficiencyUnit(
   value: string,
 ): value is FuelEfficiencyUnit {
   return FUEL_EFFICIENCY_UNITS.some((unit) => unit === value);
+}
+
+/**
+ * Volume unit implied by the owner's other settings, since nothing stores it
+ * directly. Miles plus pounds means the UK, which pumps in imperial gallons.
+ *
+ * Currency is normalised through its symbol because the column holds either a
+ * code or a symbol depending on when the row was written.
+ */
+export function resolveFuelVolumeUnit(
+  distanceUnit: DistanceUnit,
+  currency?: string | null,
+): FuelVolumeUnit {
+  if (distanceUnit === "km") return "Liters";
+
+  return getCurrencySymbol(currency) === "£" ? "Gallons (UK)" : "Gallons";
 }
 
 export function getDefaultFuelEfficiencyUnit(

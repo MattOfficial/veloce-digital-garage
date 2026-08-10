@@ -7,6 +7,7 @@ import {
   getEvEfficiencyPrecision,
   isEvEfficiencyUnit,
   isFuelEfficiencyUnit,
+  resolveFuelVolumeUnit,
 } from "@/utils/efficiency-units";
 
 describe("fuel efficiency units", () => {
@@ -102,5 +103,26 @@ describe("EV efficiency units", () => {
   it("guards unit picker values", () => {
     expect(isEvEfficiencyUnit("Wh/km")).toBe(true);
     expect(isEvEfficiencyUnit("km/L")).toBe(false);
+  });
+});
+
+describe("resolveFuelVolumeUnit", () => {
+  it("pumps litres wherever distance is metric", () => {
+    expect(resolveFuelVolumeUnit("km", "INR")).toBe("Liters");
+    expect(resolveFuelVolumeUnit("km", "GBP")).toBe("Liters");
+  });
+
+  it("uses imperial gallons for miles and pounds", () => {
+    expect(resolveFuelVolumeUnit("miles", "GBP")).toBe("Gallons (UK)");
+  });
+
+  it("accepts a currency stored as either a code or a symbol", () => {
+    // The column holds one or the other depending on when the row was written.
+    expect(resolveFuelVolumeUnit("miles", "£")).toBe("Gallons (UK)");
+  });
+
+  it("falls back to US gallons for miles anywhere else", () => {
+    expect(resolveFuelVolumeUnit("miles", "USD")).toBe("Gallons");
+    expect(resolveFuelVolumeUnit("miles", null)).toBe("Gallons");
   });
 });
