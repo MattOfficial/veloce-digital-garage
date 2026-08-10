@@ -6,6 +6,23 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the builder page (2026-08-10)
+
+- `/dashboard/reports` with a new sidebar entry. Coverage (this vehicle / whole garage with
+  per-vehicle switches), period (seven presets plus a custom range on the existing `Calendar`),
+  which records to include, and the output format.
+- **The preview runs the real builder, not an estimate.** The panel calls `buildReportDataset`
+  over the store's copy of the data with the same options the request will carry, so the
+  counts and the total on screen are the ones the file will contain. An estimate that can
+  disagree with the download is worse than no preview.
+- Garage selection defaults to null rather than to a list of today's vehicle ids, so a vehicle
+  added later is included by default instead of silently missing from the next report.
+- Custom dates convert with a local-calendar helper rather than `toISOString`, which would
+  hand the server the UTC day and shift an evening selection to the day after.
+- `docs/reports.md` documents the module map, the one-dataset rule, the three format-specific
+  hazards, and the known limits — custom-tracker costs being out of scope, PostgREST row
+  limits on very large garages, pinned number grouping, and one energy type per chart.
+
 ### Reports: the export endpoint (2026-08-10)
 
 - `POST /api/reports/export` validates the request with zod, re-reads the vehicles under RLS,

@@ -5,6 +5,7 @@ import {
   formatPdfMoney,
   formatPdfNumber,
   getPdfCurrencyLabel,
+  getReportRangeLabel,
   isReportFormat,
   REPORT_MIME_TYPES,
   slugifyReportTitle,
@@ -74,6 +75,17 @@ describe("buildReportFilename", () => {
     expect(
       buildReportFilename({ title: "Your Garage", scope: "garage", range: RANGE }, "xlsx"),
     ).toBe("veloce-your-garage-2026-01-01-to-2026-08-10.xlsx");
+  });
+});
+
+describe("getReportRangeLabel", () => {
+  it("names a preset by what was asked for", () => {
+    expect(getReportRangeLabel({ ...RANGE, preset: "last-6-months" })).toBe("Last 6 months");
+    expect(getReportRangeLabel({ ...RANGE, preset: "all-time" })).toBe("All time");
+  });
+
+  it("spells out a custom window, since 'Custom range' says nothing", () => {
+    expect(getReportRangeLabel(RANGE)).toBe("01/01/2026 – 10/08/2026");
   });
 });
 
