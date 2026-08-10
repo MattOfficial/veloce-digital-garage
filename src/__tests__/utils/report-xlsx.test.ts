@@ -244,7 +244,10 @@ describe("renderReportWorkbook", () => {
     );
 
     const reopened = new ExcelJS.Workbook();
-    await reopened.xlsx.load(buffer);
+    // exceljs ships its own Buffer declaration, which does not line up
+    // structurally with the one @types/node provides.
+    type LoadArgument = Parameters<typeof reopened.xlsx.load>[0];
+    await reopened.xlsx.load(buffer as unknown as LoadArgument);
 
     expect(sheetNames(reopened)).toContain("Fuel & Charging");
     expect(reopened.getWorksheet("Fuel & Charging")?.getRow(2).getCell(9).value).toBe(2_000);

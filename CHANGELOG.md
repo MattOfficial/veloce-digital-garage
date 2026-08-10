@@ -6,6 +6,24 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: chart geometry (2026-08-10)
+
+- `report-charts.ts` turns the dataset's series into SVG geometry — stacked bars for monthly
+  spend, pie arcs for the cost mix, a polyline for efficiency over time — plus nice-rounded
+  axis scales and gridlines. Recharts renders to the DOM, so none of the app's charting stack
+  works on the server; these are drawn from raw primitives.
+- The maths lives in a tested module rather than inline in the renderer because every failure
+  mode here is *invisible*: an arc that sweeps a full turn ends where it started and SVG draws
+  nothing, so a petrol-only garage would have got a blank circle where its pie should be. That
+  case now emits two half-arcs, and a test pins the path.
+- Same class of bug covered elsewhere: a flat series has no range to scale against and would
+  divide by zero; a single reading makes a polyline that renders nothing, so it is drawn as a
+  bare dot; axis labels are built by multiplication rather than repeated addition, which is
+  what stops a gridline reading 1.0999999999999999.
+- Efficiency points sit at their true position in time, not at even intervals. Three fills in
+  one week and a fourth six months later is a fact about the driving, and evenly spacing them
+  would hide it.
+
 ### Reports: the Excel workbook (2026-08-10)
 
 - `report-xlsx.ts` builds a sheet per record type — Summary, Fuel & Charging, Maintenance,
