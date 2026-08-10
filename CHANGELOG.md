@@ -6,6 +6,27 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Battery health ignored the readings owners actually record (2026-08-10)
+
+- **Bug:** state of health, usable range and days-of-range-left were measured only from manual
+  battery check-ins. A charge session already records an odometer and both percentages — the
+  charge left on plugging in, the charge reached on unplugging — which is exactly a discharge
+  measurement, and logging a charge is the primary EV action while a check-in is an extra
+  deliberate one. An owner who logged every charge and never opened the check-in form saw no
+  figure at all, despite the app holding everything the measurement needs. Found while
+  investigating why an EV's report showed a nearly empty odometer table.
+- **Fix:** `toChargeSocObservations` turns each session into the two readings it contains, and
+  `collectSocObservations` merges those with check-ins into one ordered history. The existing
+  segment builder then works unchanged — a plug-in-to-unplug pair is a rise at a standstill
+  and is already rejected as `charged-between`, leaving the real discharge between sessions.
+- The ordering detail that makes it correct: the two readings share a date *and* an odometer,
+  so the sort's last tiebreak is all that separates them. Plug-in is stamped to sort first;
+  reversed, every session would read as a discharge and every ride as a charge.
+- App-generated estimated rows are excluded — those are the cold-start guess, not a reading.
+- Applied at all three call sites (dashboard, Energy & Battery, copilot analytics) so the
+  surfaces cannot disagree, and `getLatestSocSnapshot` now sees charges too, which makes
+  "days of range left" reflect the last charge rather than the last manual check-in.
+
 ### Reports: the PDF now adapts to what it is describing (2026-08-10)
 
 - **A garage no longer claims one efficiency.** The summary's efficiency card appears only on

@@ -33,6 +33,7 @@ import { useVehicleStore } from "@/store/vehicle-store";
 import type { VehicleWithLogs } from "@/types/database";
 import {
   estimateDaysOfRangeLeft,
+  collectSocObservations,
   getLatestSocSnapshot,
   summarizeBatteryHealth,
 } from "@/utils/battery-health";
@@ -89,15 +90,22 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
   const usableBatteryKwh =
     vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh;
 
+  // Charge sessions carry the same odometer-plus-percentage reading a check-in
+  // does, and an owner logs far more of them.
+  const socObservations = useMemo(
+    () => collectSocObservations(vehicle.vehicle_snapshots ?? [], vehicle.fuel_logs ?? []),
+    [vehicle.vehicle_snapshots, vehicle.fuel_logs],
+  );
+
   const health = useMemo(
     () =>
-      summarizeBatteryHealth(vehicle.vehicle_snapshots ?? [], {
+      summarizeBatteryHealth(socObservations, {
         // The rated pack is a fallback: usable capacity is the correct
         // denominator but is not always known.
         usableBatteryKwh,
         baselineRangeKm: vehicle.baseline_range_km,
       }),
-    [usableBatteryKwh, vehicle.baseline_range_km, vehicle.vehicle_snapshots],
+    [usableBatteryKwh, vehicle.baseline_range_km, socObservations],
   );
 
   const energy = useMemo(
@@ -156,7 +164,7 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
       ? ui.ev.efficiency.basis[displayedEfficiency.basis]
       : null;
 
-  const latestSnapshot = getLatestSocSnapshot(vehicle.vehicle_snapshots ?? []);
+  const latestSnapshot = getLatestSocSnapshot(socObservations);
   const averageDailyDistance =
     energy.period.distance != null && energy.period.distance > 0
       ? energy.period.distance / PERIOD_DAYS
