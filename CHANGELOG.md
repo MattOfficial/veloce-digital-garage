@@ -6,6 +6,26 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reports: the CSV ledger (2026-08-10)
+
+- `report-csv.ts` writes one flat, chronological ledger across fuel, charging, service and
+  odometer records rather than a file per type, so it opens anywhere and pivots without
+  preparation. Excel will get the per-type sheets; this is the lowest common denominator.
+- **Free text is treated as hostile.** `notes`, `location`, `charger_network` and
+  `service_type` are all user-typed, and a cell starting `=`, `+`, `-`, `@`, tab or CR
+  executes as a formula when the file is opened in Excel. Those are prefixed with an
+  apostrophe. Only *text* cells go through the guard — running numbers through it would turn
+  every negative amount into text.
+- Costs are written as raw numbers, not formatted money: a spreadsheet cannot sum "₹1,200.00".
+  The currency and distance units are named in the column headers instead.
+- The file opens with a UTF-8 BOM. Without one, Excel on Windows reads the file as the system
+  codepage and every ₹ arrives as mojibake.
+- `report-format.ts` builds download filenames. The slug is an allowlist of `[a-z0-9-]`, which
+  is what makes it safe to interpolate into `Content-Disposition` — a nickname holding a
+  quote, a newline or `../` cannot travel into the header. A title with no Latin characters
+  slugs to nothing, so the scope stands in rather than the file arriving called `-`.
+- Report copy added to `ui.ts` under `reports`, shared by the CSV and the coming Excel writer.
+
 ### Reports: the range and dataset core (2026-08-10)
 
 - First step of downloadable PDF/Excel/CSV reports. `report-range.ts` resolves the seven
