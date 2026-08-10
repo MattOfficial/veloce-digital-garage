@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { ui } from "@/content/en/ui";
 import { getCurrencySymbol } from "@/utils/formatting";
 import type { ReportDataset } from "@/utils/reports/report-dataset";
+import { getTyrePositionLabel } from "@/utils/reports/report-format";
 
 /**
  * The Excel export: a sheet per record type, with real dates and real numbers
@@ -311,7 +312,7 @@ function buildSnapshotSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) 
 }
 
 function buildVehicleSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) {
-  const { columns, vehicleColumns, vehicleType, powertrain } = ui.reports;
+  const { columns, vehicleColumns, vehicleType } = ui.reports;
   const { units } = dataset;
 
   const sheet = addSheet(workbook, ui.reports.sheets.vehicles, [
@@ -343,7 +344,7 @@ function buildVehicleSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) {
       vehicle.vin,
       vehicle.color,
       vehicleType[vehicle.vehicleType],
-      powertrain[vehicle.powertrain],
+      vehicle.energyDescription,
       vehicle.engineType,
       vehicle.transmission,
       vehicle.batteryCapacityKwh,
@@ -356,7 +357,7 @@ function buildVehicleSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) {
 }
 
 function buildTyreSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) {
-  const { columns, tyreColumns, tyrePosition } = ui.reports;
+  const { columns, tyreColumns } = ui.reports;
   const { units } = dataset;
 
   const sheet = addSheet(workbook, ui.reports.sheets.tyres, [
@@ -373,7 +374,7 @@ function buildTyreSheet(workbook: ExcelJS.Workbook, dataset: ReportDataset) {
     for (const tyre of vehicle.tyres) {
       sheet.addRow([
         vehicle.label,
-        tyrePosition[tyre.position],
+        getTyrePositionLabel(tyre.position, vehicle.vehicleType),
         tyre.brand,
         tyre.installedDate == null ? null : toExcelDate(tyre.installedDate),
         tyre.installedOdometer,

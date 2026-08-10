@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isElectricPowertrain, VehicleWithLogs } from "@/types/database";
+import {
+  burnsFuel,
+  FUEL_TYPES,
+  isElectricPowertrain,
+  VehicleWithLogs,
+} from "@/types/database";
 import { useUserStore } from "@/store/user-store";
 import { updateVehicle } from "@/app/actions/vehicles";
 import { upsertVehicleServiceInterval } from "@/app/actions/reminders";
@@ -45,6 +50,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@mattofficial/veloce-ui";
 
 export function VehicleManagerClient({
@@ -384,6 +394,29 @@ export function VehicleManagerClient({
                         className="rounded-xl"
                       />
                     </div>
+                    {/* Nothing to burn in an electric vehicle. */}
+                    {burnsFuel(vehicle.powertrain) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="fuel_type">{ui.profile.fuelType}</Label>
+                        <Select
+                          name="fuel_type"
+                          defaultValue={vehicle.fuel_type ?? undefined}
+                        >
+                          <SelectTrigger id="fuel_type" className="w-full rounded-xl">
+                            <SelectValue
+                              placeholder={ui.profile.fuelTypePlaceholder}
+                            />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            {FUEL_TYPES.map((fuel) => (
+                              <SelectItem key={fuel} value={fuel}>
+                                {ui.profile.fuelTypeOptions[fuel]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="engine_type">
                         {ui.vehicle.engineType}

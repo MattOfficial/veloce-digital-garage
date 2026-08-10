@@ -474,6 +474,7 @@ export type Database = {
           current_odometer: number | null
           custom_fields: Json | null
           engine_type: string | null
+          fuel_type: string | null
           id: string
           image_url: string | null
           license_plate: string | null
@@ -501,6 +502,7 @@ export type Database = {
           current_odometer?: number | null
           custom_fields?: Json | null
           engine_type?: string | null
+          fuel_type?: string | null
           id?: string
           image_url?: string | null
           license_plate?: string | null
@@ -528,6 +530,7 @@ export type Database = {
           current_odometer?: number | null
           custom_fields?: Json | null
           engine_type?: string | null
+          fuel_type?: string | null
           id?: string
           image_url?: string | null
           license_plate?: string | null

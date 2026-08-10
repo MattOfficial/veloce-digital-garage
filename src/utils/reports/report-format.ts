@@ -1,7 +1,8 @@
 import { ui } from "@/content/en/ui";
+import type { VehicleType } from "@/types/database";
 import { formatTableDate, getCurrencyCode, getCurrencySymbol } from "@/utils/formatting";
 import type { ReportRange } from "@/utils/reports/report-range";
-import type { ReportScope } from "@/utils/reports/report-dataset";
+import type { ReportScope, ReportTyre } from "@/utils/reports/report-dataset";
 
 export const REPORT_FORMATS = ["pdf", "xlsx", "csv"] as const;
 export type ReportFormat = (typeof REPORT_FORMATS)[number];
@@ -62,6 +63,25 @@ export function getReportRangeLabel(range: ReportRange): string {
   }
 
   return ui.reports.rangeLabels[range.preset];
+}
+
+/**
+ * What to call a tyre's position, which depends on how many wheels the axle has.
+ *
+ * The tyre tracker stores a two-wheeler's tyres in the `front_left` and
+ * `rear_left` fields rather than adding columns for them, so reading those
+ * fields literally labels a scooter's tyres "Front left" and "Rear left".
+ */
+export function getTyrePositionLabel(
+  position: ReportTyre["position"],
+  vehicleType: VehicleType,
+): string {
+  const labels =
+    vehicleType === "motorcycle"
+      ? ui.reports.tyrePositionTwoWheeler
+      : ui.reports.tyrePosition;
+
+  return labels[position];
 }
 
 /**

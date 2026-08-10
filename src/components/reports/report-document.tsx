@@ -20,6 +20,7 @@ import {
   formatPdfMoney,
   formatPdfNumber,
   getPdfCurrencyLabel,
+  getTyrePositionLabel,
   toPdfText,
 } from "@/utils/reports/report-format";
 import {
@@ -261,7 +262,7 @@ function VehicleCards({
   vehicle: ReportVehicleProfile;
   dataset: ReportDataset;
 }) {
-  const { vehicleColumns, vehicleType, powertrain, summary } = ui.reports;
+  const { vehicleColumns, vehicleType, summary } = ui.reports;
   const { distanceUnit, fuelEfficiencyUnit, evEfficiencyUnit } = dataset.units;
 
   const efficiencyCards = [
@@ -292,7 +293,9 @@ function VehicleCards({
 
   const cards = [
     { label: vehicleColumns.type, value: vehicleType[vehicle.vehicleType] },
-    { label: vehicleColumns.powertrain, value: powertrain[vehicle.powertrain] },
+    // Names the fuel where the owner has said, rather than the old
+    // "Petrol / Diesel", which asserted a distinction nothing recorded.
+    { label: vehicleColumns.powertrain, value: vehicle.energyDescription },
     {
       label: vehicleColumns.distanceCovered(distanceUnit),
       value:
@@ -319,7 +322,7 @@ function VehicleExtras({
   vehicle: ReportVehicleProfile;
   dataset: ReportDataset;
 }) {
-  const { tyreColumns, tyrePosition } = ui.reports;
+  const { tyreColumns } = ui.reports;
   const { distanceUnit } = dataset.units;
 
   return (
@@ -336,7 +339,7 @@ function VehicleExtras({
               { label: tyreColumns.treadDepth, width: 15, align: "right" },
             ]}
             rows={vehicle.tyres.map((tyre) => [
-              tyrePosition[tyre.position],
+              getTyrePositionLabel(tyre.position, vehicle.vehicleType),
               tyre.brand,
               tyre.installedDate == null ? null : formatTableDate(tyre.installedDate),
               tyre.installedOdometer == null ? null : formatPdfNumber(tyre.installedOdometer),

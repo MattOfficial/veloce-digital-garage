@@ -6,6 +6,28 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Vehicles record what they burn (2026-08-10)
+
+- **The report claimed a distinction the app could not make.** Every combustion vehicle was
+  labelled "Petrol / Diesel", because `powertrain` only says whether an engine is involved —
+  nothing anywhere recorded which fuel, and `engine_type` is free text for "2.0L Inline-4".
+- New nullable `fuel_type` on vehicles (petrol / diesel / CNG / LPG, constrained in the
+  database), asked for in vehicle setup and in the specs editor, and only on powertrains that
+  burn something. CNG and LPG are in from the start because they are ordinary here.
+- Nullable on purpose: existing vehicles predate the question, so they stay unanswered and
+  every surface falls back to the setup form's own wording rather than guessing petrol. A
+  wrong fuel on a report is worse than no fuel. Switching a vehicle to electric clears it, so
+  a converted row cannot keep showing a stale "Diesel".
+- **Every vehicle now gets a garage badge**, not just electric and hybrid ones — a petrol car
+  previously had none at all, which read as missing data beside an EV in the same garage. Each
+  kind has its own colour and icon, and every badge carries its label, so colour never has to
+  carry the meaning alone.
+- `getVehicleEnergySummary` is the single source for all of it, so the garage badge and the
+  report cannot drift apart the way they just did.
+- **Two-wheeler tyres said "Front left" and "Rear left".** The tyre tracker stores a
+  two-wheeler's tyres in the left-hand fields rather than adding columns for them, and the
+  report read those fields literally. It now asks the vehicle how many wheels it has.
+
 ### Distance dropped every kilometre before the first logged record (2026-08-10)
 
 - **Bug:** distance was measured between the highest and lowest *logged* odometer readings in

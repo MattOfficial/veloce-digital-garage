@@ -6,6 +6,7 @@ import {
   formatPdfNumber,
   getPdfCurrencyLabel,
   getReportRangeLabel,
+  getTyrePositionLabel,
   toPdfText,
   isReportFormat,
   REPORT_MIME_TYPES,
@@ -87,6 +88,25 @@ describe("getReportRangeLabel", () => {
 
   it("spells out a custom window, since 'Custom range' says nothing", () => {
     expect(getReportRangeLabel(RANGE)).toBe("01/01/2026 – 10/08/2026");
+  });
+});
+
+describe("getTyrePositionLabel", () => {
+  it("names each corner on a four-wheeler", () => {
+    expect(getTyrePositionLabel("front_left", "car")).toBe("Front left");
+    expect(getTyrePositionLabel("rear_right", "truck")).toBe("Rear right");
+  });
+
+  it("drops the side on a two-wheeler", () => {
+    // The tracker stores a scooter's tyres in the left-hand fields, so reading
+    // them literally called them "Front left" and "Rear left".
+    expect(getTyrePositionLabel("front_left", "motorcycle")).toBe("Front");
+    expect(getTyrePositionLabel("rear_left", "motorcycle")).toBe("Rear");
+  });
+
+  it("keeps the set-level label whatever the vehicle", () => {
+    expect(getTyrePositionLabel("all", "car")).toBe("All wheels");
+    expect(getTyrePositionLabel("all", "motorcycle")).toBe("All wheels");
   });
 });
 

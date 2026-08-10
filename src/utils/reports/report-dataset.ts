@@ -3,6 +3,7 @@ import { eachMonthOfInterval, format, parseISO } from "date-fns";
 import type {
   ChargeSource,
   FuelLog,
+  FuelType,
   FuelLogEnergyType,
   FuelLogFillType,
   Powertrain,
@@ -11,6 +12,7 @@ import type {
   VehicleWithLogs,
 } from "@/types/database";
 import { isFullChargeSession } from "@/utils/charge-session";
+import { getVehicleEnergySummary } from "@/utils/vehicle-energy";
 import {
   convertEvEfficiency,
   convertFuelEfficiency,
@@ -149,6 +151,9 @@ export type ReportVehicleProfile = {
   color: string | null;
   vehicleType: VehicleType;
   powertrain: Powertrain;
+  fuelType: FuelType | null;
+  /** What to call the way this vehicle is powered: "Diesel", "EV", "PHEV · Petrol". */
+  energyDescription: string;
   engineType: string | null;
   transmission: string | null;
   batteryCapacityKwh: number | null;
@@ -636,6 +641,8 @@ function buildVehicleProfile(
     color: nonEmpty(vehicle.color),
     vehicleType: vehicle.vehicle_type,
     powertrain: vehicle.powertrain,
+    fuelType: vehicle.fuel_type,
+    energyDescription: getVehicleEnergySummary(vehicle).description,
     engineType: nonEmpty(vehicle.engine_type),
     transmission: nonEmpty(vehicle.transmission),
     batteryCapacityKwh: finiteOrNull(vehicle.battery_capacity_kwh),

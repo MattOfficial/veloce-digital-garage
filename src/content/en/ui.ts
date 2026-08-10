@@ -1465,6 +1465,17 @@ export const ui = {
       hev: "Hybrid (HEV)",
       rex: "Range Extender (REX)",
     },
+    fuelType: "Fuel",
+    fuelTypePlaceholder: "Select fuel",
+    /** Only asked for on a powertrain that burns something. */
+    fuelTypeDescription: "What the engine runs on. Shown on reports and in your garage.",
+    fuelTypeOptions: {
+      petrol: "Petrol",
+      diesel: "Diesel",
+      cng: "CNG",
+      lpg: "LPG",
+    },
+    fuelTypeUnset: "Not set",
     year: "Year",
     baselineDistance: (unit: string) => `Initial Distance (${unit})`,
     batteryCapacity: "Battery Capacity (kWh)",
@@ -1609,6 +1620,18 @@ export const ui = {
       front_right: "Front right",
       rear_left: "Rear left",
       rear_right: "Rear right",
+    },
+    /**
+     * A two-wheeler has one tyre per axle. The tyre tracker stores them in the
+     * left-hand fields rather than adding columns, so a report reading those
+     * fields literally called them "Front left" and "Rear left" on a scooter.
+     */
+    tyrePositionTwoWheeler: {
+      all: "All wheels",
+      front_left: "Front",
+      front_right: "Front",
+      rear_left: "Rear",
+      rear_right: "Rear",
     },
     vehicleType: {
       car: "Car",
