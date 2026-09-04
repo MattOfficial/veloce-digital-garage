@@ -334,7 +334,7 @@ export function ChargeSessionForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-2">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 items-start gap-4">
           <FormField
             control={form.control}
             name="date"
@@ -458,7 +458,7 @@ export function ChargeSessionForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 items-start gap-4">
           <p className="col-span-2 -mb-1 text-xs text-muted-foreground">
             {chargedToFull
               ? ui.ev.chargeModal.labels.socOptionalFull
@@ -516,7 +516,7 @@ export function ChargeSessionForm({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 items-start gap-4">
           {pricingMode === "per_kwh" && (
             <>
               <FormField
@@ -649,7 +649,7 @@ export function ChargeSessionForm({
         </div>
 
         {!isHome && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 items-start gap-4">
             <FormField
               control={form.control}
               name="charger_network"
@@ -705,7 +705,7 @@ export function ChargeSessionForm({
           </Button>
 
           {showExtras && (
-            <div className="mt-3 grid grid-cols-2 gap-4">
+            <div className="mt-3 grid grid-cols-2 items-start gap-4">
               {pricingMode !== "flat" && (
                 <FormField
                   control={form.control}

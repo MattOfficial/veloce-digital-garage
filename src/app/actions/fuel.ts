@@ -227,8 +227,16 @@ function resolveChargeRow(
             taxPercent: payload.tax_percent,
         }).total;
 
+    // "Charged to 100%" is a direct assertion, not a guess, so it is worth
+    // recording as the real end reading — not just the flag `isFullChargeSession`
+    // already falls back to. Without it, a segment or a pack-capacity
+    // measurement that needs the literal percentage (not just "was this full")
+    // can never use this session, even though the owner told us the answer.
+    const end_soc = payload.end_soc ?? (payload.charged_to_full ? 100 : null);
+
     return {
         ...payload,
+        end_soc,
         fuel_volume: energyKwh,
         total_cost,
         energy_basis: basis,

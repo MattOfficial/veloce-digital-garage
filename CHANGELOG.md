@@ -6,6 +6,28 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Charged-to-full sessions were invisible to segments and capacity, not just cost (2026-09-04)
+
+- **"Charged to 100%" was only ever recorded as a flag, never as the reading it asserts.**
+  `resolveSessionEnergy` (previous entry) now treats the flag as an implicit `endSoc: 100` for
+  the *energy calculation*, but the saved row still left `end_soc` null — so
+  `buildChargeSegments`'s SoC-delta chaining, `measurePackCapacity`, and `estimateChargingLoss`,
+  which all read the literal column rather than the flag, could never use these sessions. For an
+  owner who charges to full via the toggle rather than typing "100", that's most or all of their
+  history, which is why the Trends page's charging cost per km card stayed empty even with
+  fixes in place. `resolveChargeRow` now writes `end_soc = 100` whenever the flag is set and
+  nothing more specific was entered, and a backfill migration
+  (`20260904000000_backfill_charged_to_full_end_soc.sql`) does the same for sessions already
+  logged before this fix — idempotent, and it never touches a row that already has a real
+  reading.
+- **Fixed a layout bug in the charge modal's "Units consumed" / "Cost per unit" row.**
+  `FormItem` is itself a CSS grid (`grid gap-2`), so nesting it inside another `grid-cols-2` row
+  means the outer grid's default `stretch` alignment pushes a shorter sibling's input down
+  whenever the other field grows taller — which the new auto-calculated-units hint (previous
+  entry) started doing on every charge with percentages filled in. All of the modal's
+  `grid-cols-2` rows now set `items-start` so each field keeps its own height instead of
+  stretching to match its tallest neighbour.
+
 ### Three EV charging bugs (2026-09-04)
 
 - **The Trends page's "Charging cost per km" card never showed a figure, however much data
