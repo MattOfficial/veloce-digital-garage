@@ -6,6 +6,19 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Charging cost per km still needed a lifetime fallback (2026-09-04)
+
+- **The Trends page's charging cost per km card stayed empty even after the segment engine and
+  the `end_soc` backfill.** `buildChargeSegments` needs *two* sessions that chain — either
+  consecutive SoC readings or two sessions both marked full — and a month of real charging can
+  easily not produce one yet (irregular top-ups, or sessions that don't land back to back). The
+  card was reading `buildChargeSegments` directly, which has no fallback for that case.
+  `summarizeChargeEfficiency` (`ev-energy-analytics.ts`) already has one — a lifetime
+  total-cost-over-total-distance ratio, coarse but available from a single logged charge — and
+  it's what the Energy & Battery page's own cost-per-km tile already reads. The Trends card now
+  reads the same function, with the "cost over time" chart still built from segments directly
+  since a lifetime ratio has no trend to plot.
+
 ### Charged-to-full sessions were invisible to segments and capacity, not just cost (2026-09-04)
 
 - **"Charged to 100%" was only ever recorded as a flag, never as the reading it asserts.**

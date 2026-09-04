@@ -40,7 +40,11 @@ import {
   buildFuelAnalytics,
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
-import { buildChargeSegments } from "@/utils/ev-energy-analytics";
+import {
+  buildChargeSegments,
+  summarizeChargeEfficiency,
+} from "@/utils/ev-energy-analytics";
+import { getVehicleLifetimeDistanceSummary } from "@/utils/distance-analytics";
 import { canChooseEnergyType } from "@/utils/energy-type";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 import { formatMoneyCompact, formatMoneyExact } from "@/utils/formatting";
@@ -148,16 +152,48 @@ export function CostTrendsPanel({
   }, [activeAnalysisMode, analytics.fuel.closed_segments, vehicle.fuel_logs]);
 
   const recentSegments = activeCostSegments.slice(-4);
-  const energyDistance = recentSegments.reduce(
+  const recentDistance = recentSegments.reduce(
     (total, segment) => total + segment.distance,
     0,
   );
-  const energyCost = recentSegments.reduce(
+  const recentCost = recentSegments.reduce(
     (total, segment) => total + segment.cost,
     0,
   );
+
+  // A charge segment needs two sessions that chain — one owner's history for
+  // a whole month can genuinely have none yet, e.g. every session so far was
+  // logged with "charged to 100%" and nothing else lines up back to back. A
+  // single logged charge already says something, though: total cost over
+  // total distance, coarse but not nothing. See `summarizeChargeEfficiency`'s
+  // own doc comment on why the lifetime ratio exists.
+  const chargeEfficiency = useMemo(
+    () =>
+      summarizeChargeEfficiency(vehicle.fuel_logs ?? [], {
+        lifetimeDistance: getVehicleLifetimeDistanceSummary(vehicle).value,
+      }),
+    [vehicle],
+  );
+
   const energyCostPerDistance =
-    energyDistance > 0 ? energyCost / energyDistance : null;
+    activeAnalysisMode === "charge"
+      ? chargeEfficiency.costPerDistance
+      : recentDistance > 0
+        ? recentCost / recentDistance
+        : null;
+
+  const energyCostPerDistanceHint =
+    activeAnalysisMode === "charge"
+      ? chargeEfficiency.basis === "lifetime"
+        ? ui.ev.efficiency.lifetimeBasis
+        : ui.insights.energyCostPerDistanceDescription(
+            "charge",
+            chargeEfficiency.usableSegmentCount,
+          )
+      : ui.insights.energyCostPerDistanceDescription(
+          "fuel",
+          recentSegments.length,
+        );
 
   const smartPrediction = calculateSmartNextRefillFromHistory(
     analytics[activeAnalysisMode].logs.map((log) => log.date),
@@ -314,10 +350,7 @@ export function CostTrendsPanel({
                 ? ui.common.emptyValue
                 : formatCurrency(energyCostPerDistance)
             }
-            hint={ui.insights.energyCostPerDistanceDescription(
-              activeAnalysisMode,
-              recentSegments.length,
-            )}
+            hint={energyCostPerDistanceHint}
           />
         </MotionWrapper>
       </div>
