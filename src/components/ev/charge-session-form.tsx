@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -115,6 +115,12 @@ export function ChargeSessionForm({
       (log.session_fee != null || log.idle_minutes != null || log.tax_percent != null),
   );
   const [overrideCost, setOverrideCost] = useState(false);
+  // A units figure the percentages produced is free to keep recalculating; one
+  // the owner typed themselves — or that was saved as a real meter reading —
+  // is a fact, not a guess to overwrite.
+  const [unitsAutoFilled, setUnitsAutoFilled] = useState(
+    log == null || log.energy_basis === "soc_derived",
+  );
 
   const usableBatteryKwh = vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh;
 
@@ -151,11 +157,16 @@ export function ChargeSessionForm({
   const preview = useMemo(() => {
     const values = toNumericFields(watched, NUMERIC_FIELDS);
 
+    // A units figure this effect wrote in is a restatement of the
+    // percentages, not an independent reading — read as metered here it
+    // would make the session look measured when it is still a calculation.
     const energy = resolveSessionEnergy({
       pricingMode,
-      energyKwh: pricingMode === "per_kwh" ? values.fuel_volume : null,
+      energyKwh:
+        pricingMode === "per_kwh" && !unitsAutoFilled ? values.fuel_volume : null,
       startSoc: values.start_soc,
       endSoc: values.end_soc,
+      chargedToFull,
       usableBatteryKwh,
     });
 
@@ -193,7 +204,38 @@ export function ChargeSessionForm({
           ? impliedSocDelta
           : null,
     };
-  }, [overrideCost, pricingMode, usableBatteryKwh, watched]);
+  }, [chargedToFull, overrideCost, pricingMode, unitsAutoFilled, usableBatteryKwh, watched]);
+
+  // The percentages are what most owners actually read off the dash, so once
+  // they imply a units figure it belongs in the field the owner would
+  // otherwise have to compute themselves — see docs/ev-charging-redesign.md.
+  useEffect(() => {
+    if (pricingMode !== "per_kwh" || !unitsAutoFilled) return;
+
+    const socOnly = resolveSessionEnergy({
+      pricingMode,
+      energyKwh: null,
+      startSoc: toOptionalNumber(watched.start_soc),
+      endSoc: toOptionalNumber(watched.end_soc),
+      chargedToFull,
+      usableBatteryKwh,
+    });
+
+    if (socOnly.energyKwh == null) return;
+
+    const rounded = Math.round(socOnly.energyKwh * 100) / 100;
+    if (form.getValues("fuel_volume") !== rounded) {
+      form.setValue("fuel_volume", rounded);
+    }
+  }, [
+    chargedToFull,
+    form,
+    pricingMode,
+    unitsAutoFilled,
+    usableBatteryKwh,
+    watched.end_soc,
+    watched.start_soc,
+  ]);
 
   function onSubmit(formValues: ChargeFormValues) {
     if (
@@ -211,9 +253,12 @@ export function ChargeSessionForm({
     const submittedEnergy = resolveSessionEnergy({
       pricingMode: formValues.pricing_mode,
       energyKwh:
-        formValues.pricing_mode === "per_kwh" ? formValues.fuel_volume : null,
+        formValues.pricing_mode === "per_kwh" && !unitsAutoFilled
+          ? formValues.fuel_volume
+          : null,
       startSoc: formValues.start_soc,
       endSoc: formValues.end_soc,
+      chargedToFull: formValues.charged_to_full,
       usableBatteryKwh,
     });
 
@@ -238,7 +283,10 @@ export function ChargeSessionForm({
     formData.append("pricing_mode", formValues.pricing_mode);
     formData.append("charged_to_full", String(formValues.charged_to_full));
 
-    if (formValues.pricing_mode === "per_kwh") {
+    // An auto-filled figure is a restatement of the percentages already being
+    // sent; omitting it lets the server derive the same number and tag the
+    // session as SoC-derived rather than metered.
+    if (formValues.pricing_mode === "per_kwh" && !unitsAutoFilled) {
       appendOptional(formData, "fuel_volume", formValues.fuel_volume);
     }
 
@@ -286,7 +334,7 @@ export function ChargeSessionForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-2">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 items-start gap-4">
           <FormField
             control={form.control}
             name="date"
@@ -373,7 +421,102 @@ export function ChargeSessionForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Percentages ahead of the units they imply: fill these first and
+            the per-kWh units field below arrives already calculated. Asked
+            before the percentages, because answering yes is what makes them
+            unnecessary: a full charge is a reference point on its own. */}
+        <FormField
+          control={form.control}
+          name="charged_to_full"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/40 p-4 dark:border-white/5 dark:bg-white/5">
+              <div>
+                <FormLabel className="text-sm">
+                  {ui.ev.chargeModal.labels.chargedToFull}
+                </FormLabel>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {chargedToFull
+                    ? ui.ev.chargeModal.labels.chargedToFullOn
+                    : ui.ev.chargeModal.labels.chargedToFullHelper}
+                </p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked);
+                    // The end field is about to disappear; leaving a stale
+                    // value behind would submit a percentage the user can no
+                    // longer see or correct.
+                    if (checked) {
+                      form.setValue("end_soc", undefined);
+                    }
+                  }}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 items-start gap-4">
+          <p className="col-span-2 -mb-1 text-xs text-muted-foreground">
+            {chargedToFull
+              ? ui.ev.chargeModal.labels.socOptionalFull
+              : ui.ev.chargeModal.labels.socOptional}
+          </p>
+
+          <FormField
+            control={form.control}
+            name="start_soc"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{ui.ev.chargeModal.labels.startSoc}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    className="rounded-xl"
+                    placeholder={ui.ev.chargeModal.placeholders.soc}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* A full charge already states the end, so asking again is just a
+              second chance to contradict yourself. */}
+          {!chargedToFull && (
+            <FormField
+              control={form.control}
+              name="end_soc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{ui.ev.chargeModal.labels.endSoc}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      className="rounded-xl"
+                      placeholder={ui.ev.chargeModal.placeholders.soc}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 items-start gap-4">
           {pricingMode === "per_kwh" && (
             <>
               <FormField
@@ -390,8 +533,19 @@ export function ChargeSessionForm({
                         placeholder={ui.ev.chargeModal.placeholders.units}
                         {...field}
                         value={field.value ?? ""}
+                        onChange={(event) => {
+                          field.onChange(event);
+                          // Typing a figure in overrides the calculation;
+                          // clearing the field hands it back.
+                          setUnitsAutoFilled(event.target.value.trim() === "");
+                        }}
                       />
                     </FormControl>
+                    {unitsAutoFilled && field.value != null && (
+                      <p className="text-xs text-muted-foreground">
+                        {ui.ev.chargeModal.labels.unitsCalculated}
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -494,101 +648,8 @@ export function ChargeSessionForm({
 
         </div>
 
-        {/* Asked before the percentages, because answering yes is what makes
-            them unnecessary: a full charge is a reference point on its own. */}
-        <FormField
-          control={form.control}
-          name="charged_to_full"
-          render={({ field }) => (
-            <FormItem className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-secondary/40 p-4 dark:border-white/5 dark:bg-white/5">
-              <div>
-                <FormLabel className="text-sm">
-                  {ui.ev.chargeModal.labels.chargedToFull}
-                </FormLabel>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {chargedToFull
-                    ? ui.ev.chargeModal.labels.chargedToFullOn
-                    : ui.ev.chargeModal.labels.chargedToFullHelper}
-                </p>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={(checked: boolean) => {
-                    field.onChange(checked);
-                    // The end field is about to disappear; leaving a stale
-                    // value behind would submit a percentage the user can no
-                    // longer see or correct.
-                    if (checked) {
-                      form.setValue("end_soc", undefined);
-                    }
-                  }}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <p className="col-span-2 -mb-1 text-xs text-muted-foreground">
-            {chargedToFull
-              ? ui.ev.chargeModal.labels.socOptionalFull
-              : ui.ev.chargeModal.labels.socOptional}
-          </p>
-
-          <FormField
-            control={form.control}
-            name="start_soc"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{ui.ev.chargeModal.labels.startSoc}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    max="100"
-                    className="rounded-xl"
-                    placeholder={ui.ev.chargeModal.placeholders.soc}
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* A full charge already states the end, so asking again is just a
-              second chance to contradict yourself. */}
-          {!chargedToFull && (
-            <FormField
-              control={form.control}
-              name="end_soc"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{ui.ev.chargeModal.labels.endSoc}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="100"
-                      className="rounded-xl"
-                      placeholder={ui.ev.chargeModal.placeholders.soc}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
-
         {!isHome && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 items-start gap-4">
             <FormField
               control={form.control}
               name="charger_network"
@@ -644,7 +705,7 @@ export function ChargeSessionForm({
           </Button>
 
           {showExtras && (
-            <div className="mt-3 grid grid-cols-2 gap-4">
+            <div className="mt-3 grid grid-cols-2 items-start gap-4">
               {pricingMode !== "flat" && (
                 <FormField
                   control={form.control}
@@ -791,7 +852,7 @@ export function ChargeSessionForm({
             <p className="text-xs text-amber-700 dark:text-amber-200">
               {usableBatteryKwh == null
                 ? ui.ev.chargeModal.summary.needsBatterySize
-                : ui.ev.chargeModal.summary.needsSoc}
+                : ui.ev.chargeModal.summary.needsSoc(chargedToFull)}
             </p>
           )}
 

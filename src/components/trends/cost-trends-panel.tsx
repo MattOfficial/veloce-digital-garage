@@ -40,6 +40,11 @@ import {
   buildFuelAnalytics,
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
+import {
+  buildChargeSegments,
+  summarizeChargeEfficiency,
+} from "@/utils/ev-energy-analytics";
+import { getVehicleLifetimeDistanceSummary } from "@/utils/distance-analytics";
 import { canChooseEnergyType } from "@/utils/energy-type";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 import { formatMoneyCompact, formatMoneyExact } from "@/utils/formatting";
@@ -121,18 +126,74 @@ export function CostTrendsPanel({
         : "charge"
     : defaultAnalysisMode;
 
-  const activeSegments = analytics[activeAnalysisMode].closed_segments;
-  const recentSegments = activeSegments.slice(-4);
-  const energyDistance = recentSegments.reduce(
+  // Petrol efficiency closes on the full-tank method, which `fuel-analytics.ts`
+  // already computes. A vehicle charged at home most nights rarely reaches a
+  // "full charge" the same way, so `buildFuelAnalytics` deliberately never
+  // closes a charge segment — see its `buildChargeStream` comment. Charging
+  // cost per km instead comes from the SoC-corrected engine that segments
+  // driving between charge sessions without needing a full charge at all;
+  // see docs/ev-charging-redesign.md.
+  const activeCostSegments = useMemo(() => {
+    if (activeAnalysisMode === "fuel") {
+      return analytics.fuel.closed_segments.map((segment) => ({
+        date: segment.closing_log_date,
+        distance: segment.distance,
+        cost: segment.cost,
+      }));
+    }
+
+    return buildChargeSegments(vehicle.fuel_logs ?? [])
+      .filter((segment) => segment.usable)
+      .map((segment) => ({
+        date: segment.endDate,
+        distance: segment.distance,
+        cost: segment.cost,
+      }));
+  }, [activeAnalysisMode, analytics.fuel.closed_segments, vehicle.fuel_logs]);
+
+  const recentSegments = activeCostSegments.slice(-4);
+  const recentDistance = recentSegments.reduce(
     (total, segment) => total + segment.distance,
     0,
   );
-  const energyCost = recentSegments.reduce(
+  const recentCost = recentSegments.reduce(
     (total, segment) => total + segment.cost,
     0,
   );
+
+  // A charge segment needs two sessions that chain — one owner's history for
+  // a whole month can genuinely have none yet, e.g. every session so far was
+  // logged with "charged to 100%" and nothing else lines up back to back. A
+  // single logged charge already says something, though: total cost over
+  // total distance, coarse but not nothing. See `summarizeChargeEfficiency`'s
+  // own doc comment on why the lifetime ratio exists.
+  const chargeEfficiency = useMemo(
+    () =>
+      summarizeChargeEfficiency(vehicle.fuel_logs ?? [], {
+        lifetimeDistance: getVehicleLifetimeDistanceSummary(vehicle).value,
+      }),
+    [vehicle],
+  );
+
   const energyCostPerDistance =
-    energyDistance > 0 ? energyCost / energyDistance : null;
+    activeAnalysisMode === "charge"
+      ? chargeEfficiency.costPerDistance
+      : recentDistance > 0
+        ? recentCost / recentDistance
+        : null;
+
+  const energyCostPerDistanceHint =
+    activeAnalysisMode === "charge"
+      ? chargeEfficiency.basis === "lifetime"
+        ? ui.ev.efficiency.lifetimeBasis
+        : ui.insights.energyCostPerDistanceDescription(
+            "charge",
+            chargeEfficiency.usableSegmentCount,
+          )
+      : ui.insights.energyCostPerDistanceDescription(
+          "fuel",
+          recentSegments.length,
+        );
 
   const smartPrediction = calculateSmartNextRefillFromHistory(
     analytics[activeAnalysisMode].logs.map((log) => log.date),
@@ -168,8 +229,8 @@ export function CostTrendsPanel({
       ].sort((left, right) => right.value - left.value)[0]
     : null;
 
-  const energyTrendData = activeSegments.slice(-8).map((segment) => ({
-    date: format(parseISO(segment.closing_log_date.slice(0, 10)), "MMM d"),
+  const energyTrendData = activeCostSegments.slice(-8).map((segment) => ({
+    date: format(parseISO(segment.date.slice(0, 10)), "MMM d"),
     value: segment.distance > 0 ? segment.cost / segment.distance : null,
   }));
 
@@ -289,10 +350,7 @@ export function CostTrendsPanel({
                 ? ui.common.emptyValue
                 : formatCurrency(energyCostPerDistance)
             }
-            hint={ui.insights.energyCostPerDistanceDescription(
-              activeAnalysisMode,
-              recentSegments.length,
-            )}
+            hint={energyCostPerDistanceHint}
           />
         </MotionWrapper>
       </div>

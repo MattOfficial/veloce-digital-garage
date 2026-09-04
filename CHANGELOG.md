@@ -6,7 +6,77 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
-### Vehicles record what they burn (2026-08-10)
+### Docs caught up to the charging redesign (2026-09-04)
+
+- **The README still described the design `ev-charging-redesign.md` replaced.** It said home
+  charging is inferred and only public sessions are logged — the opposite of current behaviour,
+  where every charge is a logged event. Rewrote the EV Tracking section and pointed it at the
+  current doc; `ev-redesign.md` stays linked for the battery-health half only.
+- **`ev-charging-redesign.md`'s segment formula assumed `end_soc` is always populated,** which
+  wasn't true for a "charged to full" session until the previous commit's fix. Documented that
+  `resolveChargeRow` writes the literal `100` for that case, not just the flag, and why that's
+  what lets those sessions feed the primary SoC-delta method instead of only the degraded
+  full-charge-anchor fallback.
+
+### Charging cost per km still needed a lifetime fallback (2026-09-04)
+
+- **The Trends page's charging cost per km card stayed empty even after the segment engine and
+  the `end_soc` backfill.** `buildChargeSegments` needs *two* sessions that chain — either
+  consecutive SoC readings or two sessions both marked full — and a month of real charging can
+  easily not produce one yet (irregular top-ups, or sessions that don't land back to back). The
+  card was reading `buildChargeSegments` directly, which has no fallback for that case.
+  `summarizeChargeEfficiency` (`ev-energy-analytics.ts`) already has one — a lifetime
+  total-cost-over-total-distance ratio, coarse but available from a single logged charge — and
+  it's what the Energy & Battery page's own cost-per-km tile already reads. The Trends card now
+  reads the same function, with the "cost over time" chart still built from segments directly
+  since a lifetime ratio has no trend to plot.
+
+### Charged-to-full sessions were invisible to segments and capacity, not just cost (2026-09-04)
+
+- **"Charged to 100%" was only ever recorded as a flag, never as the reading it asserts.**
+  `resolveSessionEnergy` (previous entry) now treats the flag as an implicit `endSoc: 100` for
+  the *energy calculation*, but the saved row still left `end_soc` null — so
+  `buildChargeSegments`'s SoC-delta chaining, `measurePackCapacity`, and `estimateChargingLoss`,
+  which all read the literal column rather than the flag, could never use these sessions. For an
+  owner who charges to full via the toggle rather than typing "100", that's most or all of their
+  history, which is why the Trends page's charging cost per km card stayed empty even with
+  fixes in place. `resolveChargeRow` now writes `end_soc = 100` whenever the flag is set and
+  nothing more specific was entered, and a backfill migration
+  (`20260904000000_backfill_charged_to_full_end_soc.sql`) does the same for sessions already
+  logged before this fix — idempotent, and it never touches a row that already has a real
+  reading.
+- **Fixed a layout bug in the charge modal's "Units consumed" / "Cost per unit" row.**
+  `FormItem` is itself a CSS grid (`grid gap-2`), so nesting it inside another `grid-cols-2` row
+  means the outer grid's default `stretch` alignment pushes a shorter sibling's input down
+  whenever the other field grows taller — which the new auto-calculated-units hint (previous
+  entry) started doing on every charge with percentages filled in. All of the modal's
+  `grid-cols-2` rows now set `items-start` so each field keeps its own height instead of
+  stretching to match its tallest neighbour.
+
+### Three EV charging bugs (2026-09-04)
+
+- **The Trends page's "Charging cost per km" card never showed a figure, however much data
+  existed.** It read `closed_segments` off `fuel-analytics.ts`, whose charge stream
+  deliberately never closes a segment — the full-tank method it uses doesn't apply to a
+  vehicle charged at home most nights. The card now builds segments with the SoC-corrected
+  engine from `ev-energy-analytics.ts` (already used on the Energy & Battery page), which
+  segments the driving between charge sessions without needing a full charge. The "Charging
+  cost over time" trend chart read the same dead array and is fixed the same way.
+- **The charge modal computed units from the battery percentages but never showed them.** The
+  "Units consumed (kWh)" field now fills in with the calculated figure as soon as the
+  percentages resolve it, and stays editable — typing a real meter reading overrides the
+  calculation, and clearing the field hands it back. Submitting an untouched calculated figure
+  now omits it from the request so the server derives the same number itself and tags the
+  session `soc_derived` rather than `metered`, so pack-capacity and charging-loss measurements
+  (which require a real meter reading) don't get corrupted by a number that was never metered.
+- **"Charged to 100%" didn't feed its own assumption into the maths.** Turning it on hides the
+  end-percentage field but `resolveSessionEnergy` still asked for a numeric `endSoc`, so a
+  session with only a start percentage resolved to no energy and no cost. It now treats
+  `chargedToFull` as an implicit end reading of 100 wherever it's missing, on both the preview
+  and the server.
+- Reordered the charge modal so "Charged to 100%" and the battery percentages come before the
+  pricing fields — filling percentages first is what makes the units field arrive already
+  calculated, so the layout now matches that order.
 
 - **The report claimed a distinction the app could not make.** Every combustion vehicle was
   labelled "Petrol / Diesel", because `powertrain` only says whether an engine is involved —

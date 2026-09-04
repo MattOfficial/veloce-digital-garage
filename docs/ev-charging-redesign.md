@@ -54,6 +54,14 @@ C_used   = cost(i+1)   × ΔS_used / ΔS_added         money that driving cost
 The ratio `ΔS_used / ΔS_added` is the whole trick: it rescales a session's energy to cover
 exactly the driving that preceded it, whatever SoC either session started or stopped at.
 
+The formula needs `end_soc` on every session, but the UI never makes the owner type "100" —
+toggling "charged to full" hides that field. The server resolves the gap itself: a session
+saved with the flag set and no more specific reading gets `end_soc = 100` written at the
+database layer, not just the boolean. Without that, a session logged as "charged to full" is
+invisible to this formula (it can only close a segment through the degraded full-charge-anchor
+method in (b), and only when the *next* session is also full) even though the owner told us
+exactly what we needed to know.
+
 **When both sessions happen to end at 100%, `ΔS_used == ΔS_added`, the ratio is 1, and the
 formula collapses to `d / energy(i+1)` — the full-tank method exactly.** Charging to 100% is
 therefore a *special case* of the general rule, not a precondition for it. Requiring it would
@@ -174,11 +182,17 @@ total is the record.** Analytics read `total_cost`, always.
 | `idle_minutes` | numeric | `PARKING_TIME` quantity |
 | `idle_rate_per_minute` | numeric | `PARKING_TIME` rate |
 | `tax_percent` | numeric | GST and friends |
-| `charged_to_full` | boolean | the anchor flag from §2(b) |
+| `charged_to_full` | boolean | the anchor flag from §2(b), asserted by the owner |
 | `energy_basis` | text | `metered` \| `soc_derived` — which efficiency the row can feed |
 
 `fuel_volume` keeps holding resolved kWh. `total_cost` stays authoritative and is what every
 cost metric reads. `charge_source` (`home` / `ac_public` / `dc_fast` / `other`) is unchanged.
+
+`end_soc` is not purely what the owner typed: `resolveChargeRow` (`src/app/actions/fuel.ts`)
+writes `100` into it whenever `charged_to_full` is set and no more specific reading came in.
+That is not an inference — the toggle is a direct assertion — and it is what lets a
+charge-to-full session participate as `end_soc(i)` in the §2(a) formula rather than only as a
+full-charge anchor.
 
 `is_estimated` narrows to its real meaning: rows the app generated for a period with no
 sessions logged, not rows the user typed.

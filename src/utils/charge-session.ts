@@ -52,6 +52,8 @@ export interface ChargeSessionInput {
     taxPercent?: number | null;
     startSoc?: number | null;
     endSoc?: number | null;
+    /** The end percentage is known to be 100 even when nothing was typed into it. */
+    chargedToFull?: boolean | null;
     /** What the pack delivers between 100% and 0% indicated. */
     usableBatteryKwh?: number | null;
 }
@@ -94,7 +96,10 @@ export function resolveSessionEnergy(input: ChargeSessionInput): ResolvedChargeE
         return { energyKwh: metered, basis: "metered" };
     }
 
-    const socDelta = getSocDelta(input.startSoc, input.endSoc);
+    // "Charged to 100%" is itself the end reading — the field is hidden, not
+    // the fact unknown.
+    const endSoc = input.endSoc ?? (input.chargedToFull ? 100 : null);
+    const socDelta = getSocDelta(input.startSoc, endSoc);
     const usableKwh = positive(input.usableBatteryKwh);
 
     if (socDelta == null || usableKwh == null) {
