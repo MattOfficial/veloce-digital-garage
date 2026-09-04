@@ -101,6 +101,40 @@ describe("resolveSessionEnergy", () => {
 
     expect(result).toEqual({ energyKwh: 2, basis: "soc_derived" });
   });
+
+  it("treats a charge-to-full session as ending at 100% even with no end reading typed", () => {
+    const result = resolveSessionEnergy({
+      pricingMode: "per_kwh",
+      startSoc: 35,
+      endSoc: undefined,
+      chargedToFull: true,
+      usableBatteryKwh: 4,
+    });
+
+    expect(result).toEqual({ energyKwh: 2.6, basis: "soc_derived" });
+  });
+
+  it("prefers an explicit end reading over the charged-to-full assumption", () => {
+    const result = resolveSessionEnergy({
+      pricingMode: "per_kwh",
+      startSoc: 35,
+      endSoc: 90,
+      chargedToFull: true,
+      usableBatteryKwh: 4,
+    });
+
+    expect(result).toEqual({ energyKwh: 2.2, basis: "soc_derived" });
+  });
+
+  it("still has no energy when charged-to-full is on but the start reading is missing", () => {
+    expect(
+      resolveSessionEnergy({
+        pricingMode: "per_kwh",
+        chargedToFull: true,
+        usableBatteryKwh: 4,
+      }),
+    ).toEqual({ energyKwh: null, basis: null });
+  });
 });
 
 describe("calculateSessionCost", () => {

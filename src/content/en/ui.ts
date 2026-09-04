@@ -641,6 +641,8 @@ export const ui = {
         chargeSource: "Where",
         pricingMode: "Billed",
         units: "Units consumed (kWh)",
+        unitsCalculated:
+          "Calculated from your battery percentages. Edit to enter your own reading.",
         ratePerKwh: (currency: string) => `Cost per unit (${currency}/kWh)`,
         durationMinutes: "Minutes charged",
         ratePerMinute: (currency: string) => `Cost per minute (${currency})`,
@@ -687,7 +689,10 @@ export const ui = {
           `That is about ${delta.toFixed(0)}% of your battery, so you started around ${Math.max(0, start).toFixed(0)}%. Measured at the meter, so the real swing is a little smaller.`,
         needsBatterySize:
           "Set the usable battery size on this vehicle and we can work out the units from the percentages.",
-        needsSoc: "Add the start and end percentages to get the units for this session.",
+        needsSoc: (chargedToFull: boolean) =>
+          chargedToFull
+            ? "Add your starting battery percentage to get the units for this session."
+            : "Add the start and end percentages to get the units for this session.",
       },
       errors: {
         missingEnergy:

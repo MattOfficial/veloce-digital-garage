@@ -40,6 +40,7 @@ import {
   buildFuelAnalytics,
   type FuelAnalyticsMode,
 } from "@/utils/fuel-analytics";
+import { buildChargeSegments } from "@/utils/ev-energy-analytics";
 import { canChooseEnergyType } from "@/utils/energy-type";
 import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 import { formatMoneyCompact, formatMoneyExact } from "@/utils/formatting";
@@ -121,8 +122,32 @@ export function CostTrendsPanel({
         : "charge"
     : defaultAnalysisMode;
 
-  const activeSegments = analytics[activeAnalysisMode].closed_segments;
-  const recentSegments = activeSegments.slice(-4);
+  // Petrol efficiency closes on the full-tank method, which `fuel-analytics.ts`
+  // already computes. A vehicle charged at home most nights rarely reaches a
+  // "full charge" the same way, so `buildFuelAnalytics` deliberately never
+  // closes a charge segment — see its `buildChargeStream` comment. Charging
+  // cost per km instead comes from the SoC-corrected engine that segments
+  // driving between charge sessions without needing a full charge at all;
+  // see docs/ev-charging-redesign.md.
+  const activeCostSegments = useMemo(() => {
+    if (activeAnalysisMode === "fuel") {
+      return analytics.fuel.closed_segments.map((segment) => ({
+        date: segment.closing_log_date,
+        distance: segment.distance,
+        cost: segment.cost,
+      }));
+    }
+
+    return buildChargeSegments(vehicle.fuel_logs ?? [])
+      .filter((segment) => segment.usable)
+      .map((segment) => ({
+        date: segment.endDate,
+        distance: segment.distance,
+        cost: segment.cost,
+      }));
+  }, [activeAnalysisMode, analytics.fuel.closed_segments, vehicle.fuel_logs]);
+
+  const recentSegments = activeCostSegments.slice(-4);
   const energyDistance = recentSegments.reduce(
     (total, segment) => total + segment.distance,
     0,
@@ -168,8 +193,8 @@ export function CostTrendsPanel({
       ].sort((left, right) => right.value - left.value)[0]
     : null;
 
-  const energyTrendData = activeSegments.slice(-8).map((segment) => ({
-    date: format(parseISO(segment.closing_log_date.slice(0, 10)), "MMM d"),
+  const energyTrendData = activeCostSegments.slice(-8).map((segment) => ({
+    date: format(parseISO(segment.date.slice(0, 10)), "MMM d"),
     value: segment.distance > 0 ? segment.cost / segment.distance : null,
   }));
 

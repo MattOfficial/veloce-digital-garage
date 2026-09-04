@@ -6,7 +6,30 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
-### Vehicles record what they burn (2026-08-10)
+### Three EV charging bugs (2026-09-04)
+
+- **The Trends page's "Charging cost per km" card never showed a figure, however much data
+  existed.** It read `closed_segments` off `fuel-analytics.ts`, whose charge stream
+  deliberately never closes a segment — the full-tank method it uses doesn't apply to a
+  vehicle charged at home most nights. The card now builds segments with the SoC-corrected
+  engine from `ev-energy-analytics.ts` (already used on the Energy & Battery page), which
+  segments the driving between charge sessions without needing a full charge. The "Charging
+  cost over time" trend chart read the same dead array and is fixed the same way.
+- **The charge modal computed units from the battery percentages but never showed them.** The
+  "Units consumed (kWh)" field now fills in with the calculated figure as soon as the
+  percentages resolve it, and stays editable — typing a real meter reading overrides the
+  calculation, and clearing the field hands it back. Submitting an untouched calculated figure
+  now omits it from the request so the server derives the same number itself and tags the
+  session `soc_derived` rather than `metered`, so pack-capacity and charging-loss measurements
+  (which require a real meter reading) don't get corrupted by a number that was never metered.
+- **"Charged to 100%" didn't feed its own assumption into the maths.** Turning it on hides the
+  end-percentage field but `resolveSessionEnergy` still asked for a numeric `endSoc`, so a
+  session with only a start percentage resolved to no energy and no cost. It now treats
+  `chargedToFull` as an implicit end reading of 100 wherever it's missing, on both the preview
+  and the server.
+- Reordered the charge modal so "Charged to 100%" and the battery percentages come before the
+  pricing fields — filling percentages first is what makes the units field arrive already
+  calculated, so the layout now matches that order.
 
 - **The report claimed a distinction the app could not make.** Every combustion vehicle was
   labelled "Petrol / Diesel", because `powertrain` only says whether an engine is involved —

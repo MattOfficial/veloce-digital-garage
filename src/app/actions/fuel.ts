@@ -204,6 +204,7 @@ function resolveChargeRow(
         energyKwh: payload.fuel_volume,
         startSoc: payload.start_soc,
         endSoc: payload.end_soc,
+        chargedToFull: payload.charged_to_full,
         usableBatteryKwh,
     });
 
