@@ -6,6 +6,18 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Docs caught up to the charging redesign (2026-09-04)
+
+- **The README still described the design `ev-charging-redesign.md` replaced.** It said home
+  charging is inferred and only public sessions are logged — the opposite of current behaviour,
+  where every charge is a logged event. Rewrote the EV Tracking section and pointed it at the
+  current doc; `ev-redesign.md` stays linked for the battery-health half only.
+- **`ev-charging-redesign.md`'s segment formula assumed `end_soc` is always populated,** which
+  wasn't true for a "charged to full" session until the previous commit's fix. Documented that
+  `resolveChargeRow` writes the literal `100` for that case, not just the flag, and why that's
+  what lets those sessions feed the primary SoC-delta method instead of only the degraded
+  full-charge-anchor fallback.
+
 ### Charging cost per km still needed a lifetime fallback (2026-09-04)
 
 - **The Trends page's charging cost per km card stayed empty even after the segment engine and

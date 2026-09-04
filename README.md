@@ -16,9 +16,9 @@ Veloce is a Next.js vehicle ownership tracker for logging fuel, maintenance, cus
 
 ## EV Tracking
 
-Electric vehicles do not use the fill-up model. Home charging is never logged — there is no pump and no receipt — so it is inferred from distance and measured efficiency, then costed at the user's electricity tariff. Only public charging sessions are logged as events.
+Electric vehicles do not use the fill-up model. Every charge is a logged event, home included — a home charger sits on a meter or a smart plug, and inference is strictly worse than what the owner can just read off it. Pricing follows the four OCPI tariff dimensions (per-kWh, per-minute, flat, or free) with a "total paid" override, and a session can be marked charged to 100% instead of typing an end percentage. Inference survives only as a labelled cold-start fallback for a period with nothing logged in it. See [docs/ev-charging-redesign.md](docs/ev-charging-redesign.md).
 
-Efficiency and battery health come from **state-of-charge check-ins** (`vehicle_snapshots`): odometer plus battery percentage. Two check-ins with no charge between them give km per percent, and from that usable range, Wh/km and state of health. See [docs/ev-redesign.md](docs/ev-redesign.md).
+Charging efficiency and cost per distance come from the driving *between* two charge sessions, rescaled by the state of charge that driving consumed — no full charge required, though charging to 100% collapses the formula to the classic full-tank method as a special case. Battery health (usable range, Wh/km, state of health) is separate: it comes from **state-of-charge check-ins** (`vehicle_snapshots`), documented in [docs/ev-redesign.md](docs/ev-redesign.md) — only that document's battery-health half still applies; its energy-accounting half is what `docs/ev-charging-redesign.md` replaced.
 
 ## Important Scope Notes
 
