@@ -6,6 +6,18 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### The Command center dashboard shows lifetime EV savings, not just cost per km (2026-09-04)
+
+- **The petrol-vs-EV savings figure only existed on the Energy & Battery page.** The main
+  dashboard's "All-in running cost" hero card already carries the equivalent petrol metric
+  (cost per km, lifetime total), but had no comparison against what that same driving would
+  have cost on petrol — an owner had to leave the dashboard to see it.
+- Added a small pill under the hero card's tracked-total line, EV vehicles only, linking to
+  `/dashboard/fuel` (Energy & Battery, where the full benchmark breakdown lives). It reads
+  straight off `buildEvSavings` — the exact same function and inputs as the Energy & Battery
+  page's own "Saved vs petrol" card — so the two figures can never disagree. Hidden entirely
+  when there's not yet enough data to compare (no fabricated placeholder).
+
 ### Documentation sweep (2026-09-04)
 
 - **Several `docs/` files had drifted from the code they describe.** `database_schema.md` still
