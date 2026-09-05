@@ -1,18 +1,26 @@
 # Veloce UI Design System & Animation Patterns
 
 ## Overview
-The UI adopts a specific design system referred to as "Veloce UI". It focuses on a premium, dark-mode, glassmorphic aesthetic to create an immersive, futuristic application feel. Any future components MUST adhere to these exact paradigms.
+The UI adopts a specific design system referred to as "Veloce UI". **The app supports both a
+light and a dark theme** (toggled via the `.dark` class on `<html>`, per `src/app/globals.css`
+and `CLAUDE.md`'s Theme System section) — this document was originally written when the app was
+dark-only, and the glassmorphic guidance below is specifically the **dark-mode** treatment. Light
+mode uses a separate, modern pastel palette built on CSS variables (`--background`, `--card`,
+`--border`, etc.), not the raw Tailwind grays this document used to warn against everywhere.
 
 ## CSS Styling Guidelines (Tailwind CSS V4)
-Do NOT use generic standard Tailwind light-mode styles (e.g. `bg-white`, `text-black`, `border-gray-200`) anywhere in `(dashboard)` routes. 
+Do NOT hardcode `bg-white`, `border-white/5`, etc. for **light mode** — those are dark-mode-only
+utility values. Use the CSS variables (`bg-background`, `bg-secondary`, `bg-muted`, `bg-accent`,
+`border-input`, `border-border`) so a component looks correct in both themes; reserve the
+glassmorphic treatment below for `dark:` variants.
 
-1. **Backdrops and Surfaces:**
+1. **Backdrops and Surfaces (dark mode):**
    - Surfaces (Cards, Modals, Sidebars) should rely heavily on glassmorphism.
    - Use deeply translucent backgrounds rather than solid dark colors: `bg-white/5` or `bg-black/20`.
    - Apply intense blur filters to blend with the interactive background layers: `backdrop-blur-xl` or `backdrop-blur-2xl`.
 
-2. **Borders and Shadows:**
-   - Use crisp, faint borders for container separation: `border-white/5` or `border-white/10`. Avoid thick opaque borders.
+2. **Borders and Shadows (dark mode):**
+   - Use crisp, faint borders for container separation: `border-white/5` or `border-white/10`. Avoid thick opaque borders. In light mode, use `border-input` / `border-border` instead.
    - To build depth, leverage `shadow-md`, `shadow-lg`, inner shadows (`shadow-inner`), and specific drop shadows.
 
 3. **Background Effects:**

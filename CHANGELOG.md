@@ -6,6 +6,27 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Documentation sweep (2026-09-04)
+
+- **Several `docs/` files had drifted from the code they describe.** `database_schema.md` still
+  described `fuel_logs` from before the charging redesign — none of the pricing-mode, SoC, or
+  `charged_to_full` columns were listed — and never mentioned `vehicle_snapshots` at all.
+  `ui-package-usage.md` described a package at `packages/ui/` importable as `@veloce/ui`, built
+  and consumed as a real workspace dependency; the actual package is `packages/veloce-ui/`,
+  imported as `@mattofficial/veloce-ui`, and the main app consumes it via a `tsconfig.json` path
+  alias straight to source, not a built/linked dependency. `architecture_and_context.md` was
+  missing the `/dashboard/reports` route, the `snapshots.ts` server action, and the entire EV
+  charging feature from its "what's implemented" list. `ui_and_animations.md` still said to
+  never use light-mode Tailwind styles anywhere, contradicting the light theme the app has had
+  for a while. `CLAUDE.md`'s Copilot routing description skipped the guardrail/analytics
+  classification step that actually runs before the browser-local/server-chat fallback.
+- `current-state-audit.md` (dated 2026-03-15) gets a banner pointing at what supersedes it
+  instead of a rewrite — it is a point-in-time snapshot, not living documentation.
+- Fixed a typo in `packages/veloce-ui/README.md`'s Storybook link
+  (`mattrofficial` → `mattofficial`).
+- Confirmed still accurate and left unchanged: `docs/reports.md`, `docs/vercel-deployment-guide.md`,
+  `docs/ev-redesign.md` (already carries its own supersession banner).
+
 ### The Battery Health chart's Y-axis showed nine-digit numbers instead of km (2026-09-04)
 
 - **`buildDischargeSegments` had no finiteness guard on the odometer delta it computes.**

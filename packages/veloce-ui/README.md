@@ -288,7 +288,7 @@ The package uses GitHub Actions for automated testing and publishing:
 - **GitHub Repository**: https://github.com/MattOfficial/veloce-ui
 - **GitHub Packages**: https://github.com/MattOfficial/veloce-ui/packages
 - **Issue Tracker**: https://github.com/MattOfficial/veloce-ui/issues
-- **Storybook**: https://mattrofficial.github.io/veloce-ui (if deployed)
+- **Storybook**: https://mattofficial.github.io/veloce-ui (if deployed)
 
 ## 📄 License
 

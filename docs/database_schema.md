@@ -44,6 +44,7 @@ Columns used by the app:
 - `model`
 - `year`
 - `baseline_odometer`
+- `current_odometer`
 - `image_url`
 - `vin`
 - `license_plate`
@@ -56,12 +57,27 @@ Columns used by the app:
 - `tyre_info`
 - `vehicle_type`
 - `powertrain`
+- `fuel_type`
 - `battery_capacity_kwh`
+- `usable_battery_kwh`
+- `rated_range_km`
+- `baseline_range_km`
+- `battery_warranty_years`
+- `battery_warranty_km`
 - `created_at`
+
+Notes:
+
+- `fuel_type` (`petrol` / `diesel` / `cng` / `lpg`) is null until the owner sets it — added after
+  many vehicles already existed, so it is never guessed
+- `usable_battery_kwh` and `baseline_range_km` are the denominators for Wh/km and state-of-health
+  on EVs; both fall back to `battery_capacity_kwh` where the app reads usable capacity
 
 ### `fuel_logs`
 
-Fuel and charge events associated with a vehicle.
+Fuel and charge events associated with a vehicle. Every charge is a logged event, home
+included — see [ev-charging-redesign.md](ev-charging-redesign.md) for why and for the pricing
+model behind the charge-only columns below.
 
 Columns used by the app:
 
@@ -69,12 +85,22 @@ Columns used by the app:
 - `vehicle_id`
 - `date`
 - `odometer`
-- `fuel_volume`
-- `total_cost`
+- `fuel_volume` — for a charge row, resolved kWh (metered or SoC-derived)
+- `total_cost` — authoritative; rate × quantity is a UI calculator, this is the record
 - `calculated_efficiency`
-- `energy_type`
-- `fill_type`
+- `energy_type` (`fuel` \| `charge`)
+- `fill_type` (`full` \| `partial`, fuel rows only — a full charge is not a comparable concept)
 - `estimated_range`
+- `is_estimated` — true only for app-generated cold-start rows, never a session the user typed
+- `charge_source` (`home` \| `ac_public` \| `dc_fast` \| `other`)
+- `start_soc`, `end_soc` — battery percent at the start/end of a charge
+- `charged_to_full` — the full-charge anchor flag; also written into `end_soc` as `100` when set
+  and no more specific reading was given (see §2(a) of ev-charging-redesign.md)
+- `energy_basis` (`metered` \| `soc_derived`) — which efficiency figure the row can feed
+- `pricing_mode` (`per_kwh` \| `per_minute` \| `flat` \| `free`)
+- `rate_per_unit`, `duration_minutes`, `session_fee`, `idle_minutes`, `idle_rate_per_minute`,
+  `tax_percent` — the OCPI tariff components a pricing mode reads
+- `charger_network`, `location` — public charging only
 - `created_at`
 
 Notes:
@@ -82,6 +108,28 @@ Notes:
 - `fuel_volume` also represents charge energy for EV-related entries
 - `energy_type` currently uses values such as `fuel` and `charge`
 - `fill_type` is `full` or `partial` and controls whether the row closes an analytics segment
+  for liquid fuel; charge rows use `start_soc`/`end_soc`/`charged_to_full` instead, since the
+  full-tank method does not fit a vehicle charged at home most nights
+
+### `vehicle_snapshots`
+
+A point-in-time reading of the vehicle: odometer, optionally paired with a battery percentage.
+`soc_percent` is null for an ICE vehicle, where a row is simply an odometer update. Feeds
+battery health (usable range, state of health) alongside the SoC readings a charge session
+already carries — see [ev-charging-redesign.md](ev-charging-redesign.md) and
+`src/utils/battery-health.ts`.
+
+Columns used by the app:
+
+- `id`
+- `vehicle_id`
+- `date`
+- `odometer`
+- `soc_percent`
+- `displayed_range`
+- `source` (`manual` \| `ocr` \| `api`)
+- `notes`
+- `created_at`
 
 ### `maintenance_logs`
 
@@ -95,6 +143,7 @@ Columns used by the app:
 - `date`
 - `service_type`
 - `cost`
+- `odometer`
 - `notes`
 - `receipt_url`
 - `created_at`
@@ -103,6 +152,9 @@ Important:
 
 - There is currently no `provider` column in the migrated schema
 - Provider/shop names are folded into `service_type` and `notes`
+- `odometer` and `receipt_url` are read and written directly off `FormData` in
+  `src/app/actions/maintenance.ts` but are not yet modelled on the `MaintenanceLog` type in
+  `src/types/database.ts` — a gap in the app's own types, not in the schema
 
 ### `custom_log_categories`
 
@@ -202,7 +254,8 @@ Examples:
 
 - `users` rows are self-owned by `id`
 - `vehicles` rows are owned by `user_id`
-- `fuel_logs`, `maintenance_logs`, `documents`, `service_reminders`, and `custom_logs` are protected through their parent `vehicle_id`
+- `fuel_logs`, `maintenance_logs`, `documents`, `service_reminders`, `custom_logs`, and
+  `vehicle_snapshots` are protected through their parent `vehicle_id`
 
 ## Type Sync Note
 
