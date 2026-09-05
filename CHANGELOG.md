@@ -6,6 +6,18 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Thematic energy redesign across Petrol, Diesel, Hybrid, and EV (2026-09-05)
+
+- **Thematic styling previously applied only to electric vehicles, leaving ICE and hybrid vehicles on a static default palette.** Every propulsion type in Veloce now carries its own bespoke energy identity, background canvas physics, and dynamic color system for both Light Pastel and Dark Glass modes.
+- Added `getEnergyTheme` (`src/utils/energy-theme.ts`) resolving vehicles into `petrol`, `diesel`, `hybrid`, `ev`, or neutral `ice`.
+- Added pure powertrain animation engine (`src/utils/powertrain-theme-engine.ts`) with dedicated physics for:
+  - Petrol: Aerodynamic wind-tunnel streamlines and rising combustion micro-embers.
+  - Diesel: Concentric kinetic torque compression pulse rings and drifting golden torque dust.
+  - Hybrid: Dual intertwined electric cyan and kinetic mint flux streams.
+- Unified background rendering into `<ThematicBackground />` (`src/components/thematic-background.tsx`), which dynamically renders the active theme's physics while respecting `prefers-reduced-motion` and mouse wind interaction.
+- `src/components/interactive-background.tsx` binds `data-energy-theme` (`petrol`, `diesel`, `hybrid`, `ev`) to `document.documentElement`.
+- `src/app/globals.css` gains comprehensive CSS variables for all 4 energy archetypes across both Light Mode (high-contrast, WCAG-compliant porcelain/chamois/frost/eucalyptus paper) and Dark Mode (carbon/slate/navy/pine glass with theme-colored glows).
+
 ### EV Nature UI and dynamic eco CSS theme (2026-09-05)
 
 - **Electric vehicles shared the same combustion-era blue dot particle swarm and indigo tech palette as ICE cars.** An EV should feel distinct, serene, and connected to sustainable clean energy rather than mechanical combustion telemetry.
