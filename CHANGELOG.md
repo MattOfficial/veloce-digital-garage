@@ -6,6 +6,24 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### The dashboard's "saved vs petrol" pill didn't reconcile against the numbers beside it (2026-09-04)
+
+- **The previous commit's new pill used `buildEvSavings`'s fuel-only comparison, but the two
+  headline numbers it sits next to are all-in.** An owner comparing the EV's ₹0.22/km against a
+  petrol vehicle's own ₹2.80/km all-in card and doing the arithmetic themselves got a different
+  answer than the pill showed, because the pill was actually comparing charge cost against the
+  petrol peer's fuel-only rate from closed tank segments — deliberately excluding maintenance on
+  both sides, which is the right call for the Energy & Battery page's own "Saved vs petrol"
+  card but not for a number sitting next to two all-in figures.
+- `ev-savings.ts` gains a `costBasis` option (`"fuel-only"` default, `"all-in"`) threaded through
+  `getPetrolBenchmark` and `buildEvSavings`. All-in reads the same `getOwnershipCostSummary`
+  the dashboard's own running-cost card uses, on both the EV and the petrol peer, and has no
+  honest regional/profile-reference fallback to reach for (maintenance histories vary far more
+  than fuel prices), so it reports nothing rather than mixing bases when no real garage peer
+  exists. The dashboard pill now passes `costBasis: "all-in"`; the Energy & Battery page's card
+  is untouched and keeps comparing fuel-only, by design — the two are expected to show
+  different numbers now, each correct for what it's measuring.
+
 ### The Command center dashboard shows lifetime EV savings, not just cost per km (2026-09-04)
 
 - **The petrol-vs-EV savings figure only existed on the Energy & Battery page.** The main

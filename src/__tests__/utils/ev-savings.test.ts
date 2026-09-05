@@ -210,3 +210,90 @@ describe("buildEvSavings", () => {
     expect(savings.benchmark.source).toBe("unavailable");
   });
 });
+
+describe("costBasis: all-in", () => {
+  /**
+   * The dashboard's "saved vs petrol" pill has to reconcile against the two
+   * all-in cost-per-km figures already on screen (one per vehicle), which the
+   * default fuel-only basis does not — it reads closed tank segments and the
+   * EV's charge cost alone, leaving maintenance out of both sides.
+   */
+  it("getPetrolBenchmark measures a peer's whole tracked cost, not just fuel segments", () => {
+    const ev = makeEv();
+    const peer = factories.makeVehicle({
+      id: "petrol-1",
+      vehicle_type: "motorcycle",
+      powertrain: "ice",
+      baseline_odometer: 1_000,
+      fuel_logs: [
+        factories.makeFuelLog({ id: "f1", odometer: 1_500, total_cost: 800 }),
+      ],
+      maintenance_logs: [
+        factories.makeMaintenanceLog({ id: "m1", odometer: 1_500, cost: 200 }),
+      ],
+    });
+
+    const fuelOnly = getPetrolBenchmark(ev, [ev, peer], { currency: "INR" });
+    expect(fuelOnly.source).toBe("garage");
+    // Fuel alone: 800 / 500 km. The 200 of maintenance never enters this rate.
+    expect(fuelOnly.costPerDistance).toBeCloseTo(1.6, 5);
+
+    const allIn = getPetrolBenchmark(ev, [ev, peer], {
+      currency: "INR",
+      costBasis: "all-in",
+    });
+    expect(allIn.source).toBe("garage");
+    // (800 fuel + 200 maintenance) / 500 km.
+    expect(allIn.costPerDistance).toBeCloseTo(2, 5);
+  });
+
+  it("does not fall back to the profile reference or regional default for all-in", () => {
+    const ev = makeEv();
+    const benchmark = getPetrolBenchmark(ev, [ev], {
+      currency: "INR",
+      petrolPricePerUnit: 105,
+      iceReferenceEfficiency: 42,
+      costBasis: "all-in",
+    });
+
+    expect(benchmark.source).toBe("unavailable");
+    expect(benchmark.costPerDistance).toBeNull();
+  });
+
+  it("buildEvSavings compares whole tracked cost on both sides", () => {
+    const ev = factories.makeEvVehicle({
+      baseline_odometer: 0,
+      fuel_logs: [
+        factories.makeChargeLog({ id: "c1", odometer: 1_000, total_cost: 100 }),
+      ],
+      maintenance_logs: [
+        factories.makeMaintenanceLog({ id: "m1", odometer: 1_000, cost: 50 }),
+      ],
+    });
+    const peer = factories.makeVehicle({
+      id: "petrol-1",
+      vehicle_type: "motorcycle",
+      powertrain: "ice",
+      baseline_odometer: 1_000,
+      fuel_logs: [
+        factories.makeFuelLog({ id: "f1", odometer: 1_500, total_cost: 800 }),
+      ],
+      maintenance_logs: [
+        factories.makeMaintenanceLog({ id: "m1", odometer: 1_500, cost: 200 }),
+      ],
+    });
+
+    const savings = buildEvSavings(ev, [ev, peer], {
+      currency: "INR",
+      costBasis: "all-in",
+    });
+
+    // EV: (100 charge + 50 maintenance) over 1,000 km.
+    expect(savings.distance).toBe(1_000);
+    expect(savings.evCostPerDistance).toBeCloseTo(0.15, 5);
+    // Peer: (800 + 200) over 500 km = Rs 2/km.
+    expect(savings.benchmark.costPerDistance).toBeCloseTo(2, 5);
+    expect(savings.equivalentPetrolCost).toBeCloseTo(2_000, 5);
+    expect(savings.savings).toBeCloseTo(2_000 - 150, 5);
+  });
+});

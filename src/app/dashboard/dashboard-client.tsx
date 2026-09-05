@@ -276,13 +276,16 @@ export default function DashboardClient({
       ? distanceLast30Days.value / 30
       : null,
   );
-  // Same derivation as the Energy & Battery page's "Saved vs petrol" card, so
-  // the two surfaces cannot disagree.
+  // All-in, not fuel-only: this card's headline is the all-in cost per km, so
+  // the savings figure next to it has to net out the same categories on both
+  // sides — otherwise "saved" doesn't reconcile against the two rates an
+  // owner can already see and subtract themselves. The Energy & Battery
+  // page's own "Saved vs petrol" card intentionally isolates energy cost
+  // instead, so the two figures are expected to differ.
   const evSavings = isEv
     ? buildEvSavings(selectedVehicle, vehicles, {
-        petrolPricePerUnit: profile.petrolPriceReference,
-        iceReferenceEfficiency: profile.iceReferenceEfficiency,
         currency: profile.currency,
+        costBasis: "all-in",
       })
     : null;
 
