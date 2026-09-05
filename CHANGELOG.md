@@ -6,6 +6,13 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### EV Nature UI and dynamic eco CSS theme (2026-09-05)
+
+- **Electric vehicles shared the same combustion-era blue dot particle swarm and indigo tech palette as ICE cars.** An EV should feel distinct, serene, and connected to sustainable clean energy rather than mechanical combustion telemetry.
+- Introduced an animated, GPU-friendly nature canvas engine (`src/utils/ev-nature-engine.ts`, `src/components/ev-nature-background.tsx`) featuring subtle arching botanical canopy branches on viewport corners, drifting leaves, and bioluminescent spores that gently respond to cursor wind vectors and respect `prefers-reduced-motion`.
+- `InteractiveBackground` now subscribes to `useVehicleStore` and dynamically applies `data-powertrain="ev"` to `document.documentElement`, mounting the nature canvas for electric powertrains (`ev`, `phev`, `rex`) and retaining classic `VibeParticles` for liquid-fuel vehicles.
+- `src/app/globals.css` gains full EV theme token definitions: a deep obsidian-pine (`#040d0a`) glassmorphism with bioluminescent emerald (`oklch(0.76 0.18 155)`) glows and mint accents in dark mode, and a fresh eucalyptus-linen (`oklch(0.985 0.006 145)`) palette with sage borders in light mode.
+
 ### The dashboard's "saved vs petrol" pill didn't reconcile against the numbers beside it (2026-09-04)
 
 - **The previous commit's new pill used `buildEvSavings`'s fuel-only comparison, but the two

@@ -2,8 +2,11 @@
 
 import { useVibeEngine } from "vibe-particles/react";
 import { SwarmPhysics, DotRenderer, NoInteraction } from "vibe-particles";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect } from "react";
 import { useThemeStore } from "@/store/theme-store";
+import { useVehicleStore } from "@/store/vehicle-store";
+import { isElectricPowertrain } from "@/types/database";
+import { EvNatureBackground } from "@/components/ev-nature-background";
 
 function VibeParticles({ rgb }: { rgb: [number, number, number] }) {
     const { canvasRef } = useVibeEngine({
@@ -53,9 +56,28 @@ function useDOMTheme() {
     );
 }
 
+const noopSubscribe = () => () => {};
+
+function useIsMounted() {
+    return useSyncExternalStore(
+        noopSubscribe,
+        () => true,
+        () => false
+    );
+}
+
 export function InteractiveBackground() {
     const { theme: storeTheme } = useThemeStore();
     const domTheme = useDOMTheme();
+    const isMounted = useIsMounted();
+
+    const selectedVehicle = useVehicleStore((state) => state.getSelectedVehicle());
+    const isEv = isMounted && isElectricPowertrain(selectedVehicle?.powertrain);
+
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        document.documentElement.setAttribute("data-powertrain", isEv ? "ev" : "ice");
+    }, [isEv]);
 
     // Prefer store theme if hydrated, otherwise use DOM theme
     const activeTheme = storeTheme || domTheme;
@@ -64,6 +86,10 @@ export function InteractiveBackground() {
     // Dark mode uses bright blue particles
     const rgb: [number, number, number] = activeTheme === "dark" ? [59, 130, 246] : [45, 45, 45];
 
+    if (isEv) {
+        return <EvNatureBackground key={`ev-${activeTheme}`} isDark={activeTheme === "dark"} />;
+    }
+
     // Force remount when theme changes so particles reinitialize with correct color
-    return <VibeParticles key={activeTheme} rgb={rgb} />;
+    return <VibeParticles key={`ice-${activeTheme}`} rgb={rgb} />;
 }
