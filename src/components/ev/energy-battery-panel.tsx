@@ -175,7 +175,12 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
     averageDailyDistance,
   );
 
-  const trendData = health.trend.filter((point) => point.usableRangeKm != null);
+  // `!= null` alone lets a NaN through — it fails strict equality with both
+  // null and undefined — so a corrupted reading upstream would otherwise
+  // plot as a chart point instead of being dropped like the rest of the gaps.
+  const trendData = health.trend.filter((point) =>
+    Number.isFinite(point.usableRangeKm),
+  );
   // A free session carries no energy and no cost but is still a session, so the
   // headline row should appear rather than the empty state.
   const hasSessions = (vehicle.fuel_logs ?? []).some(
@@ -385,7 +390,10 @@ export function EnergyBatteryPanel({ vehicle }: { vehicle: VehicleWithLogs }) {
                             tickLine={false}
                             axisLine={false}
                             className="text-xs"
+                            width={40}
                             domain={["dataMin - 5", "dataMax + 5"]}
+                            allowDecimals={false}
+                            tickFormatter={(value: number) => Math.round(value).toString()}
                           />
                           <Tooltip
                             contentStyle={{

@@ -6,6 +6,24 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### The Battery Health chart's Y-axis showed nine-digit numbers instead of km (2026-09-04)
+
+- **`buildDischargeSegments` had no finiteness guard on the odometer delta it computes.**
+  `soc_percent` was already checked with `Number.isFinite`, but `distance` (from
+  `end.odometer - start.odometer`) was not — and a non-finite `distance` fails both `<= 0` and
+  `> 0`, so it skipped every rejection check and came out `usable: true` with a fabricated
+  `kmPerPercent` of `0` instead of being rejected. Added an explicit finiteness check ahead of
+  the existing ones (`invalid-reading`, a new rejection reason), and a matching guard in
+  `buildTrend` so a non-finite rate can never populate a monthly bucket even from an unanticipated
+  path.
+- **The trend chart's own filter let a `NaN` value through.** `health.trend.filter(point =>
+  point.usableRangeKm != null)` excludes `null` and `undefined` but not `NaN` — `NaN != null` is
+  `true` in JS — so a corrupted month would still reach Recharts as a real data point instead of
+  being dropped like every other gap. Switched to `Number.isFinite`.
+- **The Y-axis had no tick formatting at all.** Added `tickFormatter` (whole numbers) and
+  `allowDecimals={false}` so the axis always renders clean, human-readable km values instead of
+  whatever precision the underlying figure happened to carry.
+
 ### A calculated units figure still failed to save (2026-09-04)
 
 - **Auto-filling the units field from battery percentages exposed a client/server mismatch on
