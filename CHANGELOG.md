@@ -6,6 +6,18 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### A calculated units figure still failed to save (2026-09-04)
+
+- **Auto-filling the units field from battery percentages exposed a client/server mismatch on
+  usable battery size.** Once a session's units come from percentages rather than a typed
+  reading, submitting it omits `fuel_volume` so the server derives the same figure itself — but
+  the server read only `usable_battery_kwh`, while every client-side computation (this preview
+  included) has always fallen back to `battery_capacity_kwh` when that is unset. A vehicle
+  without a distinct usable-capacity figure — the common case — would show the calculated units
+  on screen and then have the save rejected with "enter the units consumed", because the server
+  saw no battery size to derive them from. `submitFuelLog` and `editFuelLog` now apply the same
+  fallback.
+
 ### Docs caught up to the charging redesign (2026-09-04)
 
 - **The README still described the design `ev-charging-redesign.md` replaced.** It said home
