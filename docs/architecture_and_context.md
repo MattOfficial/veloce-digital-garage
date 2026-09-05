@@ -17,6 +17,7 @@ Primary routes:
 - `/dashboard/insights` tabbed insights for running costs and distance analytics
 - `/dashboard/profile` profile, provider key management, badges, garage management, and garage-wide distance metrics
 - `/dashboard/vehicles/[id]` vehicle detail editor and service history
+- `/dashboard/reports` downloadable PDF/Excel/CSV reports for one vehicle or the whole garage — see [reports.md](reports.md)
 - `/telemetry` experimental visual demo
 
 ## Runtime Architecture
@@ -94,13 +95,14 @@ Most data mutations live in `src/app/actions/*` and execute through the server S
 
 Current action groups:
 
-- `fuel.ts`
+- `fuel.ts` — fuel and charge sessions, including the OCPI-style pricing model and SoC-derived energy (see [ev-charging-redesign.md](ev-charging-redesign.md))
 - `maintenance.ts`
 - `vehicles.ts`
 - `custom-trackers.ts`
 - `reminders.ts`
 - `badges.ts`
 - `ocr.ts`
+- `snapshots.ts` — battery/odometer check-ins for battery-health tracking
 - `dashboard/profile/actions.ts`
 
 ## What Is Present Versus Planned
@@ -117,15 +119,20 @@ Implemented in this branch:
 - Multi-provider Copilot
 - Browser-local AI support for Edge and Chrome
 - Distance analytics on overview, insights, and profile surfaces
+- EV charging: every charge is a logged event (home included) with an OCPI-style pricing model,
+  battery-health tracking from SoC check-ins and charge sessions, pack-capacity and
+  charging-loss estimates, and a battery care score — see [ev-charging-redesign.md](ev-charging-redesign.md)
+- Downloadable PDF/Excel/CSV reports at `/dashboard/reports` — see [reports.md](reports.md)
 
 Partially implemented:
 
 - `documents` table and storage-backed document persistence exist, but there is no standalone vault page
-- `service_reminders` exists in schema and server actions, but not in the main dashboard flow
+- `service_reminders` exists in schema and server actions, and a status view derived from it
+  appears in the maintenance UI, but there is no reminder create/edit UI wired up (`add-reminder-modal.tsx` exists but is not rendered anywhere)
 
 ## Known Maintenance Notes
 
 - `src/types/supabase.ts` should be kept aligned with `supabase/migrations`
 - `supabase/schema.sql` is historical bootstrap SQL, not the best source of truth for the current schema
-- `npm run lint` currently passes on this branch
-- `npm run build` currently passes on this branch
+- `bun run lint` currently passes on this branch
+- `bun run build` currently passes on this branch

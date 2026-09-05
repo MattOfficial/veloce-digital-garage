@@ -256,6 +256,20 @@ describe("buildDischargeSegments", () => {
     expect(segments[0].rejection).toBe("no-distance");
   });
 
+  it("rejects a non-finite reading rather than fabricating a zero rate", () => {
+    // A corrupted odometer (a bad OCR read, a malformed row) makes `distance`
+    // NaN, and NaN fails both `<= 0` and `> 0` — so before this guard it fell
+    // through every check as "usable" with a fabricated kmPerPercent of 0.
+    const segments = buildDischargeSegments([
+      makeSnapshot({ id: "s1", date: "2026-07-01", odometer: 1000, soc_percent: 90 }),
+      makeSnapshot({ id: "s2", date: "2026-07-02", odometer: Number.NaN, soc_percent: 80 }),
+    ]);
+
+    expect(segments[0].usable).toBe(false);
+    expect(segments[0].rejection).toBe("invalid-reading");
+    expect(segments[0].kmPerPercent).toBe(0);
+  });
+
   it("rejects a drop too small to survive whole-percent reporting", () => {
     const segments = buildDischargeSegments([
       makeSnapshot({ id: "s1", date: "2026-07-01", odometer: 1000, soc_percent: 90 }),

@@ -6,6 +6,87 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### The dashboard's "saved vs petrol" pill didn't reconcile against the numbers beside it (2026-09-04)
+
+- **The previous commit's new pill used `buildEvSavings`'s fuel-only comparison, but the two
+  headline numbers it sits next to are all-in.** An owner comparing the EV's ₹0.22/km against a
+  petrol vehicle's own ₹2.80/km all-in card and doing the arithmetic themselves got a different
+  answer than the pill showed, because the pill was actually comparing charge cost against the
+  petrol peer's fuel-only rate from closed tank segments — deliberately excluding maintenance on
+  both sides, which is the right call for the Energy & Battery page's own "Saved vs petrol"
+  card but not for a number sitting next to two all-in figures.
+- `ev-savings.ts` gains a `costBasis` option (`"fuel-only"` default, `"all-in"`) threaded through
+  `getPetrolBenchmark` and `buildEvSavings`. All-in reads the same `getOwnershipCostSummary`
+  the dashboard's own running-cost card uses, on both the EV and the petrol peer, and has no
+  honest regional/profile-reference fallback to reach for (maintenance histories vary far more
+  than fuel prices), so it reports nothing rather than mixing bases when no real garage peer
+  exists. The dashboard pill now passes `costBasis: "all-in"`; the Energy & Battery page's card
+  is untouched and keeps comparing fuel-only, by design — the two are expected to show
+  different numbers now, each correct for what it's measuring.
+
+### The Command center dashboard shows lifetime EV savings, not just cost per km (2026-09-04)
+
+- **The petrol-vs-EV savings figure only existed on the Energy & Battery page.** The main
+  dashboard's "All-in running cost" hero card already carries the equivalent petrol metric
+  (cost per km, lifetime total), but had no comparison against what that same driving would
+  have cost on petrol — an owner had to leave the dashboard to see it.
+- Added a small pill under the hero card's tracked-total line, EV vehicles only, linking to
+  `/dashboard/fuel` (Energy & Battery, where the full benchmark breakdown lives). It reads
+  straight off `buildEvSavings` — the exact same function and inputs as the Energy & Battery
+  page's own "Saved vs petrol" card — so the two figures can never disagree. Hidden entirely
+  when there's not yet enough data to compare (no fabricated placeholder).
+
+### Documentation sweep (2026-09-04)
+
+- **Several `docs/` files had drifted from the code they describe.** `database_schema.md` still
+  described `fuel_logs` from before the charging redesign — none of the pricing-mode, SoC, or
+  `charged_to_full` columns were listed — and never mentioned `vehicle_snapshots` at all.
+  `ui-package-usage.md` described a package at `packages/ui/` importable as `@veloce/ui`, built
+  and consumed as a real workspace dependency; the actual package is `packages/veloce-ui/`,
+  imported as `@mattofficial/veloce-ui`, and the main app consumes it via a `tsconfig.json` path
+  alias straight to source, not a built/linked dependency. `architecture_and_context.md` was
+  missing the `/dashboard/reports` route, the `snapshots.ts` server action, and the entire EV
+  charging feature from its "what's implemented" list. `ui_and_animations.md` still said to
+  never use light-mode Tailwind styles anywhere, contradicting the light theme the app has had
+  for a while. `CLAUDE.md`'s Copilot routing description skipped the guardrail/analytics
+  classification step that actually runs before the browser-local/server-chat fallback.
+- `current-state-audit.md` (dated 2026-03-15) gets a banner pointing at what supersedes it
+  instead of a rewrite — it is a point-in-time snapshot, not living documentation.
+- Fixed a typo in `packages/veloce-ui/README.md`'s Storybook link
+  (`mattrofficial` → `mattofficial`).
+- Confirmed still accurate and left unchanged: `docs/reports.md`, `docs/vercel-deployment-guide.md`,
+  `docs/ev-redesign.md` (already carries its own supersession banner).
+
+### The Battery Health chart's Y-axis showed nine-digit numbers instead of km (2026-09-04)
+
+- **`buildDischargeSegments` had no finiteness guard on the odometer delta it computes.**
+  `soc_percent` was already checked with `Number.isFinite`, but `distance` (from
+  `end.odometer - start.odometer`) was not — and a non-finite `distance` fails both `<= 0` and
+  `> 0`, so it skipped every rejection check and came out `usable: true` with a fabricated
+  `kmPerPercent` of `0` instead of being rejected. Added an explicit finiteness check ahead of
+  the existing ones (`invalid-reading`, a new rejection reason), and a matching guard in
+  `buildTrend` so a non-finite rate can never populate a monthly bucket even from an unanticipated
+  path.
+- **The trend chart's own filter let a `NaN` value through.** `health.trend.filter(point =>
+  point.usableRangeKm != null)` excludes `null` and `undefined` but not `NaN` — `NaN != null` is
+  `true` in JS — so a corrupted month would still reach Recharts as a real data point instead of
+  being dropped like every other gap. Switched to `Number.isFinite`.
+- **The Y-axis had no tick formatting at all.** Added `tickFormatter` (whole numbers) and
+  `allowDecimals={false}` so the axis always renders clean, human-readable km values instead of
+  whatever precision the underlying figure happened to carry.
+
+### A calculated units figure still failed to save (2026-09-04)
+
+- **Auto-filling the units field from battery percentages exposed a client/server mismatch on
+  usable battery size.** Once a session's units come from percentages rather than a typed
+  reading, submitting it omits `fuel_volume` so the server derives the same figure itself — but
+  the server read only `usable_battery_kwh`, while every client-side computation (this preview
+  included) has always fallen back to `battery_capacity_kwh` when that is unset. A vehicle
+  without a distinct usable-capacity figure — the common case — would show the calculated units
+  on screen and then have the save rejected with "enter the units consumed", because the server
+  saw no battery size to derive them from. `submitFuelLog` and `editFuelLog` now apply the same
+  fallback.
+
 ### Docs caught up to the charging redesign (2026-09-04)
 
 - **The README still described the design `ev-charging-redesign.md` replaced.** It said home

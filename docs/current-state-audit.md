@@ -2,6 +2,11 @@
 
 Audit date: 2026-03-15
 
+> **Historical snapshot.** This predates the EV charging redesign (August 2026) and the Reports
+> feature (September 2026), among other work — it is not a living document. For current state,
+> see [architecture_and_context.md](architecture_and_context.md), [database_schema.md](database_schema.md),
+> and [ev-charging-redesign.md](ev-charging-redesign.md).
+
 ## What Was Verified
 
 - The app builds successfully with `npm run build`

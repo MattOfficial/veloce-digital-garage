@@ -90,6 +90,9 @@ CSS variables for theming include: `--background`, `--foreground`, `--primary`, 
 
 Data mutations live in `src/app/actions/`:
 - `fuel.ts`, `maintenance.ts`, `vehicles.ts` — CRUD operations
+- `fuel.ts` also resolves EV charge sessions — pricing, SoC-derived energy, the `charged_to_full`
+  anchor — see `docs/ev-charging-redesign.md`
+- `snapshots.ts` — battery/odometer check-ins for battery-health tracking
 - `ocr.ts` — Gemini-based receipt parsing
 - `reminders.ts`, `badges.ts`, `custom-trackers.ts` — Domain-specific actions
 
@@ -99,10 +102,15 @@ Supabase Auth with SSR. Middleware at `src/utils/supabase/middleware.ts` refresh
 
 ### Copilot / AI Routing
 
-The copilot (`src/components/veloce-copilot.tsx`) routes through:
-1. Local NLP (`src/utils/nlp-engine.ts`) — explicit fuel/maintenance flows
-2. Browser-local AI (`src/utils/browser-ai.ts`) — Edge/Chrome Prompt API
-3. Server analytics/chat (`/api/copilot`) — Gemini, OpenAI, DeepSeek
+The copilot (`src/components/veloce-copilot.tsx`) decides its route via
+`getCopilotClientRoute` (`src/utils/copilot-routing.ts`), in this precedence:
+1. Attachments present → server (`/api/copilot`), attachment-routed
+2. Cancelling or continuing an explicit draft → local NLP (`src/utils/nlp-engine.ts` via
+   `copilot-draft-intent.ts`) — explicit fuel/maintenance flows
+3. Intent classified out-of-scope → a guardrail refusal (no model call)
+4. Intent classified as an analytics question → server analytics (`/api/copilot`)
+5. Otherwise, browser-local AI (`src/utils/browser-ai.ts`, Edge/Chrome Prompt API) if available
+6. Otherwise, server chat (`/api/copilot`) — Gemini, OpenAI, DeepSeek
 
 ### Route Structure
 
@@ -114,6 +122,7 @@ The copilot (`src/components/veloce-copilot.tsx`) routes through:
 - `/dashboard/insights` — Running costs and distance analytics (tabbed)
 - `/dashboard/profile` — User profile, provider keys, badges, garage management
 - `/dashboard/vehicles/[id]` — Vehicle detail editor
+- `/dashboard/reports` — Downloadable PDF/Excel/CSV reports (see `docs/reports.md`)
 
 ## Design Conventions
 

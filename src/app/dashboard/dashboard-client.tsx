@@ -18,6 +18,7 @@ import {
   Gauge,
   LayoutDashboard,
   Map as MapIcon,
+  PiggyBank,
   Plus,
   Receipt,
   Route,
@@ -68,6 +69,7 @@ import {
   getDefaultFuelEfficiencyUnit,
 } from "@/utils/efficiency-units";
 import { getEvEfficiencyDisplay } from "@/utils/ev-efficiency-display";
+import { buildEvSavings } from "@/utils/ev-savings";
 import { buildFuelAnalytics, type FuelAnalyticsMode } from "@/utils/fuel-analytics";
 import {
   formatMoney,
@@ -274,6 +276,18 @@ export default function DashboardClient({
       ? distanceLast30Days.value / 30
       : null,
   );
+  // All-in, not fuel-only: this card's headline is the all-in cost per km, so
+  // the savings figure next to it has to net out the same categories on both
+  // sides — otherwise "saved" doesn't reconcile against the two rates an
+  // owner can already see and subtract themselves. The Energy & Battery
+  // page's own "Saved vs petrol" card intentionally isolates energy cost
+  // instead, so the two figures are expected to differ.
+  const evSavings = isEv
+    ? buildEvSavings(selectedVehicle, vehicles, {
+        currency: profile.currency,
+        costBasis: "all-in",
+      })
+    : null;
 
   const totalEfficiencyDistance = activeStream.closed_segments.reduce(
     (sum, segment) => sum + segment.distance,
@@ -500,6 +514,15 @@ export default function DashboardClient({
                     ? `${formatMoney(ownership.totalCost, currencySymbol)} tracked over ${formatNumber(ownership.trackedDistance)} ${distanceUnit}`
                     : "Add odometer history to unlock your ownership rate."}
                 </p>
+                {isEv && evSavings?.savings != null && (
+                  <Link
+                    href="/dashboard/fuel"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300 dark:hover:bg-amber-400/15"
+                  >
+                    <PiggyBank className="h-3.5 w-3.5" />
+                    {formatMoney(evSavings.savings, currencySymbol)} saved vs petrol
+                  </Link>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-3 border-t border-border/70 pt-5 sm:grid-cols-3 sm:gap-0">

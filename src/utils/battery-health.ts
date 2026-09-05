@@ -43,7 +43,8 @@ export type BatterySegmentRejection =
   | "no-distance"
   | "soc-drop-too-small"
   | "span-too-long"
-  | "outlier";
+  | "outlier"
+  | "invalid-reading";
 
 export type BatteryHealthConfidence = "none" | "low" | "medium" | "high";
 
@@ -203,6 +204,9 @@ function sortSnapshots(snapshots: SocObservation[]): SocObservation[] {
 export function buildDischargeSegments(
   snapshots: SocObservation[],
 ): BatteryDischargeSegment[] {
+  // A non-finite SoC is already screened out here. A non-finite odometer is
+  // not, so it is checked per-candidate below instead — the same reading can
+  // be the end of one segment and the start of the next.
   const withSoc = sortSnapshots(snapshots).filter(
     (snapshot) => snapshot.soc_percent != null && Number.isFinite(snapshot.soc_percent),
   );
@@ -223,8 +227,16 @@ export function buildDischargeSegments(
     const distance = end.odometer - start.odometer;
     const spanDays = differenceInCalendarDays(endDate, startDate);
 
+    // A non-finite odometer reading (a bad OCR read, a corrupted row) would
+    // otherwise sail past every check below: `distance <= 0` and `distance >
+    // 0` are both false for NaN, so the segment fell through as "usable" with
+    // a fabricated kmPerPercent of 0 rather than being rejected outright.
+    const hasFiniteReadings = Number.isFinite(distance) && Number.isFinite(socDrop);
+
     let rejection: BatterySegmentRejection | null = null;
-    if (socDrop <= 0) {
+    if (!hasFiniteReadings) {
+      rejection = "invalid-reading";
+    } else if (socDrop <= 0) {
       rejection = "charged-between";
     } else if (distance <= 0) {
       rejection = "no-distance";
@@ -246,7 +258,8 @@ export function buildDischargeSegments(
       startSoc,
       endSoc,
       socDrop,
-      kmPerPercent: socDrop > 0 && distance > 0 ? distance / socDrop : 0,
+      kmPerPercent:
+        hasFiniteReadings && socDrop > 0 && distance > 0 ? distance / socDrop : 0,
       usable: rejection == null,
       rejection,
     });
@@ -291,6 +304,7 @@ function buildTrend(
   const buckets = new Map<string, number[]>();
 
   for (const segment of segments) {
+    if (!Number.isFinite(segment.kmPerPercent)) continue;
     const endDate = parseSnapshotDate(segment.endDate);
     if (!endDate) continue;
     const key = format(startOfMonth(endDate), "yyyy-MM");

@@ -300,7 +300,7 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
 
     const { data: vehicle, error: vehicleError } = await supabase
         .from("vehicles")
-        .select("id, baseline_odometer, usable_battery_kwh")
+        .select("id, baseline_odometer, usable_battery_kwh, battery_capacity_kwh")
         .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
@@ -309,7 +309,14 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         return { success: false, error: "Vehicle not found or access denied." };
     }
 
-    const row = resolveChargeRow(payload, vehicle.usable_battery_kwh);
+    // The usable figure is the correct denominator but is not always known; the
+    // client's SoC-derived preview already falls back to the nameplate capacity,
+    // so the server has to fall back the same way or it rejects a session the
+    // owner just watched it calculate.
+    const row = resolveChargeRow(
+        payload,
+        vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh,
+    );
     if (row == null) {
         return { success: false, error: MISSING_ENERGY_ERROR };
     }
@@ -364,14 +371,17 @@ export async function editFuelLog(logId: string, formData: FormData): Promise<Fu
     // Verify the user owns this log via the vehicle
     const { data: vehicle } = await supabase
         .from("vehicles")
-        .select("id, user_id, baseline_odometer, usable_battery_kwh")
+        .select("id, user_id, baseline_odometer, usable_battery_kwh, battery_capacity_kwh")
         .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
 
     if (!vehicle) return { success: false, error: "Vehicle not found or access denied." };
 
-    const row = resolveChargeRow(payload, vehicle.usable_battery_kwh);
+    const row = resolveChargeRow(
+        payload,
+        vehicle.usable_battery_kwh ?? vehicle.battery_capacity_kwh,
+    );
     if (row == null) {
         return { success: false, error: MISSING_ENERGY_ERROR };
     }

@@ -2,6 +2,7 @@ import type { VehicleType, VehicleWithLogs } from "@/types/database";
 import { isLiquidFuelPowertrain } from "@/types/database";
 import { getVehicleLifetimeDistanceSummary } from "@/utils/distance-analytics";
 import { buildFuelAnalytics } from "@/utils/fuel-analytics";
+import { getOwnershipCostSummary } from "@/utils/ownership-analytics";
 
 /**
  * What an EV saves against petrol.
@@ -64,12 +65,43 @@ export interface EvSavings {
     benchmark: PetrolBenchmark;
 }
 
+/**
+ * `fuel-only` isolates the energy-source saving — what petrol would have cost
+ * for the same driving, nothing else. `all-in` nets out each vehicle's whole
+ * tracked cost (fuel/charge, maintenance, everything), matching the headline
+ * cost-per-distance already shown on that vehicle's own dashboard card, at
+ * the cost of mixing "cheaper energy" with "cheaper (or costlier) upkeep" —
+ * and of favouring a young EV that has not paid for its first service yet.
+ */
+export type SavingsCostBasis = "fuel-only" | "all-in";
+
 export interface SavingsOptions {
     /** Rate and economy the owner set by hand, used when the garage cannot answer. */
     petrolPricePerUnit?: number | null;
     iceReferenceEfficiency?: number | null;
     /** Gates the rupee defaults. */
     currency?: string | null;
+    /** Defaults to `fuel-only`, the original comparison. */
+    costBasis?: SavingsCostBasis;
+}
+
+/**
+ * A vehicle's cost and distance under the given basis. `all-in` reads the same
+ * summary the dashboard's own running-cost card shows; `fuel-only` keeps
+ * reading closed tank segments so a petrol peer's maintenance never leaks in.
+ */
+function getVehicleCostPerDistance(
+    vehicle: VehicleWithLogs,
+    basis: SavingsCostBasis,
+): { distance: number; cost: number } | null {
+    if (basis === "all-in") {
+        const summary = getOwnershipCostSummary(vehicle);
+        return summary.trackedDistance > 0 && summary.totalCost > 0
+            ? { distance: summary.trackedDistance, cost: summary.totalCost }
+            : null;
+    }
+
+    return getVehicleFuelCostPerDistance(vehicle);
 }
 
 function isRupeeGarage(currency: string | null | undefined): boolean {
@@ -113,6 +145,7 @@ export function getPetrolBenchmark(
     options: SavingsOptions = {},
 ): PetrolBenchmark {
     const vehicleType = evVehicle.vehicle_type;
+    const basis = options.costBasis ?? "fuel-only";
 
     const peers = garage.filter(
         (vehicle) =>
@@ -126,7 +159,7 @@ export function getPetrolBenchmark(
     let contributing = 0;
 
     for (const peer of peers) {
-        const measured = getVehicleFuelCostPerDistance(peer);
+        const measured = getVehicleCostPerDistance(peer, basis);
         if (!measured) continue;
 
         pooledDistance += measured.distance;
@@ -140,6 +173,20 @@ export function getPetrolBenchmark(
             source: "garage",
             vehicleCount: contributing,
             distance: pooledDistance,
+            vehicleType,
+        };
+    }
+
+    // The fuel-price and regional fallbacks describe the energy cost alone —
+    // there is no honest all-in equivalent to reach for, since maintenance
+    // histories vary far more than fuel prices do. All-in stops at a real
+    // garage peer or reports nothing.
+    if (basis === "all-in") {
+        return {
+            costPerDistance: null,
+            source: "unavailable",
+            vehicleCount: 0,
+            distance: 0,
             vehicleType,
         };
     }
@@ -191,26 +238,38 @@ export function buildEvSavings(
     garage: VehicleWithLogs[],
     options: SavingsOptions = {},
 ): EvSavings {
+    const basis = options.costBasis ?? "fuel-only";
     const benchmark = getPetrolBenchmark(evVehicle, garage, options);
-    const distance = getVehicleLifetimeDistanceSummary(evVehicle).value;
 
-    const chargeCost = (evVehicle.fuel_logs ?? [])
-        .filter((log) => log.energy_type === "charge")
-        .reduce(
-            (total, log) => total + (Number.isFinite(log.total_cost) ? log.total_cost : 0),
-            0,
-        );
+    // All-in reads the same summary the dashboard's own running-cost card
+    // shows, so the two numbers agree; fuel-only isolates the charge cost so
+    // this vehicle's own maintenance cannot flatter or worsen the comparison.
+    let distance: number | null;
+    let evCost: number;
+
+    if (basis === "all-in") {
+        const summary = getOwnershipCostSummary(evVehicle);
+        distance = summary.trackedDistance > 0 ? summary.trackedDistance : null;
+        evCost = summary.totalCost;
+    } else {
+        distance = getVehicleLifetimeDistanceSummary(evVehicle).value;
+        evCost = (evVehicle.fuel_logs ?? [])
+            .filter((log) => log.energy_type === "charge")
+            .reduce(
+                (total, log) => total + (Number.isFinite(log.total_cost) ? log.total_cost : 0),
+                0,
+            );
+    }
 
     const evCostPerDistance =
-        distance != null && distance > 0 && chargeCost > 0 ? chargeCost / distance : null;
+        distance != null && distance > 0 && evCost > 0 ? evCost / distance : null;
 
-    const canCompare =
-        distance != null &&
-        distance > 0 &&
-        evCostPerDistance != null &&
-        benchmark.costPerDistance != null;
-
-    if (!canCompare) {
+    if (
+        distance == null ||
+        distance <= 0 ||
+        evCostPerDistance == null ||
+        benchmark.costPerDistance == null
+    ) {
         return {
             distance,
             evCostPerDistance,
@@ -222,8 +281,8 @@ export function buildEvSavings(
         };
     }
 
-    const equivalentPetrolCost = distance * (benchmark.costPerDistance as number);
-    const savings = equivalentPetrolCost - chargeCost;
+    const equivalentPetrolCost = distance * benchmark.costPerDistance;
+    const savings = equivalentPetrolCost - evCost;
 
     return {
         distance,
