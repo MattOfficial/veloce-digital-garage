@@ -731,7 +731,7 @@ export const ui = {
     overview: {
       efficiency: "Efficiency",
       costPerDistance: (unit: string) => `Cost per ${unit}`,
-      saved: "Saved vs petrol",
+      saved: "Saved on fuel",
       totalCharged: "Total charged",
       lifetime: "Lifetime",
       chargingLoss: (percent: string) =>

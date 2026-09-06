@@ -213,7 +213,7 @@ describe("buildEvSavings", () => {
 
 describe("costBasis: all-in", () => {
   /**
-   * The dashboard's "saved vs petrol" pill has to reconcile against the two
+   * The dashboard's "all-in saved vs internal combustion" pill has to reconcile against the two
    * all-in cost-per-km figures already on screen (one per vehicle), which the
    * default fuel-only basis does not — it reads closed tank segments and the
    * EV's charge cost alone, leaving maintenance out of both sides.
