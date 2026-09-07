@@ -1,5 +1,5 @@
 import { ui } from "@/content/en/ui";
-import { getCurrencySymbol } from "@/utils/formatting";
+import { getCurrencySymbol, roundTo as round } from "@/utils/formatting";
 import type { ReportDataset } from "@/utils/reports/report-dataset";
 
 /**
@@ -58,11 +58,6 @@ function toCsvRow(cells: CsvCell[]): string {
   return cells.map(escapeCsvCell).join(",");
 }
 
-/** Rounds for display without dragging float noise into the file. */
-function round(value: number | null | undefined, decimals: number): number | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  return Number(value.toFixed(decimals));
-}
 
 type LedgerRow = {
   date: string;

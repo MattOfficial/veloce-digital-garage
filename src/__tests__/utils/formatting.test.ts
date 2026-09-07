@@ -10,6 +10,7 @@ import {
   formatTableDate,
   getCurrencyCode,
   getCurrencySymbol,
+  roundTo,
 } from "@/utils/formatting";
 
 describe("getCurrencySymbol", () => {
@@ -99,5 +100,24 @@ describe("getCurrencyCode", () => {
 
   it("keeps an unrecognised value rather than inventing one", () => {
     expect(getCurrencyCode("AUD")).toBe("AUD");
+  });
+});
+
+describe("roundTo", () => {
+  it("rounds to specified decimal places", () => {
+    expect(roundTo(12.3456, 2)).toBe(12.35);
+    expect(roundTo(12.3456, 1)).toBe(12.3);
+    expect(roundTo(12.3456, 0)).toBe(12);
+  });
+
+  it("defaults to two decimal places", () => {
+    expect(roundTo(12.3456)).toBe(12.35);
+  });
+
+  it("returns null for null, undefined, or non-finite numbers", () => {
+    expect(roundTo(null)).toBeNull();
+    expect(roundTo(undefined)).toBeNull();
+    expect(roundTo(NaN)).toBeNull();
+    expect(roundTo(Infinity)).toBeNull();
   });
 });

@@ -58,6 +58,20 @@ export function formatMoneyCompact(value: number, currency?: string | null) {
   });
 }
 
+/**
+ * Rounds a number to a specified decimal precision, avoiding floating-point drift.
+ * Returns null for non-finite or null/undefined inputs.
+ */
+export function roundTo(value: number, decimals?: number): number;
+export function roundTo(value: number | null | undefined, decimals?: number): number | null;
+export function roundTo(
+  value: number | null | undefined,
+  decimals = 2,
+): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(decimals));
+}
+
 export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}) {
   return new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 0,

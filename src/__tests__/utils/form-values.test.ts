@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toNumericFields, toOptionalNumber } from "@/utils/form-values";
+import { parseNumericField, toNumericFields, toOptionalNumber } from "@/utils/form-values";
 
 describe("toOptionalNumber", () => {
   it("parses the strings a number input actually produces", () => {
@@ -56,5 +56,30 @@ describe("toNumericFields", () => {
     toNumericFields(original, ["units"]);
 
     expect(original.units).toBe("2.6");
+  });
+});
+
+describe("parseNumericField", () => {
+  it("parses valid numeric strings", () => {
+    expect(parseNumericField("120")).toBe(120);
+    expect(parseNumericField("45.67")).toBe(45.67);
+    expect(parseNumericField("0")).toBe(0);
+    expect(parseNumericField("-15")).toBe(-15);
+  });
+
+  it("handles whitespace in numeric strings", () => {
+    expect(parseNumericField("  85.5  ")).toBe(85.5);
+  });
+
+  it("returns null for empty strings, null, or undefined", () => {
+    expect(parseNumericField("")).toBeNull();
+    expect(parseNumericField("   ")).toBeNull();
+    expect(parseNumericField(null)).toBeNull();
+    expect(parseNumericField(undefined)).toBeNull();
+  });
+
+  it("returns null for non-numeric or non-finite values", () => {
+    expect(parseNumericField("abc")).toBeNull();
+    expect(parseNumericField("NaN")).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { Database } from "@/types/supabase";
 import {
@@ -93,3 +94,25 @@ export async function syncVehicleServiceInterval(
         console.error(`Error syncing service interval ${reminder.id}:`, updateError);
     }
 }
+
+/**
+ * Centralized cache revalidation for vehicle mutations.
+ */
+export function revalidateVehiclePaths(
+    vehicleId: string,
+    options?: { tab?: "fuel" | "maintenance" | "both" },
+) {
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/insights");
+    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+
+    if (options?.tab === "maintenance") {
+        revalidatePath("/dashboard/maintenance");
+    } else if (options?.tab === "fuel") {
+        revalidatePath("/dashboard/fuel");
+    } else {
+        revalidatePath("/dashboard/fuel");
+        revalidatePath("/dashboard/maintenance");
+    }
+}
+
