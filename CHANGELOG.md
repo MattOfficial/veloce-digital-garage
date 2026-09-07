@@ -6,6 +6,12 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Apply Next.js security patches and compatible dependency updates (2026-09-07)
+
+- Upgrade `next` and `eslint-config-next` together from 16.3.0 to 16.3.4. This includes the critical Windows server and AVIF image optimization security fixes released in 16.3.3, plus restored AVIF support and follow-up fixes in 16.3.4.
+- Refresh PDF rendering, Supabase JS, React Hook Form, Sonner, Zustand, React DOM types, and the matching Vitest/coverage packages within their existing major versions; regenerate the Bun lockfile for reproducible installs.
+- Keep React/React DOM at the current stable 19.2.8. Defer major-version migrations (including Zod/resolvers, Recharts, TypeScript, ESLint, and Vitest) and Supabase SSR's pre-1.0 minor migration so they can receive focused compatibility validation.
+
 ### Clarify savings comparison labels and prune codebase redundancies (2026-09-07)
 
 - **The dashboard running cost pill and Energy & Battery savings card used ambiguous "Saved vs petrol" copy despite measuring different cost bases.** An EV owner could compare against a diesel or hybrid combustion vehicle, and the dashboard pill calculates all-in running costs while the battery card calculates fuel/energy costs alone.
