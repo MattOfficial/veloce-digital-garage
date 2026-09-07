@@ -6,6 +6,30 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reduce repeated work in ownership and distance analytics (2026-09-07)
+
+- Accumulate ownership category totals, rolling periods, and monthly costs in one pass, parsing each log date once instead of repeatedly scanning and parsing the same history. Preserve calendar-day boundaries, future-entry exclusion, and lifetime costs outside the chart range.
+- Reuse the shared median function in distance trends and accept readonly inputs without mutating them, removing a duplicate statistical implementation.
+- Add regression coverage for rolling-period boundaries, invalid dates, nonfinite/missing costs, and immutable inputs.
+
+### Apply Next.js security patches and compatible dependency updates (2026-09-07)
+
+- Upgrade `next` and `eslint-config-next` together from 16.3.0 to 16.3.4. This includes the critical Windows server and AVIF image optimization security fixes released in 16.3.3, plus restored AVIF support and follow-up fixes in 16.3.4.
+- Refresh PDF rendering, Supabase JS, React Hook Form, Sonner, Zustand, React DOM types, and the matching Vitest/coverage packages within their existing major versions; regenerate the Bun lockfile for reproducible installs.
+- Keep React/React DOM at the current stable 19.2.8. Defer major-version migrations (including Zod/resolvers, Recharts, TypeScript, ESLint, and Vitest) and Supabase SSR's pre-1.0 minor migration so they can receive focused compatibility validation.
+
+### Clarify savings comparison labels and prune codebase redundancies (2026-09-07)
+
+- **The dashboard running cost pill and Energy & Battery savings card used ambiguous "Saved vs petrol" copy despite measuring different cost bases.** An EV owner could compare against a diesel or hybrid combustion vehicle, and the dashboard pill calculates all-in running costs while the battery card calculates fuel/energy costs alone.
+- Clarified the dashboard running cost pill copy to `{amount} all-in saved vs internal combustion`, styled consistently with `PILL_TONES.amber`.
+- Clarified the Energy & Battery savings card label in `src/content/en/ui.ts` to `Saved on fuel`.
+- Pruned obsolete `vite-tsconfig-paths` devDependency and transitioned `vitest.config.ts` to native `vitest.config.mts` using `resolve.tsconfigPaths`.
+- Untracked accidentally committed `packages/veloce-ui/dist/` build output and updated `.gitignore`.
+- Removed dead component `src/components/ev-nature-background.tsx` superseded by `thematic-background.tsx`.
+- Centralized decimal rounding in `src/utils/formatting.ts` (`roundTo`) with comprehensive unit tests, deduplicating local round functions in CSV and chart report generators.
+- Exported and unit tested `parseNumericField` in `src/utils/form-values.ts`, deduplicating manual `parseFloat` parsing in server actions.
+- Centralized authentication check in `src/app/actions/_auth.ts` (`getAuthenticatedUser`) and vehicle cache revalidation in `src/app/actions/_vehicle-sync.ts` (`revalidateVehiclePaths`), refactoring `fuel.ts`, `maintenance.ts`, and `snapshots.ts`.
+
 ### Thematic energy redesign across Petrol, Diesel, Hybrid, and EV (2026-09-05)
 
 - **Thematic styling previously applied only to electric vehicles, leaving ICE and hybrid vehicles on a static default palette.** Every propulsion type in Veloce now carries its own bespoke energy identity, background canvas physics, and dynamic color system for both Light Pastel and Dark Glass modes.

@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import type { VehicleSnapshotSource } from "@/types/database";
-import { createClient } from "@/utils/supabase/server";
-import { syncVehicleCurrentOdometer } from "./_vehicle-sync";
+import type { createClient } from "@/utils/supabase/server";
+import { parseNumericField } from "@/utils/form-values";
+import { revalidateVehiclePaths, syncVehicleCurrentOdometer } from "./_vehicle-sync";
+import { getAuthenticatedUser } from "./_auth";
 
 /**
  * Vehicle state check-ins. For an EV this is the primary logging action: odometer
@@ -27,15 +27,6 @@ type SnapshotMutationResult = {
     success: boolean;
     error?: string;
 };
-
-function parseNumericField(value: FormDataEntryValue | null): number | null {
-    if (typeof value !== "string" || value.trim() === "") {
-        return null;
-    }
-
-    const parsedValue = Number(value);
-    return Number.isFinite(parsedValue) ? parsedValue : null;
-}
 
 function normalizeSource(value: FormDataEntryValue | null): VehicleSnapshotSource {
     if (value === "ocr" || value === "api") {
@@ -78,10 +69,7 @@ function parseSnapshotPayload(formData: FormData): SnapshotMutationPayload | nul
 }
 
 function revalidateSnapshotPaths(vehicleId: string) {
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/fuel");
-    revalidatePath("/dashboard/insights");
-    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+    revalidateVehiclePaths(vehicleId, { tab: "fuel" });
 }
 
 async function assertVehicleOwnership(
@@ -100,16 +88,15 @@ async function assertVehicleOwnership(
 }
 
 export async function submitVehicleSnapshot(formData: FormData): Promise<SnapshotMutationResult> {
-    const supabase = await createClient();
     const payload = parseSnapshotPayload(formData);
 
     if (!payload) {
         return { success: false, error: "Odometer is required and state of charge must be 0-100." };
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser("Authentication required.");
     if (authError || !user) {
-        return { success: false, error: "Authentication required." };
+        return { success: false, error: authError ?? "Authentication required." };
     }
 
     if (!(await assertVehicleOwnership(supabase, payload.vehicle_id, user.id))) {
@@ -133,16 +120,15 @@ export async function editVehicleSnapshot(
     snapshotId: string,
     formData: FormData,
 ): Promise<SnapshotMutationResult> {
-    const supabase = await createClient();
     const payload = parseSnapshotPayload(formData);
 
     if (!payload) {
         return { success: false, error: "Odometer is required and state of charge must be 0-100." };
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser("Authentication required.");
     if (authError || !user) {
-        return { success: false, error: "Authentication required." };
+        return { success: false, error: authError ?? "Authentication required." };
     }
 
     if (!(await assertVehicleOwnership(supabase, payload.vehicle_id, user.id))) {
@@ -184,11 +170,9 @@ export async function deleteVehicleSnapshot(
     snapshotId: string,
     vehicleId: string,
 ): Promise<SnapshotMutationResult> {
-    const supabase = await createClient();
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser("Authentication required.");
     if (authError || !user) {
-        return { success: false, error: "Authentication required." };
+        return { success: false, error: authError ?? "Authentication required." };
     }
 
     if (!(await assertVehicleOwnership(supabase, vehicleId, user.id))) {

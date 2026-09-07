@@ -39,6 +39,8 @@ import { FuelLogModal } from "@/components/fuel-log-modal";
 import { MetricCard } from "@/components/metric-card";
 import { MotionWrapper } from "@/components/motion-wrapper";
 import { PageHeader } from "@/components/page-header";
+import { PILL_TONES } from "@/components/ui/pill";
+import { cn } from "@/lib/utils";
 import {
   ChartConfig,
   ChartContainer,
@@ -517,7 +519,10 @@ export default function DashboardClient({
                 {isEv && evSavings?.savings != null && (
                   <Link
                     href="/dashboard/fuel"
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300 dark:hover:bg-amber-400/15"
+                    className={cn(
+                      "mt-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-85",
+                      PILL_TONES.amber,
+                    )}
                   >
                     <PiggyBank className="h-3.5 w-3.5 shrink-0" />
                     {formatMoney(evSavings.savings, currencySymbol)} all-in saved vs internal combustion

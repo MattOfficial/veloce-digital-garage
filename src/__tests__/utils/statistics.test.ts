@@ -23,7 +23,7 @@ describe("median", () => {
   });
 
   it("does not mutate the input", () => {
-    const values = [3, 1, 2];
+    const values = Object.freeze([3, 1, 2]);
     median(values);
     expect(values).toEqual([3, 1, 2]);
   });

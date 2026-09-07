@@ -1,49 +1,47 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
-import { revalidatePath } from "next/cache";
 import { evaluateBadges, awardAiMechanicBadge } from "./badges";
 import type { BadgeDefinition } from "@/lib/badges";
-import { syncVehicleServiceInterval, syncVehicleCurrentOdometer } from "./_vehicle-sync";
+import { parseNumericField } from "@/utils/form-values";
+import { getAuthenticatedUser } from "./_auth";
+import {
+    syncVehicleServiceInterval,
+    syncVehicleCurrentOdometer,
+    revalidateVehiclePaths,
+} from "./_vehicle-sync";
 
 function revalidateMaintenanceRelatedPaths(vehicleId: string) {
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/maintenance");
-    revalidatePath("/dashboard/insights");
-    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+    revalidateVehiclePaths(vehicleId, { tab: "maintenance" });
 }
 
 export async function submitMaintenanceLog(formData: FormData) {
-    const supabase = await createClient();
-
-    const {
-        data: { user },
-        error: authError,
-    } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser(
+        "You must be logged in to log maintenance.",
+    );
 
     if (authError || !user) {
-        return { error: "You must be logged in to log maintenance." };
+        return { error: authError ?? "You must be logged in to log maintenance." };
     }
 
     const vehicle_id = formData.get("vehicle_id")?.toString();
     const date = formData.get("date")?.toString();
     const service_type = formData.get("service_type")?.toString();
-    const costStr = formData.get("cost")?.toString();
-    const odometerStr = formData.get("odometer")?.toString();
     const notes = formData.get("notes")?.toString();
     const receipt_url = formData.get("receipt_url")?.toString();
 
-    if (!vehicle_id || !date || !service_type || !costStr) {
-        return { error: "Missing required fields." };
-    }
-
-    const cost = parseFloat(costStr);
-    if (isNaN(cost) || cost < 0) {
+    const cost = parseNumericField(formData.get("cost"));
+    if (cost == null || cost < 0) {
         return { error: "Cost must be a valid positive number." };
     }
-    const odometer = odometerStr ? parseFloat(odometerStr) : null;
-    if (odometerStr && (odometer == null || Number.isNaN(odometer) || odometer < 0)) {
+
+    const odometerRaw = formData.get("odometer");
+    const odometer = parseNumericField(odometerRaw);
+    if (odometerRaw && (odometer == null || odometer < 0)) {
         return { error: "Odometer must be a valid positive number." };
+    }
+
+    if (!vehicle_id || !date || !service_type) {
+        return { error: "Missing required fields." };
     }
 
     // Insert into Supabase
@@ -82,15 +80,12 @@ export async function submitMaintenanceLog(formData: FormData) {
 }
 
 export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
-    const supabase = await createClient();
-
-    const {
-        data: { user },
-        error: authError,
-    } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser(
+        "You must be logged in to delete a maintenance log.",
+    );
 
     if (authError || !user) {
-        return { error: "You must be logged in to delete a maintenance log." };
+        return { error: authError ?? "You must be logged in to delete a maintenance log." };
     }
 
     const { error } = await supabase
@@ -111,35 +106,32 @@ export async function deleteMaintenanceLog(logId: string, vehicleId: string) {
 }
 
 export async function editMaintenanceLog(logId: string, formData: FormData) {
-    const supabase = await createClient();
-
-    const {
-        data: { user },
-        error: authError,
-    } = await supabase.auth.getUser();
+    const { user, error: authError, supabase } = await getAuthenticatedUser(
+        "You must be logged in to edit a maintenance log.",
+    );
 
     if (authError || !user) {
-        return { error: "You must be logged in to edit a maintenance log." };
+        return { error: authError ?? "You must be logged in to edit a maintenance log." };
     }
 
     const vehicle_id = formData.get("vehicle_id")?.toString();
     const date = formData.get("date")?.toString();
     const service_type = formData.get("service_type")?.toString();
-    const costStr = formData.get("cost")?.toString();
-    const odometerStr = formData.get("odometer")?.toString();
     const notes = formData.get("notes")?.toString();
 
-    if (!vehicle_id || !date || !service_type || !costStr) {
-        return { error: "Missing required fields." };
-    }
-
-    const cost = parseFloat(costStr);
-    if (isNaN(cost) || cost < 0) {
+    const cost = parseNumericField(formData.get("cost"));
+    if (cost == null || cost < 0) {
         return { error: "Cost must be a valid positive number." };
     }
-    const odometer = odometerStr ? parseFloat(odometerStr) : null;
-    if (odometerStr && (odometer == null || Number.isNaN(odometer) || odometer < 0)) {
+
+    const odometerRaw = formData.get("odometer");
+    const odometer = parseNumericField(odometerRaw);
+    if (odometerRaw && (odometer == null || odometer < 0)) {
         return { error: "Odometer must be a valid positive number." };
+    }
+
+    if (!vehicle_id || !date || !service_type) {
+        return { error: "Missing required fields." };
     }
 
     const { error: updateError } = await supabase

@@ -11,10 +11,10 @@ import type {
 } from "@/types/database";
 import { calculateSessionCost, resolveSessionEnergy } from "@/utils/charge-session";
 import { getDatabaseErrorMessage } from "@/utils/errors";
+import { parseNumericField } from "@/utils/form-values";
 import { createClient } from "@/utils/supabase/server";
-import { revalidatePath } from "next/cache";
 import { evaluateBadges } from "./badges";
-import { syncVehicleCurrentOdometer } from "./_vehicle-sync";
+import { revalidateVehiclePaths, syncVehicleCurrentOdometer } from "./_vehicle-sync";
 
 type FuelLogMutationPayload = {
     vehicle_id: string;
@@ -58,14 +58,6 @@ type FuelLogMutationResult = {
     newBadges?: Awaited<ReturnType<typeof evaluateBadges>>;
 };
 
-function parseNumericField(value: FormDataEntryValue | null): number | null {
-    if (typeof value !== "string" || value.trim() === "") {
-        return null;
-    }
-
-    const parsedValue = Number(value);
-    return Number.isFinite(parsedValue) ? parsedValue : null;
-}
 
 function normalizeEnergyType(value: FormDataEntryValue | null): FuelLogEnergyType {
     return value === "charge" ? "charge" : "fuel";
@@ -279,10 +271,7 @@ async function deriveCalculatedEfficiency(
 }
 
 function revalidateFuelRelatedPaths(vehicleId: string) {
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/fuel");
-    revalidatePath("/dashboard/insights");
-    revalidatePath(`/dashboard/vehicles/${vehicleId}`);
+    revalidateVehiclePaths(vehicleId, { tab: "fuel" });
 }
 
 export async function submitFuelLog(formData: FormData): Promise<FuelLogMutationResult> {
@@ -298,14 +287,15 @@ export async function submitFuelLog(formData: FormData): Promise<FuelLogMutation
         return { success: false, error: "Authentication required." };
     }
 
-    const { data: vehicle, error: vehicleError } = await supabase
+    // Verify the user owns this vehicle
+    const { data: vehicle } = await supabase
         .from("vehicles")
-        .select("id, baseline_odometer, usable_battery_kwh, battery_capacity_kwh")
+        .select("id, user_id, baseline_odometer, usable_battery_kwh, battery_capacity_kwh")
         .eq("id", payload.vehicle_id)
         .eq("user_id", user.id)
         .single();
 
-    if (vehicleError || !vehicle) {
+    if (!vehicle) {
         return { success: false, error: "Vehicle not found or access denied." };
     }
 

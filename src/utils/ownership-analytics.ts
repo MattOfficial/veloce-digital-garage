@@ -67,14 +67,6 @@ function getCostEvents(vehicle: VehicleWithLogs): CostEvent[] {
   ];
 }
 
-function sumEventsInRange(events: CostEvent[], start: Date, endExclusive: Date) {
-  return events.reduce((total, event) => {
-    const date = parseLogDate(event.date);
-    if (!date || date < start || date >= endExclusive) return total;
-    return total + event.cost;
-  }, 0);
-}
-
 export function getOwnershipCostSummary(
   vehicle: VehicleWithLogs,
   currentDate: Date = new Date(),
@@ -82,21 +74,6 @@ export function getOwnershipCostSummary(
 ): OwnershipCostSummary {
   const today = startOfDay(currentDate);
   const currentPeriodEnd = addDays(today, 1);
-  const events = getCostEvents(vehicle).filter((event) => {
-    const date = parseLogDate(event.date);
-    return date != null && date < currentPeriodEnd;
-  });
-  const totalFuelCost = events
-    .filter((event) => event.category === "fuel")
-    .reduce((total, event) => total + event.cost, 0);
-  const totalMaintenanceCost = events
-    .filter((event) => event.category === "maintenance")
-    .reduce((total, event) => total + event.cost, 0);
-  const totalOtherCost = events
-    .filter((event) => event.category === "other")
-    .reduce((total, event) => total + event.cost, 0);
-  const totalCost = totalFuelCost + totalMaintenanceCost + totalOtherCost;
-
   const trackedDistance = Math.max(
     0,
     getVehicleCurrentOdometer(vehicle) - vehicle.baseline_odometer,
@@ -104,16 +81,13 @@ export function getOwnershipCostSummary(
 
   const currentPeriodStart = subDays(today, 29);
   const previousPeriodStart = subDays(currentPeriodStart, 30);
-  const currentPeriodCost = sumEventsInRange(
-    events,
-    currentPeriodStart,
-    currentPeriodEnd,
-  );
-  const previousPeriodCost = sumEventsInRange(
-    events,
-    previousPeriodStart,
-    currentPeriodStart,
-  );
+  let currentPeriodCost = 0;
+  let previousPeriodCost = 0;
+  const totals: Record<OwnershipCostCategory, number> = {
+    fuel: 0,
+    maintenance: 0,
+    other: 0,
+  };
 
   const normalizedMonthCount = Math.max(1, Math.floor(monthCount));
   const monthlyCosts = Array.from(
@@ -134,14 +108,26 @@ export function getOwnershipCostSummary(
   );
   const monthMap = new Map(monthlyCosts.map((month) => [month.key, month]));
 
-  for (const event of events) {
+  // Parse each date once and accumulate all summaries in the same pass.
+  for (const event of getCostEvents(vehicle)) {
     const date = parseLogDate(event.date);
-    if (!date) continue;
+    if (!date || date >= currentPeriodEnd) continue;
+
+    totals[event.category] += event.cost;
+    if (date >= currentPeriodStart) {
+      currentPeriodCost += event.cost;
+    } else if (date >= previousPeriodStart) {
+      previousPeriodCost += event.cost;
+    }
+
     const month = monthMap.get(format(date, "yyyy-MM"));
     if (!month) continue;
     month[event.category] += event.cost;
     month.total += event.cost;
   }
+
+  const { fuel: totalFuelCost, maintenance: totalMaintenanceCost, other: totalOtherCost } = totals;
+  const totalCost = totalFuelCost + totalMaintenanceCost + totalOtherCost;
 
   return {
     totalFuelCost,

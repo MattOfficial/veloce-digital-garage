@@ -14,6 +14,8 @@ import {
   subMonths,
 } from "date-fns";
 
+import { median } from "@/utils/statistics";
+
 import type { DistanceCoverage } from "@/utils/distance-analytics";
 import type { VehicleWithLogs } from "@/types/database";
 
@@ -197,15 +199,6 @@ function parseMonthKey(value: string): Date | null {
 
   const date = parseISO(`${value}-01`);
   return isValid(date) && format(date, "yyyy-MM") === value ? date : null;
-}
-
-function median(values: readonly number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-
-  return sorted.length % 2 === 0
-    ? (sorted[middle - 1] + sorted[middle]) / 2
-    : sorted[middle];
 }
 
 function clampMonthCount(value: number | undefined): number {

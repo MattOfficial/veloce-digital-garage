@@ -12,6 +12,10 @@
  * knows about colour, copy or fonts.
  */
 
+import { roundTo } from "@/utils/formatting";
+
+const round = (value: number): number => roundTo(value);
+
 export type ChartPadding = {
   top: number;
   right: number;
@@ -39,10 +43,7 @@ export type AxisScale = {
   values: number[];
 };
 
-/** Two decimals is below the resolution of a printed page and keeps files small. */
-function round(value: number): number {
-  return Number(value.toFixed(2));
-}
+
 
 function getPlotArea(box: ChartBox): PlotArea {
   return {

@@ -37,3 +37,18 @@ export function toNumericFields<T extends object, K extends keyof T>(
 
     return coerced;
 }
+
+/**
+ * Coerces a FormData entry or raw string into a valid number or null.
+ * Blank or non-finite inputs return null.
+ */
+export function parseNumericField(
+    value: FormDataEntryValue | string | null | undefined,
+): number | null {
+    if (typeof value !== "string" || value.trim() === "") {
+        return null;
+    }
+
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+}

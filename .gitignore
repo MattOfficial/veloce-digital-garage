@@ -49,3 +49,9 @@ packages/ui/coverage/
 packages/ui/storybook-static/
 packages/ui/node_modules/.cache/
 packages/ui/*.log
+packages/veloce-ui/dist/
+packages/veloce-ui/.vite/
+packages/veloce-ui/coverage/
+packages/veloce-ui/storybook-static/
+packages/veloce-ui/node_modules/.cache/
+packages/veloce-ui/*.log

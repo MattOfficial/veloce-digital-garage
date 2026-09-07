@@ -10,7 +10,7 @@
 const DEFAULT_MIN_RELATIVE_SPREAD = 0.5;
 const DEFAULT_MAD_MULTIPLIER = 3;
 
-export function median(values: number[]): number | null {
+export function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
 
   const sorted = [...values].sort((left, right) => left - right);
