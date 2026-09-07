@@ -6,6 +6,12 @@ Started 2026-08-08. Nothing before that date is recorded here — see the git hi
 
 ## Unreleased
 
+### Reduce repeated work in ownership and distance analytics (2026-09-07)
+
+- Accumulate ownership category totals, rolling periods, and monthly costs in one pass, parsing each log date once instead of repeatedly scanning and parsing the same history. Preserve calendar-day boundaries, future-entry exclusion, and lifetime costs outside the chart range.
+- Reuse the shared median function in distance trends and accept readonly inputs without mutating them, removing a duplicate statistical implementation.
+- Add regression coverage for rolling-period boundaries, invalid dates, nonfinite/missing costs, and immutable inputs.
+
 ### Apply Next.js security patches and compatible dependency updates (2026-09-07)
 
 - Upgrade `next` and `eslint-config-next` together from 16.3.0 to 16.3.4. This includes the critical Windows server and AVIF image optimization security fixes released in 16.3.3, plus restored AVIF support and follow-up fixes in 16.3.4.

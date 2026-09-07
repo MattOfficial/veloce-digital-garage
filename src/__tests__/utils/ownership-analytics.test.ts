@@ -66,6 +66,45 @@ function makeCustomLog(overrides: Partial<CustomLog> = {}): CustomLog {
 describe("getOwnershipCostSummary", () => {
   const TODAY = new Date(2026, 6, 21, 18, 30);
 
+  it("keeps rolling-period boundaries separate from lifetime and calendar totals", () => {
+    const vehicle = makeVehicle({
+      fuel_logs: [
+        makeFuelLog({ date: "2026-05-22", total_cost: 1 }),
+        makeFuelLog({ date: "2026-05-23", total_cost: 2 }),
+        makeFuelLog({ date: "2026-06-21", total_cost: 4 }),
+        makeFuelLog({ date: "2026-06-22", total_cost: 8 }),
+        makeFuelLog({ date: "2026-07-21T23:59:59Z", total_cost: 16 }),
+        makeFuelLog({ date: "2026-07-22", total_cost: 32 }),
+      ],
+    });
+    const original = structuredClone(vehicle);
+    const result = getOwnershipCostSummary(vehicle, TODAY, 1);
+
+    expect(result.totalCost).toBe(31);
+    expect(result.previousPeriodCost).toBe(6);
+    expect(result.currentPeriodCost).toBe(24);
+    expect(result.periodTrendPercent).toBe(300);
+    expect(result.monthlyCosts).toMatchObject([{ key: "2026-07", total: 16 }]);
+    expect(vehicle).toEqual(original);
+  });
+
+  it("ignores invalid dates and treats missing or nonfinite costs as zero", () => {
+    const vehicle = makeVehicle({
+      fuel_logs: [
+        makeFuelLog({ date: "invalid", total_cost: 999 }),
+        makeFuelLog({ total_cost: Number.NaN }),
+      ],
+      maintenance_logs: [makeMaintenanceLog({ cost: Number.POSITIVE_INFINITY })],
+      custom_logs: [makeCustomLog({ cost: null }), makeCustomLog({ cost: 25 })],
+    });
+    const result = getOwnershipCostSummary(vehicle, TODAY);
+    expect(result.totalFuelCost).toBe(0);
+    expect(result.totalMaintenanceCost).toBe(0);
+    expect(result.totalOtherCost).toBe(25);
+    expect(result.currentPeriodCost).toBe(25);
+    expect(result.monthlyCosts.at(-1)?.total).toBe(25);
+  });
+
   it("combines every tracked cost category and uses the reliable odometer", () => {
     const vehicle = makeVehicle({
       current_odometer: 11_250,
